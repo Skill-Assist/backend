@@ -1,0 +1,170 @@
+{
+  "exams": [
+    {
+      "owner": "Ultrapar Participacoes SA",
+      "category": "Desenvolvedor",
+      "subCategory": "Front-end",
+      "level": "Pleno",
+      "durationInHours": 2,
+      "deadline": "2023-07-15T10:00:00Z"
+    },
+    {
+      "owner": "Ambev SA",
+      "category": "Designer",
+      "subCategory": "UI/UX",
+      "level": "Sênior",
+      "durationInHours": 2,
+      "deadline": "2023-07-15T10:00:00Z"
+    },
+    {
+      "owner": "Inteli - Instituto de Tecnologia e Liderança",
+      "category": "Candidato",
+      "subCategory": "Engenharia de Software",
+      "durationInHours": 2,
+      "deadline": "2023-07-15T10:00:00Z"
+    }
+  ],
+  "sections": [
+    {
+      "name": "Lógica de Programação",
+      "description": "Avalia a capacidade de resolver problemas de forma lógica",
+      "durationInHours": 1,
+      "questions": [
+        {
+          "type": "multipleChoice",
+          "statement": "Qual dos seguintes operadores lógicos retorna verdadeiro apenas quando ambos os operandos são verdadeiros?",
+          "options": {
+            "a": "AND (&&)",
+            "b": "OR (||)",
+            "c": "NOT (!)",
+            "d": "XOR (^)"
+          },
+          "gradingRubric": { "a": 10 }
+        },
+        {
+          "type": "multipleChoice",
+          "statement": "Qual linguagem de programação é mais indicado para o desenvolvimento de aplicativos web responsivos?",
+          "options": {
+            "a": "TypeScript",
+            "b": "JavaScript",
+            "c": "Python",
+            "d": "Java"
+          },
+          "gradingRubric": { "b": 10 }
+        },
+        {
+          "type": "text",
+          "statement": "Descreva as vantagens e desvantagens do Typescript para o desenvolvimento de APIs?",
+          "gradingRubric": {
+            "accuracy": {
+              "total_points": 40,
+              "descrição precisa e abrangente das vantagens e desvantagens do TypeScript para o desenvolvimento de APIs": 40,
+              "menciona algumas vantagens e desvantagens, mas pode deixar de mencionar pontos importantes": {
+                "min": 20,
+                "max": 39
+              },
+              "não menciona ou descreve incorretamente as vantagens e desvantagens": {
+                "min": 0,
+                "max": 19
+              }
+            },
+            "explanation": {
+              "total_points": 40,
+              "fornece uma explicação clara e detalhada de por que o TypeScript é vantajoso ou desvantajoso para o desenvolvimento de APIs": 40,
+              "oferece alguma explicação, mas falta clareza ou profundidade": {
+                "min": 20,
+                "max": 39
+              },
+              "fornece uma explicação insuficiente ou irrelevante": {
+                "min": 0,
+                "max": 19
+              }
+            },
+            "supporting arguments": {
+              "total_points": 20,
+              "apresenta argumentos fortes e válidos, apoiados por exemplos ou evidências, que mostram as vantagens ou desvantagens do TypeScript para o desenvolvimento de APIs": 20,
+              "fornece alguns argumentos, mas eles são fracos ou carecem de suporte adequado": {
+                "min": 10,
+                "max": 19
+              },
+              "não fornece argumentos ou evidências substanciais": {
+                "min": 0,
+                "max": 9
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Linguagens de Programação",
+      "description": "Avalia a capacidade de desenvolver em uma linguagem específica",
+      "durationInHours": 1,
+      "questions": [
+        {
+          "type": "programming",
+          "statement": "Desenvolva uma função que receba um array de números e retorne a soma de todos os números pares",
+          "gradingRubric": {
+            "A resposta deve ser uma função que receba um array de números e retorne a soma de todos os números pares. A função deve ser escrita em JavaScript.": 10
+          }
+        },
+        {
+          "type": "programming",
+          "statement": "Desenvolva uma função que recebe dois objetos e retorna um objeto com as propriedades dos dois objetos combinadas",
+          "gradingRubric": {
+            "A resposta deve ser uma função que recebe dois objetos e retorna um objeto com as propriedades dos dois objetos combinadas. A função deve ser escrita em JavaScript.": 10
+          }
+        }
+      ]
+    },
+    {
+      "name": "Banco de Dados",
+      "description": "Avalia a capacidade de estruturar e manipular dados",
+      "durationInHours": 1,
+      "questions": [
+        {
+          "type": "text",
+          "statement": "Descreva as vantagens e desvantagens de utilizar um banco de dados relacional para armazenar dados de um aplicativo web",
+          "gradingRubric": {
+            "accuracy": {
+              "total_points": 40,
+              "descreve com precisão e abrangência as vantagens e desvantagens de utilizar um banco de dados relacional para armazenar dados de um aplicativo web": 40,
+              "menciona algumas vantagens e desvantagens, mas pode deixar de mencionar pontos importantes": {
+                "min": 20,
+                "max": 39
+              },
+              "não menciona ou fornece uma descrição incorreta das vantagens e desvantagens": {
+                "min": 0,
+                "max": 19
+              }
+            },
+            "explanation": {
+              "total_points": 40,
+              "fornece uma explicação clara e detalhada de por que um banco de dados relacional é vantajoso ou desvantajoso para armazenar dados em um aplicativo web": 40,
+              "oferece alguma explicação, mas falta clareza ou profundidade": {
+                "min": 20,
+                "max": 39
+              },
+              "fornece uma explicação insuficiente ou irrelevante": {
+                "min": 0,
+                "max": 19
+              }
+            },
+            "supporting arguments": {
+              "total_points": 20,
+              "apresenta argumentos fortes e válidos, apoiados por exemplos ou evidências, que mostram as vantagens ou desvantagens de utilizar um banco de dados relacional para armazenamento de dados em um aplicativo web": 20,
+              "fornece alguns argumentos, mas eles são fracos ou carecem de suporte adequado": {
+                "min": 10,
+                "max": 19
+              },
+              "não fornece argumentos ou evidências substanciais": {
+                "min": 0,
+                "max": 9
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+# logs
+logs
+*.log
+
+# coverage directory
+coverage
+*.lcov
+
+# dependency directories
+node_modules/
+**/package-lock.json
+
+# typeScript cache
+*.tsbuildinfo
+
+# optional npm cache directory
+.npm
+
+# dotenv environment variable files
+.env
+backend/.env
+
+# DB Local files
+.dynamodb/
+**/db.sqlite
+
+# system files
+.DS_Store
+**/.DS_Store

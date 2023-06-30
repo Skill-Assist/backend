@@ -1,0 +1,20 @@
+# Node
+dist
+node_modules
+coverage
+
+# Docker
+Dockerfile
+
+# Git
+.git
+.gitignore
+
+# Environment variables
+.env
+
+# Database
+db.sqlite
+
+# Proctored exams folder
+proctoring/
