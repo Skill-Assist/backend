@@ -13,10 +13,13 @@ import { ExamInvitationService } from "./exam-invitation.service";
 
 /** entities */
 import { ExamInvitation } from "./entities/exam-invitation.entity";
+
+/** helpers */
+import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("examInvitation")
-@UseInterceptors(ClassSerializerInterceptor)
+@UseInterceptors(ClassSerializerInterceptor, ExpirationFlagInterceptor)
 @Controller("examInvitation")
 export class ExamInvitationController {
   constructor(private readonly examInvitationService: ExamInvitationService) {}

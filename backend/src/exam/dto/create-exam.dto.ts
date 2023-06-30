@@ -36,6 +36,11 @@ export class CreateExamDto {
   @IsNumber()
   durationInHours: number;
 
+  @Min(24)
+  @Max(24 * 60)
+  @IsNumber()
+  submissionDeadlineInHours: number;
+
   @IsOptional()
   @Validate((value: Date) => isValid(value))
   dateToArchive?: Date;

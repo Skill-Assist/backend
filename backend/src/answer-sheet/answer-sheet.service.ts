@@ -49,13 +49,13 @@ export class AnswerSheetService {
       throw new UnauthorizedException("You are not enrolled in this exam");
 
     // check if user has already started the exam
-    for (const answerSheet of await exam.answerSheets) {
-      if ((await answerSheet.user).id === user.id) {
-        throw new UnauthorizedException(
-          "You have already started this exam. You can't start it again."
-        );
-      }
-    }
+    // for (const answerSheet of await exam.answerSheets) {
+    //   if ((await answerSheet.user).id === user.id) {
+    //     throw new UnauthorizedException(
+    //       "You have already started this exam. You can't start it again."
+    //     );
+    //   }
+    // }
 
     // create answer sheet
     const answerSheet = await create(
@@ -75,6 +75,25 @@ export class AnswerSheetService {
     await update(
       answerSheet.id,
       { exam },
+      this.answerSheetRepository,
+      "answerSheet"
+    );
+
+    // set deadline for answer sheet
+    const invitation = (await exam.invitations).find(
+      (invite) => invite.email === user.email
+    );
+
+    const deadline = new Date(
+      invitation
+        ? invitation.createdAt.getTime() +
+          exam.submissionDeadlineInHours * 60 * 60 * 1000
+        : exam.submissionDeadlineInHours * 60 * 60 * 1000
+    );
+
+    await update(
+      answerSheet.id,
+      { deadline },
       this.answerSheetRepository,
       "answerSheet"
     );

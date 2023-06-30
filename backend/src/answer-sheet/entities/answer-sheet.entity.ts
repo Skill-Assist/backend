@@ -16,6 +16,9 @@ export class AnswerSheet extends SQLBaseEntity {
   @Column({ nullable: true })
   endDate: Date;
 
+  @Column({ nullable: true })
+  deadline: Date;
+
   @Exclude()
   @Column({ default: true })
   isActive: boolean;

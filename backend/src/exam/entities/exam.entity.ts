@@ -33,6 +33,9 @@ export class Exam extends SQLBaseEntity {
   @Column()
   durationInHours: number;
 
+  @Column()
+  submissionDeadlineInHours: number;
+
   @Column({ nullable: true })
   dateToArchive: Date;
 
