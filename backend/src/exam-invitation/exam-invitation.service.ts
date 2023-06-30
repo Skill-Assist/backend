@@ -1,6 +1,6 @@
 /** nestjs */
-import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 
 /** providers */
 import { QueryRunnerFactory } from "../utils/query-runner.factory";
@@ -32,19 +32,22 @@ export class ExamInvitationService {
     exam: Exam,
     user?: User
   ): Promise<ExamInvitation> {
-    // check if user is a candidate and if already invited to exam
-    if (user) {
-      if (!user.roles.includes("candidate"))
-        throw new UnauthorizedException("User is not a candidate.");
+    // check if user is candidate
+    if (user && !user.roles.includes("candidate"))
+      throw new UnauthorizedException("User is not a candidate.");
 
-      if (
-        await this.examInvitationRepository
-          .createQueryBuilder("examInvitation")
-          .leftJoinAndSelect("examInvitation.user", "user")
-          .where("user.id = :userId", { userId: user.id })
-          .getOne()
-      )
-        throw new UnauthorizedException("User is already invited.");
+    // check if email is already invited
+    const existingInvitations = await this.findAll(
+      "email",
+      createExamInvitationDto.email
+    );
+    if (existingInvitations.length) {
+      for (const invitation of existingInvitations) {
+        if ((await invitation.exam).id === exam.id)
+          throw new UnauthorizedException(
+            "User has already been invited to this exam."
+          );
+      }
     }
 
     // create exam invitation
@@ -96,19 +99,24 @@ export class ExamInvitationService {
   async findOne(
     key: string,
     value: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<ExamInvitation | null> {
     return (await findOne(
       this.examInvitationRepository,
       "examInvitation",
       key,
       value,
-      relations
+      relations,
+      map
     )) as ExamInvitation;
   }
 
-  async update(invitationId: number, payload: Record<string, unknown>) {
-    return await update(
+  async update(
+    invitationId: number,
+    payload: Record<string, unknown>
+  ): Promise<void> {
+    await update(
       invitationId,
       payload,
       this.examInvitationRepository,
@@ -122,7 +130,7 @@ export class ExamInvitationService {
     userId: number
   ): Promise<ExamInvitation> {
     // check if invitation exists
-    const invitation = await this.findOne("id", invitationId, ["exam", "user"]);
+    const invitation = await this.findOne("id", invitationId);
     if (!invitation)
       throw new UnauthorizedException("Exam invitation does not exist.");
 
@@ -147,7 +155,7 @@ export class ExamInvitationService {
     );
 
     // return updated invitation
-    return <ExamInvitation>await this.findOne("id", invitation.id, ["exam"]);
+    return <ExamInvitation>await this.findOne("id", invitation.id);
   }
 
   async findPendingInvitations(userEmail: string): Promise<ExamInvitation[]> {

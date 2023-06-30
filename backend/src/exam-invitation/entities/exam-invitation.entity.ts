@@ -1,9 +1,9 @@
-import { Column, Entity, ManyToOne } from "typeorm";
 import { Exclude } from "class-transformer";
+import { Column, Entity, ManyToOne } from "typeorm";
 
 import { Exam } from "../../exam/entities/exam.entity";
-import { SQLBaseEntity } from "../../utils/base.entity";
 import { User } from "../../user/entities/user.entity";
+import { SQLBaseEntity } from "../../utils/base.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Entity()
