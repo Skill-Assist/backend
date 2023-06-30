@@ -18,7 +18,7 @@ node_modules/
 
 # dotenv environment variable files
 .env
-backend/.env
+**/.env
 
 # DB Local files
 .dynamodb/
