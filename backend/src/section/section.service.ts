@@ -69,28 +69,32 @@ export class SectionService {
   async findAll(
     key?: string,
     value?: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<Section[]> {
     return (await findAll(
       this.sectionRepository,
       "section",
       key,
       value,
-      relations
+      relations,
+      map
     )) as Section[];
   }
 
   async findOne(
     key: string,
     value: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<Section | null> {
     return (await findOne(
       this.sectionRepository,
       "section",
       key,
       value,
-      relations
+      relations,
+      map
     )) as Section;
   }
 

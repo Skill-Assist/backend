@@ -17,6 +17,7 @@ import { AddQuestionDto } from "./dto/add-question.dto";
 
 /** utils */
 import { create, findOne, update } from "../utils/typeorm.utils";
+import { UpdateUserDto } from "./dto/update-user.dto";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -64,14 +65,16 @@ export class UserService {
   async findOne(
     key: string,
     value: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<User | null> {
     return (await findOne(
       this.repository,
       "user",
       key,
       value,
-      relations
+      relations,
+      map
     )) as User;
   }
 
@@ -83,9 +86,12 @@ export class UserService {
 
     if (user.roles.includes("candidate"))
       _query
-        .loadRelationIdAndMap("user.invitationsRef", "user.invitations")
-        .loadRelationIdAndMap("user.enrolledExamsRef", "user.enrolledExams")
-        .loadRelationIdAndMap("user.answerSheetsRef", "user.answerSheets");
+        .leftJoinAndSelect("user.invitations", "invitationsRef")
+        .leftJoinAndSelect("user.enrolledExams", "enrolledExamsRef")
+        .leftJoinAndSelect("user.answerSheets", "answerSheetsRef");
+    // .loadRelationIdAndMap("user.invitationsRef", "user.invitations")
+    // .loadRelationIdAndMap("user.enrolledExamsRef", "user.enrolledExams")
+    // .loadRelationIdAndMap("user.answerSheetsRef", "user.answerSheets");
 
     if (user.roles.includes("recruiter"))
       _query.loadRelationIdAndMap("user.ownedExamsRef", "user.ownedExams");
@@ -119,5 +125,16 @@ export class UserService {
         "answerSheets",
       ])
     );
+  }
+
+  async updateProfile(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+    await update(
+      id,
+      updateUserDto as unknown as Record<string, unknown>,
+      this.repository,
+      "user"
+    );
+
+    return <User>await this.findOne("id", id);
   }
 }

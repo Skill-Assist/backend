@@ -61,7 +61,8 @@ export class ExamService {
   async findAll(
     key?: string,
     value?: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<Exam[]> {
     if (key && !value) throw new NotFoundException("Value not provided.");
 
@@ -70,7 +71,8 @@ export class ExamService {
       "exam",
       key,
       value,
-      relations
+      relations,
+      map
     )) as Exam[];
   }
 

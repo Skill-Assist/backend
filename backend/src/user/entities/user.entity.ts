@@ -27,6 +27,18 @@ export class User extends SQLBaseEntity {
   @Column()
   password: string;
 
+  @Column({ nullable: true })
+  mobilePhone: string;
+
+  @Column({ nullable: true })
+  nationalId: string;
+
+  @Column({ default: "#000000" })
+  color: string;
+
+  @Column({ default: "https://i.imgur.com/6VBx3io.png" })
+  logo: string;
+
   @Column({ type: "simple-array" })
   roles: string[];
 

@@ -49,13 +49,13 @@ export class AnswerSheetService {
       throw new UnauthorizedException("You are not enrolled in this exam");
 
     // check if user has already started the exam
-    // for (const answerSheet of await exam.answerSheets) {
-    //   if ((await answerSheet.user).id === user.id) {
-    //     throw new UnauthorizedException(
-    //       "You have already started this exam. You can't start it again."
-    //     );
-    //   }
-    // }
+    for (const answerSheet of await exam.answerSheets) {
+      if ((await answerSheet.user).id === user.id) {
+        throw new UnauthorizedException(
+          "You have already started this exam. You can't start it again."
+        );
+      }
+    }
 
     // create answer sheet
     const answerSheet = await create(
@@ -105,7 +105,8 @@ export class AnswerSheetService {
   async findAll(
     key?: string,
     value?: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<AnswerSheet[]> {
     if (key && !value) throw new NotFoundException("Value not provided");
 
@@ -114,21 +115,24 @@ export class AnswerSheetService {
       "answerSheet",
       key,
       value,
-      relations
+      relations,
+      map
     )) as AnswerSheet[];
   }
 
   async findOne(
     key: string,
     value: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<AnswerSheet | null> {
     return (await findOne(
       this.answerSheetRepository,
       "answerSheet",
       key,
       value,
-      relations
+      relations,
+      map
     )) as AnswerSheet;
   }
 

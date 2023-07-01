@@ -44,12 +44,14 @@ export class AnswerSheetController {
   findAll(
     @Query("key") key: string,
     @Query("value") value: unknown,
-    @Query("relations") relations: string
+    @Query("relations") relations: string,
+    @Query("map") map: boolean
   ) {
     return this.answerSheetService.findAll(
       key,
       value,
-      relations ? relations.split(",") : undefined
+      relations ? relations.split(",") : undefined,
+      map
     );
   }
 
@@ -57,12 +59,14 @@ export class AnswerSheetController {
   findOne(
     @Query("key") key: string,
     @Query("value") value: unknown,
-    @Query("relations") relations: string
+    @Query("relations") relations: string,
+    @Query("map") map: boolean
   ) {
     return this.answerSheetService.findOne(
       key,
       value,
-      relations ? relations.split(",") : undefined
+      relations ? relations.split(",") : undefined,
+      map
     );
   }
 

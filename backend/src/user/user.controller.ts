@@ -2,6 +2,8 @@
 import {
   Get,
   Req,
+  Body,
+  Patch,
   Query,
   Controller,
   UseInterceptors,
@@ -14,6 +16,7 @@ import { UserService } from "./user.service";
 
 /** entities & dtos */
 import { User } from "./entities/user.entity";
+import { UpdateUserDto } from "./dto/update-user.dto";
 
 /** utils */
 import { PassportRequest } from "../auth/auth.controller";
@@ -36,5 +39,13 @@ export class UserController {
     @Query("invitationId") token: number
   ): Promise<User> {
     return this.userService.acceptInvitation(token, req.user!);
+  }
+
+  @Patch("updateProfile")
+  updateProfile(
+    @Req() req: PassportRequest,
+    @Body() updateUserDto: UpdateUserDto
+  ): Promise<User> {
+    return this.userService.updateProfile(req.user!.id, updateUserDto);
   }
 }
