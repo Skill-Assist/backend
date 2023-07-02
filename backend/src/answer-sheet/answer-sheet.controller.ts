@@ -76,4 +76,11 @@ export class AnswerSheetController {
   submit(@Param("id") id: number): Promise<string> {
     return this.answerSheetService.submit(id);
   }
+
+  @Get("findOneWithSections")
+  getAnswerSheetWithSections(
+    @Query("id") id: number
+  ): Promise<AnswerSheet | null> {
+    return this.answerSheetService.getAnswerSheetWithSections(id);
+  }
 }

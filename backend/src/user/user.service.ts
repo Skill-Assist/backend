@@ -13,11 +13,11 @@ import { Repository } from "typeorm";
 /** entities & dtos */
 import { User } from "./entities/user.entity";
 import { CreateUserDto } from "./dto/create-user.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
 import { AddQuestionDto } from "./dto/add-question.dto";
 
 /** utils */
 import { create, findOne, update } from "../utils/typeorm.utils";
-import { UpdateUserDto } from "./dto/update-user.dto";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -86,12 +86,20 @@ export class UserService {
 
     if (user.roles.includes("candidate"))
       _query
-        .leftJoinAndSelect("user.invitations", "invitationsRef")
-        .leftJoinAndSelect("user.enrolledExams", "enrolledExamsRef")
-        .leftJoinAndSelect("user.answerSheets", "answerSheetsRef");
-    // .loadRelationIdAndMap("user.invitationsRef", "user.invitations")
-    // .loadRelationIdAndMap("user.enrolledExamsRef", "user.enrolledExams")
-    // .loadRelationIdAndMap("user.answerSheetsRef", "user.answerSheets");
+        .leftJoinAndMapMany(
+          "user.invitationsRef",
+          "user.invitations",
+          "invitations"
+        )
+        .leftJoinAndMapOne("invitations.examRef", "invitations.exam", "exam")
+        .leftJoinAndMapOne("exam.createdByRef", "exam.createdBy", "createdBy")
+        .leftJoinAndMapOne(
+          "exam.answerSheetsRef",
+          "exam.answerSheets",
+          "answerSheets",
+          "answerSheets.user = :id",
+          { id }
+        );
 
     if (user.roles.includes("recruiter"))
       _query.loadRelationIdAndMap("user.ownedExamsRef", "user.ownedExams");

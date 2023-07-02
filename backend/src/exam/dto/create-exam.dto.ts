@@ -39,7 +39,7 @@ export class CreateExamDto {
   @Min(24)
   @Max(24 * 60)
   @IsNumber()
-  submissionDeadlineInHours: number;
+  submissionInHours: number;
 
   @IsOptional()
   @Validate((value: Date) => isValid(value))

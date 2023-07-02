@@ -4,7 +4,7 @@ import {
   NestInterceptor,
   ExecutionContext,
 } from "@nestjs/common";
-import { Observable } from "rxjs";
+// import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -16,22 +16,30 @@ export interface Response<T> {
 export class ExpirationFlagInterceptor<T>
   implements NestInterceptor<T, Response<T>>
 {
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler
-  ): Observable<Response<T>> {
+  intercept(context: ExecutionContext, next: CallHandler): any {
     return next.handle().pipe(
-      map((data) => {
+      map(async (data) => {
+        let submissionDeadline: number;
+
         for (const key in data) {
+          submissionDeadline = (await data[key].exam).submissionInHours;
+
           data[key].isExpired =
             data[key].createdAt.getTime() +
               data[key].expirationInHours * 60 * 60 * 1000 <
             Date.now();
+
+          data[key].submissionDeadline = new Date(
+            submissionDeadline * 60 * 60 * 1000 + data[key].createdAt.getTime()
+          );
         }
 
-        return {
-          data,
-        };
+        const dataWithoutProperties = data.map((item: any) => {
+          const { __exam__, __has_exam__, ...itemWithoutProperties } = item;
+          return itemWithoutProperties;
+        });
+
+        return dataWithoutProperties;
       })
     );
   }

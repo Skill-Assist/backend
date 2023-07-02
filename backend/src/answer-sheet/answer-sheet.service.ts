@@ -58,10 +58,10 @@ export class AnswerSheetService {
     }
 
     // create answer sheet
-    const answerSheet = await create(
+    const answerSheet = (await create(
       this.queryRunner,
       this.answerSheetRepository
-    );
+    )) as AnswerSheet;
 
     // set relation between answer sheet and user
     await update(
@@ -79,21 +79,25 @@ export class AnswerSheetService {
       "answerSheet"
     );
 
-    // set deadline for answer sheet
+    // set deadline for answer sheet: whichever is earlier of
+    // answerSheet.startDate + exam.durationInHours OR
+    //  invitation.createdAt + exam.submissionInHours
+    const deadlineByDuration =
+      answerSheet.startDate.getTime() + exam.durationInHours * 60 * 60 * 1000;
+
     const invitation = (await exam.invitations).find(
       (invite) => invite.email === user.email
     );
 
-    const deadline = new Date(
-      invitation
-        ? invitation.createdAt.getTime() +
-          exam.submissionDeadlineInHours * 60 * 60 * 1000
-        : exam.submissionDeadlineInHours * 60 * 60 * 1000
-    );
+    const deadlineBySubmission = invitation
+      ? invitation.createdAt.getTime() + exam.submissionInHours * 60 * 60 * 1000
+      : exam.submissionInHours * 60 * 60 * 1000;
 
     await update(
       answerSheet.id,
-      { deadline },
+      {
+        deadline: new Date(Math.min(deadlineByDuration, deadlineBySubmission)),
+      },
       this.answerSheetRepository,
       "answerSheet"
     );
@@ -155,5 +159,14 @@ export class AnswerSheetService {
     await this.update(id, { endDate: new Date() });
 
     return `Answer sheet with id ${id} submitted successfully.`;
+  }
+
+  async getAnswerSheetWithSections(id: number): Promise<AnswerSheet | null> {
+    return await this.answerSheetRepository
+      .createQueryBuilder("answerSheet")
+      .leftJoinAndSelect("answerSheet.exam", "exam")
+      .leftJoinAndSelect("exam.sections", "sections")
+      .where("answerSheet.id = :id", { id })
+      .getOne();
   }
 }
