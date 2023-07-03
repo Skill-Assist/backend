@@ -42,7 +42,8 @@ export class SectionToAnswerSheetController {
   findAll(
     @Query("key") key: string,
     @Query("value") value: unknown,
-    @Query("relations") relations: string
+    @Query("relations") relations: string,
+    @Query("map") map: boolean
   ): Promise<SectionToAnswerSheet[]> {
     return this.sectionToAnswerSheetService.findAll(
       key,
@@ -55,7 +56,8 @@ export class SectionToAnswerSheetController {
   findOne(
     @Query("key") key: string,
     @Query("value") value: unknown,
-    @Query("relations") relations: string
+    @Query("relations") relations: string,
+    @Query("map") map: boolean
   ): Promise<SectionToAnswerSheet | null> {
     return this.sectionToAnswerSheetService.findOne(
       key,

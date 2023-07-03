@@ -1,10 +1,10 @@
 /** nestjs */
-import { InjectRepository } from "@nestjs/typeorm";
 import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
 import { ExamService } from "../exam/exam.service";
@@ -15,7 +15,6 @@ import { Repository } from "typeorm";
 
 /** entities */
 import { User } from "../user/entities/user.entity";
-import { Exam } from "../exam/entities/exam.entity";
 import { AnswerSheet } from "./entities/answer-sheet.entity";
 
 /** utils */
@@ -34,14 +33,14 @@ export class AnswerSheetService {
   /** basic CRUD methods */
   async create(user: User, examId: number): Promise<AnswerSheet> {
     // check if exam exists and is active
-    const exam: Exam | null = await this.examService.findOne("id", examId);
+    const exam = await this.examService.findOne("id", examId);
     if (!exam || !exam.isActive)
       throw new UnauthorizedException("Exam not found or not active");
 
     // check if exam is live
     if (exam.status !== "live")
       throw new UnauthorizedException(
-        "You can't start this exam. It is not published or live."
+        "You can only start an exam if it is live."
       );
 
     // check if user is enrolled in exam
@@ -79,9 +78,7 @@ export class AnswerSheetService {
       "answerSheet"
     );
 
-    // set deadline for answer sheet: whichever is earlier of
-    // answerSheet.startDate + exam.durationInHours OR
-    //  invitation.createdAt + exam.submissionInHours
+    // set deadline for answer sheet
     const deadlineByDuration =
       answerSheet.startDate.getTime() + exam.durationInHours * 60 * 60 * 1000;
 

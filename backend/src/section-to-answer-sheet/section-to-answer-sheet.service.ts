@@ -81,7 +81,8 @@ export class SectionToAnswerSheetService {
   async findAll(
     key?: string,
     value?: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<SectionToAnswerSheet[]> {
     if (key && !value) throw new NotFoundException("Value not provided.");
 
@@ -90,21 +91,24 @@ export class SectionToAnswerSheetService {
       "sectionToAnswerSheet",
       key,
       value,
-      relations
+      relations,
+      map
     )) as SectionToAnswerSheet[];
   }
 
   async findOne(
     key: string,
     value: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<SectionToAnswerSheet | null> {
     return (await findOne(
       this.sectionToAnswerSheetRepository,
       "sectionToAnswerSheet",
       key,
       value,
-      relations
+      relations,
+      map
     )) as SectionToAnswerSheet;
   }
 

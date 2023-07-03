@@ -109,4 +109,9 @@ export class AnswerController {
   ): Promise<string> {
     return this.answerService.closeSection(id, updateAnswerAndCloseSectionDto);
   }
+
+  @Get("test")
+  test(@Query("pathToZip") pathToZip: string): Promise<any> {
+    return this.answerService.test(pathToZip);
+  }
 }

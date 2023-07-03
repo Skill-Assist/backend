@@ -2,7 +2,7 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
-/** dependencies */
+/** external dependencies */
 import {
   OpenAIApi,
   Configuration,
@@ -10,6 +10,9 @@ import {
   CreateChatCompletionResponse,
 } from "openai";
 import { AxiosResponse } from "axios";
+import * as AWS from "aws-sdk";
+import * as unzipper from "unzipper";
+import { Readable } from "stream";
 ////////////////////////////////////////////////////////////////////////////////
 
 /** types */
@@ -29,13 +32,11 @@ export type ChatCompletionResponse = {
 
 @Injectable()
 export class OpenaiService {
-  // set the OpenAI API key
   private _openAiApi: OpenAIApi;
 
-  // inject the ConfigService
   constructor(private readonly configService: ConfigService) {}
 
-  // create the OpenAI API instance
+  /** create the OpenAI API instance */
   get openAiApi(): OpenAIApi {
     if (!this._openAiApi) {
       const configuration = new Configuration({
@@ -47,7 +48,65 @@ export class OpenaiService {
     return this._openAiApi;
   }
 
-  // create the chat completion for the answer
+  /** content manipulation methods */
+  async unzipContent(pathToZip: string): Promise<string | void> {
+    const credentials = new AWS.Credentials({
+      accessKeyId: this.configService.get<string>("AWS_ACCESS_KEY_ID")!,
+      secretAccessKey: this.configService.get<string>("AWS_SECRET_ACCESS_KEY")!,
+    });
+
+    const s3 = new AWS.S3({
+      credentials: credentials,
+      region: "sa-east-1",
+    });
+
+    const getObjectParams = {
+      Bucket: this.configService.get<string>("AWS_S3_BUCKET_NAME")!,
+      Key: pathToZip,
+    };
+
+    try {
+      const response = await s3.getObject(getObjectParams).promise();
+      if (!response.Body) throw new Error("No file found in S3 bucket");
+
+      const fileStream = new Readable();
+      fileStream.push(response.Body);
+      fileStream.push(null);
+
+      const zip = fileStream.pipe(unzipper.Parse({ forceStream: true }));
+
+      for await (const entry of zip) {
+        const fileName: string = entry.path;
+        const type: string = entry.type;
+        const size: number = entry.vars.uncompressedSize;
+        const content: Buffer = await entry.buffer();
+
+        if (
+          (type === "Directory" && size === 0) ||
+          fileName.startsWith("__MACOSX") ||
+          fileName.endsWith(".DS_Store")
+        )
+          continue;
+
+        if (fileName.includes("node_modules"))
+          return "node_modules folder found";
+
+        console.log("fileName: ", fileName);
+        console.log("type: ", type);
+        console.log("size: ", size);
+
+        if (fileName.endsWith(".png")) continue;
+        if (fileName.endsWith(".ico")) continue;
+
+        console.log(content.toString("utf8"));
+      }
+    } catch (error) {
+      console.error("Error retrieving file from S3:", error);
+      throw error;
+    }
+  }
+
+  /** prompt engineering methods */
   async createChatCompletion(
     questionStatement: string,
     questionGradingRubric: GradingRubric,

@@ -232,4 +232,8 @@ export class AnswerService {
 
     return `Section ${_id} closed successfully at ${new Date()}.`;
   }
+
+  async test(body: string) {
+    return await this.openaiService.unzipContent(body);
+  }
 }

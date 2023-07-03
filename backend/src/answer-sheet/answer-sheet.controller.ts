@@ -4,7 +4,6 @@ import {
   Req,
   Post,
   Patch,
-  Param,
   Query,
   Controller,
   UseInterceptors,
@@ -71,9 +70,9 @@ export class AnswerSheetController {
   }
 
   /** custom endpoints */
-  @Patch("submit/:id")
+  @Patch("submit")
   @Roles(UserRole.CANDIDATE)
-  submit(@Param("id") id: number): Promise<string> {
+  submit(@Query("id") id: number): Promise<string> {
     return this.answerSheetService.submit(id);
   }
 
