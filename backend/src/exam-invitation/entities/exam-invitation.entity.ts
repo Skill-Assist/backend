@@ -15,7 +15,7 @@ export class ExamInvitation extends SQLBaseEntity {
   @Column({ default: 24 })
   expirationInHours: number;
 
-  @Column({ default: false })
+  @Column({ nullable: true })
   accepted: boolean;
 
   @Exclude()

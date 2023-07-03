@@ -95,7 +95,7 @@ export class ExamService {
   async update(id: number, updateExamDto: UpdateExamDto): Promise<Exam> {
     await update(
       id,
-      <Record<string, unknown>>updateExamDto,
+      updateExamDto as Record<string, unknown>,
       this.examRepository,
       "exam"
     );
@@ -103,33 +103,6 @@ export class ExamService {
   }
 
   /** custom methods */
-  async switchStatus(id: number, status: string): Promise<Exam> {
-    // try to get exam by id
-    const exam = await this.findOne("id", id);
-    if (!exam) throw new NotFoundException("Exam not found.");
-
-    // status should be: draft, published, live or archived
-    if (!["draft", "published", "live", "archived"].includes(status))
-      throw new UnauthorizedException("Invalid status.");
-
-    // if status is published, check if exam is draft
-    if (status === "published" && exam.status !== "draft")
-      throw new UnauthorizedException(
-        "Exam is not in draft status. Process was aborted."
-      );
-
-    // switch status of exam
-    await this.examRepository
-      .createQueryBuilder()
-      .update(Exam)
-      .set({ status })
-      .where("id = :id", { id })
-      .execute();
-
-    // return updated exam
-    return <Exam>await this.findOne("id", id);
-  }
-
   async invite(id: number, inviteDto: InviteDto): Promise<string> {
     // get user service and exam invitation service from moduleRef
     this.userService = this.moduleRef.get(UserService, { strict: false });
@@ -148,13 +121,6 @@ export class ExamService {
       );
 
     for (const email of inviteDto.email) {
-      // validate email addresses using regex
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email))
-        throw new UnauthorizedException(
-          "Invalid email address. Process was aborted."
-        );
-
       // check if email addresses are already in exam
       if (
         await this.examRepository
@@ -184,6 +150,33 @@ export class ExamService {
 
     // return message to user with number of invitations sent
     return `Invitations sent to ${inviteDto.email.length} email addresses.`;
+  }
+
+  async switchStatus(id: number, status: string): Promise<Exam> {
+    // try to get exam by id
+    const exam = await this.findOne("id", id);
+    if (!exam) throw new NotFoundException("Exam not found.");
+
+    // status should be: draft, published, live or archived
+    if (!["draft", "published", "live", "archived"].includes(status))
+      throw new UnauthorizedException("Invalid status.");
+
+    // if status is published, check if exam is draft
+    if (status === "published" && exam.status !== "draft")
+      throw new UnauthorizedException(
+        "Exam is not in draft status. Process was aborted."
+      );
+
+    // switch status of exam
+    await this.examRepository
+      .createQueryBuilder()
+      .update(Exam)
+      .set({ status })
+      .where("id = :id", { id })
+      .execute();
+
+    // return updated exam
+    return <Exam>await this.findOne("id", id);
   }
 
   async enrollUser(exam: Exam, user: User): Promise<Exam> {

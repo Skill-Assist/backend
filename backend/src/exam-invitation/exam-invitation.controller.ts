@@ -1,6 +1,7 @@
 /** nestjs */
 import {
   Get,
+  Req,
   Query,
   Controller,
   UseInterceptors,
@@ -16,6 +17,7 @@ import { ExamInvitation } from "./entities/exam-invitation.entity";
 
 /** helpers */
 import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
+import { PassportRequest } from "../auth/auth.controller";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("examInvitation")
@@ -38,5 +40,13 @@ export class ExamInvitationController {
       relations ? relations.split(",") : undefined,
       map
     );
+  }
+
+  @Get("resendInvitation")
+  async resendInvitation(
+    @Req() req: PassportRequest,
+    @Query("id") id: number
+  ): Promise<ExamInvitation> {
+    return this.examInvitationService.resendInvitation(id, req.user!.id);
   }
 }

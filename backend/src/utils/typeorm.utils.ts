@@ -41,7 +41,7 @@ type HandlerEntity =
 
 type HandlerDto =
   | CreateUserDto
-  | (CreateUserDto & { ownedExams: [] } & { ownedQuestions: [] })
+  | (CreateUserDto & { ownedQuestions: [] })
   | CreateExamDto
   | (CreateSectionDto & { questionId: [] })
   | CreateExamInvitationDto

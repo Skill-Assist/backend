@@ -45,6 +45,15 @@ export class UserController {
     return this.userService.acceptInvitation(token, req.user!);
   }
 
+  @Get("rejectInvitation")
+  @Roles(UserRole.CANDIDATE)
+  rejectInvitation(
+    @Req() req: PassportRequest,
+    @Query("invitationId") token: number
+  ): Promise<User> {
+    return this.userService.rejectInvitation(token, req.user!);
+  }
+
   @Patch("updateProfile")
   updateProfile(
     @Req() req: PassportRequest,

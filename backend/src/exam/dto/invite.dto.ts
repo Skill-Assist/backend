@@ -1,12 +1,11 @@
-import { IsArray, IsNumber, Max, Min } from "class-validator";
+import { IsArray, IsEmail, IsNumber } from "class-validator";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class InviteDto {
   @IsArray()
+  @IsEmail({}, { each: true })
   email: string[];
 
-  @Min(1)
-  @Max(24 * 7)
   @IsNumber()
   expirationInHours: number;
 }

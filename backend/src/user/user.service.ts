@@ -128,6 +128,19 @@ export class UserService {
     );
   }
 
+  async rejectInvitation(invitationId: number, user: User): Promise<User> {
+    // reject invitation
+    await this.examInvitationService.rejectInvitation(invitationId, user.id);
+
+    return <User>(
+      await this.findOne("id", user.id, [
+        "invitations",
+        "enrolledExams",
+        "answerSheets",
+      ])
+    );
+  }
+
   async updateProfile(id: number, updateUserDto: UpdateUserDto): Promise<User> {
     await update(
       id,

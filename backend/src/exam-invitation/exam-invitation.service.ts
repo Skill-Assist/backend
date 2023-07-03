@@ -158,6 +158,64 @@ export class ExamInvitationService {
     return <ExamInvitation>await this.findOne("id", invitation.id);
   }
 
+  async rejectInvitation(
+    invitationId: number,
+    userId: number
+  ): Promise<ExamInvitation> {
+    // check if invitation exists
+    const invitation = await this.findOne("id", invitationId);
+    if (!invitation)
+      throw new UnauthorizedException("Exam invitation does not exist.");
+
+    // check if user owns invitation
+    if ((await invitation.user).id !== userId)
+      throw new UnauthorizedException("User does not own invitation.");
+
+    // change invitation status to denied
+    await update(
+      invitation.id,
+      { accepted: false },
+      this.examInvitationRepository,
+      "examInvitation"
+    );
+
+    // return updated invitation
+    return <ExamInvitation>await this.findOne("id", invitation.id);
+  }
+
+  async resendInvitation(
+    invitationId: number,
+    userId: number
+  ): Promise<ExamInvitation> {
+    // check if invitation exists
+    const invitation = await this.findOne("id", invitationId);
+    if (!invitation)
+      throw new UnauthorizedException("Exam invitation does not exist.");
+
+    // check if user owns invitation
+    if ((await invitation.user).id !== userId)
+      throw new UnauthorizedException("User does not own invitation.");
+
+    // check if invitation is not expired
+    const expiresAt =
+      invitation.createdAt.getTime() +
+      invitation.expirationInHours * 60 * 60 * 1000;
+
+    if (expiresAt < Date.now())
+      throw new UnauthorizedException("Exam invitation has expired.");
+
+    // change invitation createdAt to current time
+    await update(
+      invitation.id,
+      { createdAt: new Date() },
+      this.examInvitationRepository,
+      "examInvitation"
+    );
+
+    // return updated invitation
+    return <ExamInvitation>await this.findOne("id", invitation.id);
+  }
+
   async findPendingInvitations(userEmail: string): Promise<ExamInvitation[]> {
     return (await this.examInvitationRepository
       .createQueryBuilder("examInvitation")
