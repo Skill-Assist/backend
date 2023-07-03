@@ -1,4 +1,4 @@
-import { Exclude, Transform } from "class-transformer";
+import { Exclude } from "class-transformer";
 import { Index, Column, Entity, OneToMany, ManyToMany } from "typeorm";
 
 import { Exam } from "../../exam/entities/exam.entity";
@@ -15,7 +15,6 @@ export enum UserRole {
 
 @Entity()
 export class User extends SQLBaseEntity {
-  @Transform(({ value }) => value.split(" ")[0], { toPlainOnly: true })
   @Column()
   name: string;
 
@@ -42,7 +41,7 @@ export class User extends SQLBaseEntity {
   @Column({ type: "simple-array" })
   roles: string[];
 
-  @Column({ type: "simple-array", nullable: true })
+  @Column({ type: "simple-array" })
   ownedQuestions: string[];
 
   @Exclude()

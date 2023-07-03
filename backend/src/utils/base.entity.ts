@@ -17,7 +17,6 @@ export abstract class SQLBaseEntity extends TypeOrmBaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Exclude()
   @CreateDateColumn()
   createdAt: Date;
 

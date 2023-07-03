@@ -38,15 +38,10 @@ export class UserService {
     }
 
     // create user
-    const user = <User>(
-      await create(
-        this.queryRunner,
-        this.repository,
-        createUserDto.roles.includes("recruiter")
-          ? { ...createUserDto, ownedExams: [], ownedQuestions: [] }
-          : createUserDto
-      )
-    );
+    const user = <User>await create(this.queryRunner, this.repository, {
+      ...createUserDto,
+      ownedQuestions: [],
+    });
 
     // if user is candidate, check for pending invitations
     if (user.roles.includes("candidate")) {
@@ -65,16 +60,14 @@ export class UserService {
   async findOne(
     key: string,
     value: unknown,
-    relations?: string[],
-    map?: boolean
+    relations?: string[]
   ): Promise<User | null> {
     return (await findOne(
       this.repository,
       "user",
       key,
       value,
-      relations,
-      map
+      relations
     )) as User;
   }
 

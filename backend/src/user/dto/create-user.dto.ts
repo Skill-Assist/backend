@@ -1,17 +1,17 @@
-import { UserRole } from "../entities/user.entity";
 import {
+  IsUrl,
+  IsEnum,
   IsEmail,
   Matches,
-  IsEnum,
-  IsOptional,
   IsHexColor,
-  IsUrl,
+  IsOptional,
   IsMobilePhone,
 } from "class-validator";
+import { UserRole } from "../entities/user.entity";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateUserDto {
-  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ\s]{3,20}$/, {
+  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s]{3,20}$/, {
     message: "Name must be between 3 and 20 characters long",
   })
   name: string;

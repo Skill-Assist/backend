@@ -15,11 +15,13 @@ import { ApiTags } from "@nestjs/swagger";
 import { UserService } from "./user.service";
 
 /** entities & dtos */
-import { User } from "./entities/user.entity";
+import { User, UserRole } from "./entities/user.entity";
 import { UpdateUserDto } from "./dto/update-user.dto";
 
 /** utils */
+import { Roles } from "./decorators/roles.decorator";
 import { PassportRequest } from "../auth/auth.controller";
+// import { InvitationCreatedAtInterceptor } from "./interceptors/invitation-createdAt-interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("user")
@@ -29,11 +31,13 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get("profile")
+  // @UseInterceptors(InvitationCreatedAtInterceptor)
   profile(@Req() req: PassportRequest): Promise<User> {
     return this.userService.profile(req.user!.id);
   }
 
   @Get("acceptInvitation")
+  @Roles(UserRole.CANDIDATE)
   acceptInvitation(
     @Req() req: PassportRequest,
     @Query("invitationId") token: number
