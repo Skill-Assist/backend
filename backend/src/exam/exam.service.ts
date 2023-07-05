@@ -41,7 +41,8 @@ export class ExamService {
   /** basic CRUD methods */
   async create(userId: number, createExamDto: CreateExamDto): Promise<Exam> {
     // get user service from moduleRef
-    this.userService = this.moduleRef.get(UserService, { strict: false });
+    this.userService =
+      this.userService ?? this.moduleRef.get(UserService, { strict: false });
 
     // create exam
     const exam = await create(
@@ -93,8 +94,11 @@ export class ExamService {
     // check if exam exists
     if (!exam) throw new NotFoundException("Exam not found.");
 
-    // check if exam is owned by user
-    if (userId !== (await exam.createdBy).id)
+    // check if exam is owned by user or user is enrolled in exam
+    if (
+      userId !== (await exam.createdBy).id &&
+      !(await exam.enrolledUsers).some((candidate) => candidate.id === userId)
+    )
       throw new UnauthorizedException(
         "You are not authorized to access this exam."
       );
@@ -168,10 +172,13 @@ export class ExamService {
     inviteDto: InviteDto
   ): Promise<string> {
     // get user service and exam invitation service from moduleRef
-    this.userService = this.moduleRef.get(UserService, { strict: false });
-    this.examInvitationService = this.moduleRef.get(ExamInvitationService, {
-      strict: false,
-    });
+    this.userService =
+      this.userService ?? this.moduleRef.get(UserService, { strict: false });
+    this.examInvitationService =
+      this.examInvitationService ??
+      this.moduleRef.get(ExamInvitationService, {
+        strict: false,
+      });
 
     // try to get exam by id
     const exam = await this.findOne(userId, "id", examId);
@@ -204,7 +211,11 @@ export class ExamService {
 
       // create exam invitation related to exam and user, if any
       await this.examInvitationService.create(
-        { email, expirationInHours: inviteDto.expirationInHours },
+        userId,
+        {
+          email,
+          expirationInHours: inviteDto.expirationInHours,
+        },
         exam!,
         user
       );

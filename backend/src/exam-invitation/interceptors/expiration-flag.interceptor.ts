@@ -35,7 +35,14 @@ export class ExpirationFlagInterceptor<T>
         }
 
         const dataWithoutProperties = data.map((item: any) => {
-          const { __exam__, __has_exam__, ...itemWithoutProperties } = item;
+          const {
+            __exam__,
+            __has_exam__,
+            updatedAt,
+            deletedAt,
+            version,
+            ...itemWithoutProperties
+          } = item;
           return itemWithoutProperties;
         });
 

@@ -96,7 +96,10 @@ export class SectionService {
 
     // check if user is authorized to access section
     const exam = await section.exam;
-    if ((await exam.createdBy).id !== userId)
+    if (
+      (await exam.createdBy).id !== userId &&
+      !(await exam.enrolledUsers).some((candidate) => candidate.id === userId)
+    )
       throw new UnauthorizedException(
         "You are not authorized to access this section."
       );

@@ -9,5 +9,5 @@ export class CreateExamInvitationDto {
   @Min(1)
   @Max(24 * 7)
   @IsNumber()
-  expirationInHours: number;
+  expirationInHours?: number;
 }

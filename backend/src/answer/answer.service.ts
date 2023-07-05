@@ -51,9 +51,11 @@ export class AnswerService {
     createAnswerDto: CreateAnswerDto
   ): Promise<Answer> {
     // get sectionToAnswerSheetService from moduleRef
-    this.sasService = this.moduleRef.get(SectionToAnswerSheetService, {
-      strict: false,
-    });
+    this.sasService =
+      this.sasService ??
+      this.moduleRef.get(SectionToAnswerSheetService, {
+        strict: false,
+      });
 
     // check if sectionToAnswerSheet exists
     const sectionToAnswerSheet = await this.sasService.findOne("id", sasId);
@@ -180,9 +182,11 @@ export class AnswerService {
     updateAnswerAndCloseSectionDto: UpdateAnswerAndCloseSectionDto
   ): Promise<string> {
     // get sectionToAnswerSheetService from moduleRef
-    this.sasService = this.moduleRef.get(SectionToAnswerSheetService, {
-      strict: false,
-    });
+    this.sasService =
+      this.sasService ??
+      this.moduleRef.get(SectionToAnswerSheetService, {
+        strict: false,
+      });
 
     // update answer with provided data
     const answer: Answer = await this.update(answerId, {

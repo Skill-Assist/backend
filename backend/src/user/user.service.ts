@@ -50,7 +50,9 @@ export class UserService {
 
       //  set relation between invitation and user
       for (const invitation of invitations) {
-        await this.examInvitationService.update(invitation.id, { user });
+        await this.examInvitationService.update(user.id, invitation.id, {
+          user,
+        });
       }
     }
 

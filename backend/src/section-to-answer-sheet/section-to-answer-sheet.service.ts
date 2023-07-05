@@ -135,9 +135,11 @@ export class SectionToAnswerSheetService {
     answerSheetId: number
   ): Promise<SectionToAnswerSheet> {
     // get answer service from moduleRef
-    this.answerService = this.moduleRef.get(AnswerService, {
-      strict: false,
-    });
+    this.answerService =
+      this.answerService ??
+      this.moduleRef.get(AnswerService, {
+        strict: false,
+      });
 
     // create a section to answer sheet
     const sectionToAnswerSheet = await this.create(

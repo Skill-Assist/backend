@@ -16,8 +16,10 @@ import { ExamInvitationService } from "./exam-invitation.service";
 import { ExamInvitation } from "./entities/exam-invitation.entity";
 
 /** helpers */
-import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
 import { PassportRequest } from "../auth/auth.controller";
+import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
+import { Roles } from "../user/decorators/roles.decorator";
+import { UserRole } from "../user/entities/user.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("examInvitation")
@@ -28,25 +30,25 @@ export class ExamInvitationController {
 
   /** basic CRUD endpoints */
   @Get()
+  @Roles(UserRole.ADMIN)
   findAll(
     @Query("key") key: string,
     @Query("value") value: unknown,
-    @Query("relations") relations: string,
-    @Query("map") map: boolean
+    @Query("relations") relations: string
   ): Promise<ExamInvitation[]> {
     return this.examInvitationService.findAll(
       key,
       value,
-      relations ? relations.split(",") : undefined,
-      map
+      relations ? relations.split(",") : undefined
     );
   }
 
   @Get("resendInvitation")
+  @Roles(UserRole.RECRUITER)
   async resendInvitation(
     @Req() req: PassportRequest,
     @Query("id") id: number
-  ): Promise<ExamInvitation> {
+  ): Promise<ExamInvitation[]> {
     return this.examInvitationService.resendInvitation(id, req.user!.id);
   }
 }
