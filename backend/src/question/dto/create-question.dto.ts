@@ -1,9 +1,11 @@
 import {
   Min,
   Max,
+  Length,
   IsEnum,
   Matches,
   IsNumber,
+  IsString,
   IsObject,
   IsBoolean,
   IsOptional,
@@ -17,8 +19,9 @@ export class CreateQuestionDto {
   })
   type: string;
 
-  @Matches(/^[\da-zA-Z\s]{10,500}$/, {
-    message: "Question statement must be between 10 and 500 characters long.",
+  @IsString()
+  @Length(10, 500, {
+    message: "Statement must be between 10 and 500 characters long",
   })
   statement: string;
 

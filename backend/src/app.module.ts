@@ -40,13 +40,15 @@ import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
+        const user = configService.get<string>("MYSQL_USER");
         const pass = configService.get<string>("MYSQL_ROOT_PASS");
+        const host = configService.get<string>("MYSQL_HOST");
         const db = configService.get<string>("MYSQL_DATABASE");
         return {
           type: "mysql",
-          host: "mysql",
+          host: host,
           port: 3306,
-          username: "root",
+          username: user,
           password: pass,
           database: db,
           autoLoadEntities: true,
@@ -61,8 +63,10 @@ import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to
       useFactory: async (configService: ConfigService) => {
         const user = configService.get<string>("MONGO_USER");
         const pass = configService.get<string>("MONGO_USER_PASS");
+        const host = configService.get<string>("MONGO_HOST");
+        const db = configService.get<string>("MONGO_DATABASE");
         return {
-          uri: `mongodb://${user}:${pass}@mongodb:27017/skill-assist?authSource=admin`,
+          uri: `mongodb://${user}:${pass}@${host}:27017/${db}?authSource=admin`,
         };
       },
     }),

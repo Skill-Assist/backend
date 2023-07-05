@@ -1,7 +1,7 @@
 # Node
-dist
-node_modules
-coverage
+dist/
+node_modules/
+coverage/
 
 # Docker
 Dockerfile
@@ -16,5 +16,7 @@ Dockerfile
 # Database
 db.sqlite
 
-# Proctored exams folder
+# utils folders
 proctoring/
+data/
+test/

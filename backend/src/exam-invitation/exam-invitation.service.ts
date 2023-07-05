@@ -219,7 +219,10 @@ export class ExamInvitationService {
   async findPendingInvitations(userEmail: string): Promise<ExamInvitation[]> {
     return (await this.examInvitationRepository
       .createQueryBuilder("examInvitation")
-      .where("examInvitation.accepted = :accepted", { accepted: false })
+      .where(
+        "examInvitation.accepted = :accepted OR examInvitation.accepted IS NULL",
+        { accepted: false }
+      )
       .andWhere("examInvitation.email = :email", { email: userEmail })
       .getMany()) as ExamInvitation[];
   }

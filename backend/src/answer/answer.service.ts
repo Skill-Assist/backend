@@ -27,7 +27,6 @@ import { UpdateAnswerAndCloseSectionDto } from "./dto/update-answer-and-close-se
 
 /** OpenAI API */
 import { OpenaiService } from "../openai/openai.service";
-import { ChatCompletionResponse } from "../openai/openai.service";
 
 /** utils */
 import { create, findOne, findAll, update } from "../utils/typeorm.utils";
@@ -146,7 +145,7 @@ export class AnswerService {
     if (!answer) throw new NotFoundException("Answer not found.");
 
     // check if sectionToAnswerSheet is already closed
-    if (!(await answer.sectionToAnswerSheet).endDate)
+    if ((await answer.sectionToAnswerSheet).endDate)
       throw new BadRequestException("Section is already closed.");
 
     // update answer
@@ -163,22 +162,6 @@ export class AnswerService {
       answers.push(await this.create(sasId, answer));
     }
     return answers;
-  }
-
-  async getAiFeedback(id: number): Promise<ChatCompletionResponse> {
-    const answer: Answer | null = await this.findOne("id", id);
-    if (!answer) throw new NotFoundException("Answer not found.");
-
-    const question: Question | null = await this.questionService.findOne(
-      new ObjectId(answer.questionRef)
-    );
-    if (!question) throw new NotFoundException("Question not found.");
-
-    return await this.openaiService.createChatCompletion(
-      question.statement,
-      question.gradingRubric,
-      answer.content
-    );
   }
 
   async getQuestion(answerId: number): Promise<Partial<Question>> {
@@ -200,7 +183,7 @@ export class AnswerService {
     };
   }
 
-  async closeSection(
+  async submitAndCloseSection(
     answerId: number,
     updateAnswerAndCloseSectionDto: UpdateAnswerAndCloseSectionDto
   ): Promise<string> {
@@ -233,7 +216,58 @@ export class AnswerService {
     return `Section ${_id} closed successfully at ${new Date()}.`;
   }
 
-  async test(body: string) {
-    return await this.openaiService.unzipContent(body);
+  async generateEval(id: number): Promise<Answer> {
+    const answer: Answer | null = await this.findOne("id", id);
+    if (!answer) throw new NotFoundException("Answer not found.");
+
+    const question: Question | null = await this.questionService.findOne(
+      new ObjectId(answer.questionRef)
+    );
+    if (!question) throw new NotFoundException("Question not found.");
+
+    let maxScore: number = 0;
+    for (const rubric of Object.values(question.gradingRubric)) {
+      maxScore += rubric["pontos totais"];
+    }
+
+    const generatedEval = await this.openaiService.createChatCompletion(
+      question.statement,
+      question.gradingRubric,
+      question.type === "challenge"
+        ? JSON.stringify(
+            (
+              await this.openaiService.fetchUnzippedDocumentary(answer.content)
+            ).documentaryContent
+          )
+        : answer.content,
+      question.type === "challenge" ? "gpt-3.5-turbo-16k" : "gpt-3.5-turbo"
+    );
+
+    let aiScore: number = 0;
+    let aiFeedback: string = "";
+    for (const key in generatedEval) {
+      const content = generatedEval[key].choices[0].message?.content;
+
+      const scoreRegex: RegExp = /Nota: (\d+)/;
+      const scoreMatch: RegExpMatchArray | null = content!.match(scoreRegex);
+      if (scoreMatch) aiScore += parseInt(scoreMatch[1]);
+
+      const feedbackRegex: RegExp = /Feedback: (.+)/;
+      const feedbackMatch: RegExpMatchArray | null =
+        content!.match(feedbackRegex);
+      if (feedbackMatch) aiFeedback += `${key}: ${feedbackMatch[1]}\n\n`;
+    }
+
+    // update answer with aiScore
+    await this.answerRepository.update(
+      { id },
+      { aiScore: (aiScore / maxScore) * 10 }
+    );
+
+    // update answer with aiFeedback
+    await this.answerRepository.update({ id }, { aiFeedback });
+
+    // return updated answer
+    return (await this.findOne("id", id))!;
   }
 }

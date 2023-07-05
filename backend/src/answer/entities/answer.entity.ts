@@ -17,7 +17,7 @@ export class Answer extends SQLBaseEntity {
   @Column({ nullable: true })
   aiScore: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: "longtext" })
   aiFeedback: string;
 
   @Column({ nullable: true })

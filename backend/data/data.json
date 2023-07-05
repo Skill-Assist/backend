@@ -118,6 +118,67 @@
       ]
     },
     {
+      "name": "Desenvolvimento Web",
+      "description": "Avalia a capacidade de desenvolver uma aplicação web funcional",
+      "durationInHours": 1,
+      "questions": [
+        {
+          "type": "challenge",
+          "statement": "Desenvolva uma aplicação web com backend e front integrados que permita ao usuário criar e gerenciar uma lista de objetivos (goals). Tanto o código quanto a interface com o usuário devem ser desenvolvidas em inglês e usando as seguintes tecnologias: nodeJS como runtime e docker para containerização e deploy do aplicativo.",
+          "gradingRubric": {
+            "completeness": {
+              "total_points": 40,
+              "implementação completa e funcional de todas as funcionalidades requeridas": 40,
+              "implementação parcial das funcionalidades requeridas": {
+                "min": 20,
+                "max": 39
+              },
+              "implementação incompleta ou ausente das funcionalidades requeridas": {
+                "min": 0,
+                "max": 19
+              }
+            },
+            "code_quality": {
+              "total_points": 30,
+              "código limpo, bem estruturado e seguindo as melhores práticas de desenvolvimento": 30,
+              "código com algumas falhas de estrutura ou não seguindo todas as melhores práticas": {
+                "min": 15,
+                "max": 29
+              },
+              "código desorganizado, difícil de entender ou com muitas falhas de implementação": {
+                "min": 0,
+                "max": 14
+              }
+            },
+            "user_interface": {
+              "total_points": 20,
+              "interface amigável e intuitiva, com um design agradável e responsivo": 20,
+              "interface utilizável, mas com algumas falhas de usabilidade ou design": {
+                "min": 10,
+                "max": 19
+              },
+              "interface confusa, difícil de usar ou com problemas graves de design": {
+                "min": 0,
+                "max": 9
+              }
+            },
+            "deployment": {
+              "total_points": 10,
+              "implantação correta e funcional da aplicação usando Docker": 10,
+              "implantação com algumas falhas ou problemas": {
+                "min": 5,
+                "max": 9
+              },
+              "implantação incorreta ou não utilização do Docker": {
+                "min": 0,
+                "max": 4
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Banco de Dados",
       "description": "Avalia a capacidade de estruturar e manipular dados",
       "durationInHours": 1,

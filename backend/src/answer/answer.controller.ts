@@ -90,9 +90,9 @@ export class AnswerController {
     );
   }
 
-  @Get("aiFeedback/:id")
-  getAiFeedback(@Param("id") id: number): Promise<any> {
-    return this.answerService.getAiFeedback(id);
+  @Get("generateEval/:id")
+  generateResponse(@Param("id") id: number): Promise<Answer> {
+    return this.answerService.generateEval(id);
   }
 
   @Get("question/:id")
@@ -107,11 +107,9 @@ export class AnswerController {
     @Param("id") id: number,
     @Body() updateAnswerAndCloseSectionDto: UpdateAnswerAndCloseSectionDto
   ): Promise<string> {
-    return this.answerService.closeSection(id, updateAnswerAndCloseSectionDto);
-  }
-
-  @Get("test")
-  test(@Query("pathToZip") pathToZip: string): Promise<any> {
-    return this.answerService.test(pathToZip);
+    return this.answerService.submitAndCloseSection(
+      id,
+      updateAnswerAndCloseSectionDto
+    );
   }
 }

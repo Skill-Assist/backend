@@ -9,10 +9,11 @@ import {
   ChatCompletionRequestMessage,
   CreateChatCompletionResponse,
 } from "openai";
-import { AxiosResponse } from "axios";
 import * as AWS from "aws-sdk";
-import * as unzipper from "unzipper";
-import { Readable } from "stream";
+import { AxiosResponse } from "axios";
+
+/** utils */
+import { fetchUnzippedDocumentaryFromS3 } from "../utils/aws.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 /** types */
@@ -49,7 +50,7 @@ export class OpenaiService {
   }
 
   /** content manipulation methods */
-  async unzipContent(pathToZip: string): Promise<string | void> {
+  async fetchUnzippedDocumentary(pathToZip: string): Promise<any> {
     const credentials = new AWS.Credentials({
       accessKeyId: this.configService.get<string>("AWS_ACCESS_KEY_ID")!,
       secretAccessKey: this.configService.get<string>("AWS_SECRET_ACCESS_KEY")!,
@@ -65,45 +66,7 @@ export class OpenaiService {
       Key: pathToZip,
     };
 
-    try {
-      const response = await s3.getObject(getObjectParams).promise();
-      if (!response.Body) throw new Error("No file found in S3 bucket");
-
-      const fileStream = new Readable();
-      fileStream.push(response.Body);
-      fileStream.push(null);
-
-      const zip = fileStream.pipe(unzipper.Parse({ forceStream: true }));
-
-      for await (const entry of zip) {
-        const fileName: string = entry.path;
-        const type: string = entry.type;
-        const size: number = entry.vars.uncompressedSize;
-        const content: Buffer = await entry.buffer();
-
-        if (
-          (type === "Directory" && size === 0) ||
-          fileName.startsWith("__MACOSX") ||
-          fileName.endsWith(".DS_Store")
-        )
-          continue;
-
-        if (fileName.includes("node_modules"))
-          return "node_modules folder found";
-
-        console.log("fileName: ", fileName);
-        console.log("type: ", type);
-        console.log("size: ", size);
-
-        if (fileName.endsWith(".png")) continue;
-        if (fileName.endsWith(".ico")) continue;
-
-        console.log(content.toString("utf8"));
-      }
-    } catch (error) {
-      console.error("Error retrieving file from S3:", error);
-      throw error;
-    }
+    return await fetchUnzippedDocumentaryFromS3(s3, getObjectParams);
   }
 
   /** prompt engineering methods */
@@ -140,39 +103,41 @@ export class OpenaiService {
     return finalResponse;
   }
 
-  setPersona(role: string = "professor"): string {
+  setPersona(role: string = "gerente de RH"): string {
     let institution: string;
     let user: string;
 
     switch (role) {
       case "professor":
-        institution = "prestigious university";
-        user = "student";
+        institution = "universidade de prestígio";
+        user = "estudante";
         break;
-      case "HR manager":
-        institution = "large company";
-        user = "candidate";
+      case "gerente de RH":
+        institution = "companhia de grande porte";
+        user = "candidato";
         break;
       default:
-        institution = "prestigious university";
-        user = "student";
+        institution = "universidade de prestígio";
+        user = "estudante";
     }
 
-    return `You are an experienced and respected ${role} at a ${institution} who is grading a ${user}'s answer to a question. You are known for your professionalism, attention to detail, and high standards. You are meticulous and thorough, leaving no stone unturned when it comes to test evaluation. Your approach to correcting tests is methodical and systematic. You value clarity, coherence, and logical reasoning`;
+    return `Você é um ${role} respeitado e experiente em uma ${institution} e no momento você está corrigindo a resposta de um ${user} para uma questão de teste. Você é conhecido por seu profissionalismo, atenção aos detalhes e alto padrão de qualidade de suas correções e avaliações. Você é meticuloso e atento aos detalhes, não deixando nada sem ser analisado quando se diz respeito à correção de testes. Para corrigir testes você é metódico e sistemático. Você dá valor à clareza, coerência e pensamento lógico`;
   }
 
   setGradingCriteria(criteria: any): string {
     let gradingCriteria: string = "";
 
     for (let i = 1; i < criteria.length; i++) {
-      gradingCriteria += `If it ${criteria[i][0]}, you should grade it ${
+      gradingCriteria += `Se a resposta possui ${
+        criteria[i][0]
+      }, você deveria atribuir uma nota ${
         typeof criteria[i][1] === "number"
-          ? `${criteria[i][1]}. `
-          : `with a specific number between ${criteria[i][1].min} and ${criteria[i][1].max}, considering the level of detail of the answer. You should never return without a specific grade, even if it is a 0. `
+          ? `de ${criteria[i][1]}. `
+          : `com um número específico entre ${criteria[i][1].min} e ${criteria[i][1].max}. `
       }`;
     }
 
-    console.log(gradingCriteria);
+    gradingCriteria += `Você deve sempre considerar o nível de detalhamento da resposta e nunca deve retornar a correção sem uma nota específica, ainda que seja 0. Além disso, notas fracionadas são preferíveis, por exemplo, 8.4 é melhor do que 8.0, 7.2 é melhor do que 7.0, e assim por diante. `;
 
     return gradingCriteria;
   }
@@ -185,45 +150,51 @@ export class OpenaiService {
     return [
       {
         role: "system",
-        content: `${this.setPersona()}. This is the question currently being graded: ${questionStatement}. Given an answer, you will grade it in respect to its ${key}. ${this.setGradingCriteria(
+        content: `${this.setPersona()}. Essa é a questão a ser corrigida no momento: ${questionStatement}. Considerando a resposta, você irá elaborar a correção com base em sua ${key}. ${this.setGradingCriteria(
           criteria
-        )}. Finally, you should return some textual feedback explaining the grade.`,
+        )}. Finalmente, você deve retornar um feedback textual explicando a nota atribuída à resposta.`,
       },
       {
         role: "user",
-        content: `<<Consider that here should be a very complete answer, deserving the maximum score possible, which is ${criteria[0][1]}>>`,
+        content: `<<Considere que aqui foi preenchida uma resposta totalmente completa, para a qual deveria ser atribuída a maior nota possível, que é ${criteria[0][1]}>>`,
       },
       {
         role: "assistant",
-        content: `Grade: ${criteria[0][1]} | Feedback: <<some text with feedback about the answer>>`,
+        content: `Nota: ${criteria[0][1]} | Feedback: <<Aqui deve constar um feedback textual sobre a resposta>>`,
       },
       {
         role: "user",
-        content: `<<Consider that here should be a somewhat complete answer, deserving a score between ${criteria[1][1].min} and ${criteria[1][1].max}>>`,
+        content: `<<Considere que aqui foi preenchida uma resposta relativamente completa , para a qual deveria ser atribuída uma nota entre ${criteria[1][1].min} e ${criteria[1][1].max}>>`,
       },
       {
         role: "assistant",
-        content: `Grade: ${Math.round(
-          (criteria[1][1].min + criteria[1][1].max) / 2
-        )} | Feedback: <<some text with feedback about the answer>>`,
+        content: `Nota: ${(
+          (criteria[1][1].min + criteria[1][1].max) /
+          2
+        ).toFixed(
+          1
+        )} | Feedback: <<Aqui deve constar um feedback textual sobre a resposta>>`,
       },
       {
         role: "user",
-        content: `<<Consider that here should be a very incomplete answer, deserving a score between ${criteria[2][1].min} and ${criteria[2][1].max}>>`,
+        content: `<<Considere que aqui foi preenchida uma resposta relativamente incompleta , para a qual deveria ser atribuída uma nota entre ${criteria[2][1].min} e ${criteria[2][1].max}>>`,
       },
       {
         role: "assistant",
-        content: `Grade: ${Math.round(
-          (criteria[2][1].min + criteria[2][1].max) / 2
-        )} | Feedback: <<some text with feedback about the answer>>`,
+        content: `Nota: ${(
+          (criteria[2][1].min + criteria[2][1].max) /
+          2
+        ).toFixed(
+          1
+        )} | Feedback: <<Aqui deve constar um feedback textual sobre a resposta>>`,
       },
       {
         role: "user",
-        content: `<<Consider that here should be an incomplete answer, deserving a score of 0>>`,
+        content: `<<Considere que aqui foi preenchida uma resposta totalmente incompleta, para a qual deveria ser atribuída a menor nota possível, que é 0>>`,
       },
       {
         role: "assistant",
-        content: `Grade: 0 | Feedback: <<some text with feedback about the answer>>`,
+        content: `Grade: 0 | Feedback: <<Aqui deve constar um feedback textual sobre a resposta>>`,
       },
     ];
   }
