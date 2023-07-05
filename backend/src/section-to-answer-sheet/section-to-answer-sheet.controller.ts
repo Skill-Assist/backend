@@ -1,5 +1,6 @@
 /** nestjs */
 import {
+  Req,
   Get,
   Post,
   Query,
@@ -18,6 +19,7 @@ import { SectionToAnswerSheet } from "./entities/section-to-answer-sheet.entity"
 /** utils */
 import { UserRole } from "../user/entities/user.entity";
 import { Roles } from "../user/decorators/roles.decorator";
+import { PassportRequest } from "../auth/auth.controller";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("section-to-answer-sheet")
@@ -32,10 +34,15 @@ export class SectionToAnswerSheetController {
   @Post()
   @Roles(UserRole.CANDIDATE)
   create(
+    @Req() req: PassportRequest,
     @Query("sectionId") sectionId: number,
     @Query("answerSheetId") answerSheetId: number
   ): Promise<SectionToAnswerSheet> {
-    return this.sectionToAnswerSheetService.create(sectionId, answerSheetId);
+    return this.sectionToAnswerSheetService.create(
+      req.user!.id,
+      sectionId,
+      answerSheetId
+    );
   }
 
   @Get()
@@ -69,11 +76,13 @@ export class SectionToAnswerSheetController {
   /** custom endpoints */
   @Post("batch-answer")
   @Roles(UserRole.CANDIDATE)
-  createBatch(
+  createBatchAnswer(
+    @Req() req: PassportRequest,
     @Query("sectionId") sectionId: number,
     @Query("answerSheetId") answerSheetId: number
   ): Promise<SectionToAnswerSheet> {
     return this.sectionToAnswerSheetService.createBatchAnswer(
+      req.user!.id,
       sectionId,
       answerSheetId
     );

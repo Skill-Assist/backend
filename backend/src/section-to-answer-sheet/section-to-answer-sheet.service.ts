@@ -35,11 +35,12 @@ export class SectionToAnswerSheetService {
 
   /** basic CRUD methods */
   async create(
+    userId: number,
     sectionId: number,
     answerSheetId: number
   ): Promise<SectionToAnswerSheet> {
     // check if section exists and is active
-    const section = await this.sectionService.findOne("id", sectionId);
+    const section = await this.sectionService.findOne(userId, "id", sectionId);
     if (!section) throw new NotFoundException("Section does not exist.");
 
     // check if answer sheet exists and is active
@@ -129,6 +130,7 @@ export class SectionToAnswerSheetService {
   /** custom methods */
   // TODO : block double creation of section to answer sheet
   async createBatchAnswer(
+    userId: number,
     sectionId: number,
     answerSheetId: number
   ): Promise<SectionToAnswerSheet> {
@@ -138,10 +140,14 @@ export class SectionToAnswerSheetService {
     });
 
     // create a section to answer sheet
-    const sectionToAnswerSheet = await this.create(sectionId, answerSheetId);
+    const sectionToAnswerSheet = await this.create(
+      userId,
+      sectionId,
+      answerSheetId
+    );
 
     // for each question in the section, create an answer
-    const section = await this.sectionService.findOne("id", sectionId);
+    const section = await this.sectionService.findOne(userId, "id", sectionId);
     const createAnswerDto = section!.questionId.map((question) => {
       return {
         questionRef: question.id,

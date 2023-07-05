@@ -70,7 +70,7 @@ export class QuestionService {
 
       // add relationship with section if sectionId is provided
       return sectionId
-        ? await this.addToSection(newQuestion._id, sectionId, points!)
+        ? await this.addToSection(userId, newQuestion._id, sectionId, points!)
         : newQuestion;
     } catch (err) {
       // throw error if question could not be created
@@ -95,6 +95,7 @@ export class QuestionService {
   }
 
   async addToSection(
+    userId: number,
     questionId: ObjectId,
     sectionId: number,
     weight: number
@@ -104,7 +105,7 @@ export class QuestionService {
     if (!question) throw new NotFoundException("Question not found.");
 
     // check if section exists
-    const section = await this.sectionService.findOne("id", sectionId);
+    const section = await this.sectionService.findOne(userId, "id", sectionId);
     if (!section) throw new NotFoundException("Section not found.");
 
     // add relationship between section and question
