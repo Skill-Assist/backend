@@ -45,6 +45,7 @@ export class SectionToAnswerSheetService {
 
     // check if answer sheet exists and is active
     const answerSheet = await this.answerSheetService.findOne(
+      userId,
       "id",
       answerSheetId
     );

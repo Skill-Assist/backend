@@ -5,6 +5,7 @@ import { Module, Global } from "@nestjs/common";
 /** modules */
 import { ExamModule } from "../exam/exam.module";
 import { ExamInvitationModule } from "../exam-invitation/exam-invitation.module";
+import { AnswerSheetModule } from "../answer-sheet/answer-sheet.module";
 
 /** controllers */
 import { UserController } from "./user.controller";
@@ -19,7 +20,12 @@ import { User } from "./entities/user.entity";
 
 @Global()
 @Module({
-  imports: [ExamInvitationModule, ExamModule, TypeOrmModule.forFeature([User])],
+  imports: [
+    ExamModule,
+    AnswerSheetModule,
+    ExamInvitationModule,
+    TypeOrmModule.forFeature([User]),
+  ],
   controllers: [UserController],
   providers: [UserService, QueryRunnerFactory],
   exports: [UserService],

@@ -40,12 +40,13 @@ export class AnswerSheetController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN)
   findAll(
     @Query("key") key: string,
     @Query("value") value: unknown,
     @Query("relations") relations: string,
     @Query("map") map: boolean
-  ) {
+  ): Promise<AnswerSheet[]> {
     return this.answerSheetService.findAll(
       key,
       value,
@@ -55,13 +56,16 @@ export class AnswerSheetController {
   }
 
   @Get("findOne")
+  @Roles(UserRole.CANDIDATE)
   findOne(
+    @Req() req: PassportRequest,
     @Query("key") key: string,
     @Query("value") value: unknown,
     @Query("relations") relations: string,
     @Query("map") map: boolean
-  ) {
+  ): Promise<AnswerSheet> {
     return this.answerSheetService.findOne(
+      req.user!.id,
       key,
       value,
       relations ? relations.split(",") : undefined,
@@ -70,16 +74,29 @@ export class AnswerSheetController {
   }
 
   /** custom endpoints */
-  @Patch("submit")
+  @Get("start")
   @Roles(UserRole.CANDIDATE)
-  submit(@Query("id") id: number): Promise<string> {
-    return this.answerSheetService.submit(id);
+  start(
+    @Req() req: PassportRequest,
+    @Query("id") id: number
+  ): Promise<AnswerSheet> {
+    return this.answerSheetService.start(req.user!.id, id);
   }
 
-  @Get("findOneWithSections")
-  getAnswerSheetWithSections(
+  @Patch("submit")
+  @Roles(UserRole.CANDIDATE)
+  submit(
+    @Req() req: PassportRequest,
     @Query("id") id: number
-  ): Promise<AnswerSheet | null> {
-    return this.answerSheetService.getAnswerSheetWithSections(id);
+  ): Promise<AnswerSheet> {
+    return this.answerSheetService.submit(req.user!.id, id);
+  }
+
+  @Get("fetchSections")
+  fetchSections(
+    @Req() req: PassportRequest,
+    @Query("id") id: number
+  ): Promise<AnswerSheet> {
+    return this.answerSheetService.fetchSections(req.user!.id, id);
   }
 }

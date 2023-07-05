@@ -5,6 +5,7 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 /** providers */
 import { ExamService } from "../exam/exam.service";
 import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { AnswerSheetService } from "../answer-sheet/answer-sheet.service";
 import { ExamInvitationService } from "../exam-invitation/exam-invitation.service";
 
 /** external dependencies */
@@ -27,6 +28,7 @@ export class UserService {
     private readonly repository: Repository<User>,
     private readonly queryRunner: QueryRunnerFactory,
     private readonly examService: ExamService,
+    private readonly answerSheetService: AnswerSheetService,
     private readonly examInvitationService: ExamInvitationService
   ) {}
 
@@ -148,6 +150,9 @@ export class UserService {
 
     // set relation between enrolled user and exam
     await this.examService.enrollUser(await invitation.exam, user);
+
+    // create empty answer sheet for user
+    await this.answerSheetService.create(user, (await invitation.exam).id);
 
     return <User>await this.profile(user.id);
   }

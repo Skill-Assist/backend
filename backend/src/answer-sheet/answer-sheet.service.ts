@@ -4,9 +4,11 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
+import { UserService } from "../user/user.service";
 import { ExamService } from "../exam/exam.service";
 import { QueryRunnerFactory } from "../utils/query-runner.factory";
 
@@ -23,35 +25,33 @@ import { create, findAll, findOne, update } from "../utils/typeorm.utils";
 
 @Injectable()
 export class AnswerSheetService {
+  private userService: UserService;
+
   constructor(
     @InjectRepository(AnswerSheet)
     private readonly answerSheetRepository: Repository<AnswerSheet>,
+    private readonly moduleRef: ModuleRef,
     private readonly examService: ExamService,
     private readonly queryRunner: QueryRunnerFactory
   ) {}
 
   /** basic CRUD methods */
   async create(user: User, examId: number): Promise<AnswerSheet> {
-    // check if exam exists and is active
+    // check if exam exists and if user is enrolled in it
     const exam = await this.examService.findOne(user.id, "id", examId);
-    if (!exam || !exam.isActive)
-      throw new UnauthorizedException("Exam not found or not active");
 
-    // check if exam is live
-    if (exam.status !== "live")
+    // check if exam is live or published
+    if (!["live", "published"].includes(exam.status)) {
       throw new UnauthorizedException(
-        "You can only start an exam if it is live."
+        "You can't start this exam because it is not live or published yet."
       );
+    }
 
-    // check if user is enrolled in exam
-    if (!(await exam.enrolledUsers).some((u) => u.id === user.id))
-      throw new UnauthorizedException("You are not enrolled in this exam");
-
-    // check if user has already started the exam
+    // check if user has already attempted the exam
     for (const answerSheet of await exam.answerSheets) {
       if ((await answerSheet.user).id === user.id) {
         throw new UnauthorizedException(
-          "You have already started this exam. You can't start it again."
+          "You have already attempted this exam. You can't attempt it again."
         );
       }
     }
@@ -78,29 +78,8 @@ export class AnswerSheetService {
       "answerSheet"
     );
 
-    // set deadline for answer sheet
-    const deadlineByDuration =
-      answerSheet.startDate.getTime() + exam.durationInHours * 60 * 60 * 1000;
-
-    const invitation = (await exam.invitations).find(
-      (invite) => invite.email === user.email
-    );
-
-    const deadlineBySubmission = invitation
-      ? invitation.createdAt.getTime() + exam.submissionInHours * 60 * 60 * 1000
-      : exam.submissionInHours * 60 * 60 * 1000;
-
-    await update(
-      answerSheet.id,
-      {
-        deadline: new Date(Math.min(deadlineByDuration, deadlineBySubmission)),
-      },
-      this.answerSheetRepository,
-      "answerSheet"
-    );
-
     // return updated answer sheet
-    return <AnswerSheet>await this.findOne("id", answerSheet.id);
+    return <AnswerSheet>await this.findOne(user.id, "id", answerSheet.id);
   }
 
   async findAll(
@@ -122,11 +101,33 @@ export class AnswerSheetService {
   }
 
   async findOne(
+    userId: number,
     key: string,
     value: unknown,
     relations?: string[],
     map?: boolean
-  ): Promise<AnswerSheet | null> {
+  ): Promise<AnswerSheet> {
+    const answerSheet = (await findOne(
+      this.answerSheetRepository,
+      "answerSheet",
+      key,
+      value
+    )) as AnswerSheet;
+
+    // check if answer sheet exists
+    if (!answerSheet)
+      throw new NotFoundException("Answer sheet with given id not found.");
+
+    // check if answer sheet is owned by user or user owns the exam
+    const exam = await answerSheet.exam;
+    if (
+      (await answerSheet.user).id !== userId &&
+      (await exam.createdBy).id !== userId
+    )
+      throw new UnauthorizedException(
+        "You are not authorized to access this answer sheet."
+      );
+
     return (await findOne(
       this.answerSheetRepository,
       "answerSheet",
@@ -138,32 +139,110 @@ export class AnswerSheetService {
   }
 
   async update(
-    id: number,
+    userId: number,
+    answerSheetId: number,
     updateAnswerSheetDto: Record<string, unknown>
   ): Promise<AnswerSheet> {
+    // check if answer sheet exists and user allowed to update it
+    await this.findOne(userId, "id", answerSheetId);
+
+    // update answer sheet
     await update(
-      id,
+      answerSheetId,
       updateAnswerSheetDto,
       this.answerSheetRepository,
       "answerSheet"
     );
-
-    return <AnswerSheet>await this.findOne("id", id);
+    return <AnswerSheet>await this.findOne(userId, "id", answerSheetId);
   }
 
   /** custom methods */
-  async submit(id: number): Promise<string> {
-    await this.update(id, { endDate: new Date() });
+  async start(userId: number, answerSheetId: number): Promise<AnswerSheet> {
+    // get userService from moduleRef
+    this.userService =
+      this.userService ??
+      this.moduleRef.get<UserService>(UserService, {
+        strict: false,
+      });
 
-    return `Answer sheet with id ${id} submitted successfully.`;
+    // check if answer sheet exists and user allowed to start it
+    const answerSheet = await this.findOne(userId, "id", answerSheetId);
+
+    // check if answer sheet is already started
+    if (answerSheet.startDate !== null)
+      throw new UnauthorizedException(
+        "You have already started this answer sheet."
+      );
+
+    // check is exam status is live
+    const exam = await answerSheet.exam;
+    if (exam.status !== "live")
+      throw new UnauthorizedException(
+        "You can't start this exam because it is not live."
+      );
+
+    // start answer sheet
+    const updatedAnswerSheet = await this.update(userId, answerSheetId, {
+      startDate: new Date(),
+    });
+
+    // set deadline for answer sheet
+    const deadlineByDuration =
+      updatedAnswerSheet.startDate.getTime() +
+      exam.durationInHours * 60 * 60 * 1000;
+
+    const user = await this.userService.findOne("id", userId);
+    const invitation = (await exam.invitations).find(
+      (invite) => invite.email === user!.email
+    );
+
+    const deadlineBySubmission = invitation
+      ? invitation.createdAt.getTime() + exam.submissionInHours * 60 * 60 * 1000
+      : exam.submissionInHours * 60 * 60 * 1000;
+
+    await this.update(userId, answerSheet.id, {
+      deadline: new Date(Math.min(deadlineByDuration, deadlineBySubmission)),
+    });
+
+    // return updated answer sheet
+    return await this.findOne(userId, "id", answerSheetId);
   }
 
-  async getAnswerSheetWithSections(id: number): Promise<AnswerSheet | null> {
-    return await this.answerSheetRepository
+  async submit(userId: number, answerSheetId: number): Promise<AnswerSheet> {
+    // check if answer sheet exists and candidate allowed to submit it
+    const answerSheet = await this.findOne(userId, "id", answerSheetId);
+
+    // check if answer sheet does not contain any section
+    if (!(await answerSheet.sectionToAnswerSheets).length)
+      throw new UnauthorizedException(
+        "You can't submit the answer sheet because it does not contain any section."
+      );
+
+    // check if all sections are closed
+    for (const section of await answerSheet.sectionToAnswerSheets) {
+      if (section.endDate === null)
+        throw new UnauthorizedException(
+          "You can't submit the answer sheet until all sections are closed."
+        );
+    }
+
+    await this.update(userId, answerSheetId, { endDate: new Date() });
+
+    return await this.findOne(userId, "id", answerSheetId);
+  }
+
+  async fetchSections(
+    userId: number,
+    answerSheetId: number
+  ): Promise<AnswerSheet> {
+    // check if answer sheet exists and user allowed to access it
+    await this.findOne(userId, "id", answerSheetId);
+
+    return (await this.answerSheetRepository
       .createQueryBuilder("answerSheet")
       .leftJoinAndSelect("answerSheet.exam", "exam")
       .leftJoinAndSelect("exam.sections", "sections")
-      .where("answerSheet.id = :id", { id })
-      .getOne();
+      .where("answerSheet.id = :answerSheetId", { answerSheetId })
+      .getOne()) as AnswerSheet;
   }
 }

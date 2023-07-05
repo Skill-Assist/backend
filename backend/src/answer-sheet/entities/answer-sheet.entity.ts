@@ -10,8 +10,14 @@ import { SectionToAnswerSheet } from "../../section-to-answer-sheet/entities/sec
 @Entity()
 export class AnswerSheet extends SQLBaseEntity {
   /** columns */
-  @Column({ default: () => "CURRENT_TIMESTAMP" })
+  @Column({ nullable: true })
   startDate: Date;
+
+  @Column({ nullable: true })
+  aiScore: number;
+
+  @Column({ nullable: true })
+  revisedScore: number;
 
   @Column({ nullable: true })
   endDate: Date;

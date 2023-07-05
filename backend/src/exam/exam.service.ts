@@ -92,7 +92,7 @@ export class ExamService {
     )) as Exam;
 
     // check if exam exists
-    if (!exam) throw new NotFoundException("Exam not found.");
+    if (!exam) throw new NotFoundException("Exam with given id not found.");
 
     // check if exam is owned by user or user is enrolled in exam
     if (
