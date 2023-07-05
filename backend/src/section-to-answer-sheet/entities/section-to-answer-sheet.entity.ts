@@ -14,6 +14,12 @@ export class SectionToAnswerSheet extends SQLBaseEntity {
   startDate: Date;
 
   @Column({ nullable: true })
+  aiScore: number;
+
+  @Column({ nullable: true })
+  revisedScore: number;
+
+  @Column({ nullable: true })
   endDate: Date;
 
   @Exclude()

@@ -117,7 +117,11 @@ export class UserService {
         );
 
     if (user.roles.includes("recruiter"))
-      _query.loadRelationIdAndMap("user.ownedExamsRef", "user.ownedExams");
+      _query.leftJoinAndMapMany(
+        "user.ownedExamsRef",
+        "user.ownedExams",
+        "exam"
+      );
 
     return <User>await _query.where("user.id = :id", { id }).getOne();
   }
