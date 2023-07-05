@@ -11,19 +11,19 @@ import { isValid } from "date-fns";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateExamDto {
-  @Matches(/^[a-zA-Z0-9\s]{3,20}$/, {
+  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s]{3,20}$/, {
     message: "Title must be between 3 and 20 characters long.",
   })
   title: string;
 
   @IsOptional()
-  @Matches(/^[a-zA-Z0-9\s]{3,20}$/, {
+  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s]{3,20}$/, {
     message: "Title must be between 3 and 20 characters long.",
   })
   subtitle?: string;
 
   @IsOptional()
-  @Matches(/^[a-zA-Z\s]{3,20}$/, {
+  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ\s]{3,20}$/, {
     message:
       "Level must be between 3 and 20 characters long and contain only letters. If number is required, please use roman numerals or contact support.",
   })

@@ -6,7 +6,6 @@ import {
   Body,
   Query,
   Patch,
-  Param,
   Controller,
   UseInterceptors,
   ClassSerializerInterceptor,
@@ -45,6 +44,7 @@ export class ExamController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN)
   findAll(
     @Query("key") key: string,
     @Query("value") value: unknown,
@@ -60,13 +60,16 @@ export class ExamController {
   }
 
   @Get("findOne")
+  @Roles(UserRole.RECRUITER)
   findOne(
+    @Req() req: PassportRequest,
     @Query("key") key: string,
     @Query("value") value: unknown,
     @Query("relations") relations: string,
     @Query("map") map: boolean
-  ): Promise<Exam | null> {
+  ): Promise<Exam> {
     return this.examService.findOne(
+      req.user!.id,
       key,
       value,
       relations ? relations.split(",") : undefined,
@@ -74,31 +77,48 @@ export class ExamController {
     );
   }
 
-  @Patch(":id")
+  @Patch()
   @Roles(UserRole.RECRUITER)
   update(
-    @Param("id") id: number,
+    @Req() req: PassportRequest,
+    @Query("id") id: number,
     @Body() updateExamDto: UpdateExamDto
   ): Promise<Exam> {
-    return this.examService.update(id, updateExamDto);
+    return this.examService.update(req.user!.id, id, updateExamDto);
   }
 
   /** custom endpoints */
+  @Get("fetchOwnedExams")
+  @Roles(UserRole.RECRUITER)
+  fetchOwnedExams(
+    @Req() req: PassportRequest,
+    @Query("relations") relations: string,
+    @Query("map") map: boolean
+  ): Promise<Exam[]> {
+    return this.examService.fetchOwnedExams(
+      req.user!.id,
+      relations ? relations.split(",") : undefined,
+      map
+    );
+  }
+
   @Get(":id/switchStatus")
   @Roles(UserRole.RECRUITER)
   switchStatus(
-    @Param("id") id: number,
+    @Req() req: PassportRequest,
+    @Query("id") id: number,
     @Query("status") status: string
   ): Promise<Exam> {
-    return this.examService.switchStatus(id, status);
+    return this.examService.switchStatus(req.user!.id, id, status);
   }
 
   @Post(":id/invite")
   @Roles(UserRole.RECRUITER)
-  invite(
-    @Param("id") id: number,
+  sendInvitations(
+    @Req() req: PassportRequest,
+    @Query("id") id: number,
     @Body() inviteDto: InviteDto
   ): Promise<string> {
-    return this.examService.invite(id, inviteDto);
+    return this.examService.sendInvitations(req.user!.id, id, inviteDto);
   }
 }

@@ -55,7 +55,7 @@ export class ExamService {
     await update(exam.id, { createdBy: user }, this.examRepository, "exam");
 
     // return updated exam
-    return <Exam>await this.findOne("id", exam.id);
+    return <Exam>await this.findOne(userId, "id", exam.id);
   }
 
   async findAll(
@@ -77,12 +77,13 @@ export class ExamService {
   }
 
   async findOne(
+    userId: number,
     key: string,
     value: unknown,
     relations?: string[],
     map?: boolean
-  ): Promise<Exam | null> {
-    return (await findOne(
+  ): Promise<Exam> {
+    const exam = (await findOne(
       this.examRepository,
       "exam",
       key,
@@ -90,20 +91,77 @@ export class ExamService {
       relations,
       map
     )) as Exam;
+
+    // check if exam exists
+    if (!exam) throw new NotFoundException("Exam not found.");
+
+    // check if exam is owned by user
+    if (userId !== (await exam.createdBy).id)
+      throw new UnauthorizedException(
+        "You are not authorized to access this exam."
+      );
+
+    return exam;
   }
 
-  async update(id: number, updateExamDto: UpdateExamDto): Promise<Exam> {
+  async update(
+    userId: number,
+    examId: number,
+    updateExamDto: UpdateExamDto
+  ): Promise<Exam> {
+    // check if exam exists and is owned by user
+    await this.findOne(userId, "id", examId);
+
+    // update exam
     await update(
-      id,
+      examId,
       updateExamDto as Record<string, unknown>,
       this.examRepository,
       "exam"
     );
-    return <Exam>await this.findOne("id", id);
+    return <Exam>await this.findOne(userId, "id", examId);
   }
 
   /** custom methods */
-  async invite(id: number, inviteDto: InviteDto): Promise<string> {
+  async fetchOwnedExams(
+    userId: number,
+    relations?: string[],
+    map?: boolean
+  ): Promise<Exam[]> {
+    return await this.findAll("createdBy", userId, relations, map);
+  }
+
+  async switchStatus(
+    userId: number,
+    examId: number,
+    status: string
+  ): Promise<Exam> {
+    // try to get exam by id
+    const exam = await this.findOne(userId, "id", examId);
+
+    // if status is published, check if exam is draft
+    if (status === "published" && exam!.status !== "draft")
+      throw new UnauthorizedException(
+        "Exam is not in draft status. Process was aborted."
+      );
+
+    // switch status of exam
+    await this.examRepository
+      .createQueryBuilder()
+      .update(Exam)
+      .set({ status })
+      .where("id = :examId", { examId })
+      .execute();
+
+    // return updated exam
+    return <Exam>await this.findOne(userId, "id", examId);
+  }
+
+  async sendInvitations(
+    userId: number,
+    examId: number,
+    inviteDto: InviteDto
+  ): Promise<string> {
     // get user service and exam invitation service from moduleRef
     this.userService = this.moduleRef.get(UserService, { strict: false });
     this.examInvitationService = this.moduleRef.get(ExamInvitationService, {
@@ -111,22 +169,21 @@ export class ExamService {
     });
 
     // try to get exam by id
-    const exam = await this.findOne("id", id);
-    if (!exam) throw new NotFoundException("Exam not found.");
+    const exam = await this.findOne(userId, "id", examId);
 
     // check if exam is published or live
-    if (!["published", "live"].includes(exam.status))
+    if (!["published", "live"].includes(exam!.status))
       throw new UnauthorizedException(
         "Exam is not published or live. Process was aborted."
       );
 
+    // check if email addresses are already in exam
     for (const email of inviteDto.email) {
-      // check if email addresses are already in exam
       if (
         await this.examRepository
           .createQueryBuilder("exam")
           .leftJoinAndSelect("exam.enrolledUsers", "enrolledUsers")
-          .where("exam.id = :id", { id })
+          .where("exam.id = :examId", { examId })
           .andWhere("enrolledUsers.email = :email", { email })
           .getOne()
       )
@@ -143,40 +200,13 @@ export class ExamService {
       // create exam invitation related to exam and user, if any
       await this.examInvitationService.create(
         { email, expirationInHours: inviteDto.expirationInHours },
-        exam,
+        exam!,
         user
       );
     }
 
     // return message to user with number of invitations sent
     return `Invitations sent to ${inviteDto.email.length} email addresses.`;
-  }
-
-  async switchStatus(id: number, status: string): Promise<Exam> {
-    // try to get exam by id
-    const exam = await this.findOne("id", id);
-    if (!exam) throw new NotFoundException("Exam not found.");
-
-    // status should be: draft, published, live or archived
-    if (!["draft", "published", "live", "archived"].includes(status))
-      throw new UnauthorizedException("Invalid status.");
-
-    // if status is published, check if exam is draft
-    if (status === "published" && exam.status !== "draft")
-      throw new UnauthorizedException(
-        "Exam is not in draft status. Process was aborted."
-      );
-
-    // switch status of exam
-    await this.examRepository
-      .createQueryBuilder()
-      .update(Exam)
-      .set({ status })
-      .where("id = :id", { id })
-      .execute();
-
-    // return updated exam
-    return <Exam>await this.findOne("id", id);
   }
 
   async enrollUser(exam: Exam, user: User): Promise<Exam> {
@@ -188,6 +218,6 @@ export class ExamService {
       .add(user);
 
     // return updated exam
-    return <Exam>await this.findOne("id", exam.id);
+    return <Exam>await this.findOne(user.id, "id", exam.id);
   }
 }

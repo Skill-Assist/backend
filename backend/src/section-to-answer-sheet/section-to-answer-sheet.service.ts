@@ -144,7 +144,7 @@ export class SectionToAnswerSheetService {
     const section = await this.sectionService.findOne("id", sectionId);
     const createAnswerDto = section!.questionId.map((question) => {
       return {
-        questionRef: question,
+        questionRef: question.id,
       };
     });
 

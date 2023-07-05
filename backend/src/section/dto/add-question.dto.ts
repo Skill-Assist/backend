@@ -1,9 +1,19 @@
 import { ObjectId } from "typeorm";
-import { IsArray, IsMongoId } from "class-validator";
+import { Type } from "class-transformer";
+import { IsArray, IsMongoId, IsNumber, ValidateNested } from "class-validator";
 //////////////////////////////////////////////////////////////////////////////////////
+
+class QuestionItem {
+  @IsMongoId()
+  id: string | ObjectId;
+
+  @IsNumber()
+  weight: number;
+}
 
 export class AddQuestionDto {
   @IsArray()
-  @IsMongoId({ each: true })
-  questionId: (string | ObjectId)[];
+  @ValidateNested({ each: true })
+  @Type(() => QuestionItem)
+  questionId: QuestionItem[];
 }

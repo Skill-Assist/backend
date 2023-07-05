@@ -32,7 +32,8 @@ export class QuestionService {
   async create(
     createQuestionDto: CreateQuestionDto,
     userId: number,
-    sectionId?: number
+    sectionId?: number,
+    points?: number
   ): Promise<Question> {
     // if type is multipleChoice, check if there are at least 2 choices
     if (
@@ -44,8 +45,14 @@ export class QuestionService {
         "Multiple choice questions must have at least 2 choices."
       );
 
+    // if sectionId is provided, check if points is provided
+    if (sectionId && !points)
+      throw new UnauthorizedException(
+        "You must provide the amount of points for this question."
+      );
+
     try {
-      // create new question and add relationship with user
+      // create new question
       const newQuestion = await this.questionModel.create({
         ...createQuestionDto,
         createdBy: userId,
@@ -63,7 +70,7 @@ export class QuestionService {
 
       // add relationship with section if sectionId is provided
       return sectionId
-        ? await this.addToSection(newQuestion._id, sectionId)
+        ? await this.addToSection(newQuestion._id, sectionId, points!)
         : newQuestion;
     } catch (err) {
       // throw error if question could not be created
@@ -89,7 +96,8 @@ export class QuestionService {
 
   async addToSection(
     questionId: ObjectId,
-    sectionId: number
+    sectionId: number,
+    weight: number
   ): Promise<Question> {
     // check if question exists
     const question = await this.findOne(questionId);
@@ -101,7 +109,7 @@ export class QuestionService {
 
     // add relationship between section and question
     this.sectionService.addtoQuestion(sectionId, {
-      questionId: [...section.questionId, questionId],
+      questionId: [{ id: questionId, weight }],
     });
 
     // add relationship between question and section

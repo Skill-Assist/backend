@@ -33,7 +33,7 @@ export class AnswerSheetService {
   /** basic CRUD methods */
   async create(user: User, examId: number): Promise<AnswerSheet> {
     // check if exam exists and is active
-    const exam = await this.examService.findOne("id", examId);
+    const exam = await this.examService.findOne(user.id, "id", examId);
     if (!exam || !exam.isActive)
       throw new UnauthorizedException("Exam not found or not active");
 

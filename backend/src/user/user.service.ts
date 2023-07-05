@@ -17,7 +17,7 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 import { AddQuestionDto } from "./dto/add-question.dto";
 
 /** utils */
-import { create, findOne, update } from "../utils/typeorm.utils";
+import { create, findOne, findAll, update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -57,17 +57,35 @@ export class UserService {
     return user;
   }
 
+  async findAll(
+    key?: string,
+    value?: unknown,
+    relations?: string[],
+    map?: boolean
+  ): Promise<User[]> {
+    return (await findAll(
+      this.repository,
+      "section",
+      key,
+      value,
+      relations,
+      map
+    )) as User[];
+  }
+
   async findOne(
     key: string,
     value: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<User | null> {
     return (await findOne(
       this.repository,
       "user",
       key,
       value,
-      relations
+      relations,
+      map
     )) as User;
   }
 
@@ -100,6 +118,17 @@ export class UserService {
     return <User>await _query.where("user.id = :id", { id }).getOne();
   }
 
+  async updateProfile(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+    await update(
+      id,
+      updateUserDto as unknown as Record<string, unknown>,
+      this.repository,
+      "user"
+    );
+
+    return <User>await this.findOne("id", id);
+  }
+
   async addQuestion(id: number, payload: AddQuestionDto): Promise<void> {
     await update(
       id,
@@ -110,7 +139,6 @@ export class UserService {
   }
 
   async acceptInvitation(invitationId: number, user: User): Promise<User> {
-    // accept invitation
     const invitation = await this.examInvitationService.acceptInvitation(
       invitationId,
       user.id
@@ -119,36 +147,11 @@ export class UserService {
     // set relation between enrolled user and exam
     await this.examService.enrollUser(await invitation.exam, user);
 
-    return <User>(
-      await this.findOne("id", user.id, [
-        "invitations",
-        "enrolledExams",
-        "answerSheets",
-      ])
-    );
+    return <User>await this.profile(user.id);
   }
 
   async rejectInvitation(invitationId: number, user: User): Promise<User> {
-    // reject invitation
     await this.examInvitationService.rejectInvitation(invitationId, user.id);
-
-    return <User>(
-      await this.findOne("id", user.id, [
-        "invitations",
-        "enrolledExams",
-        "answerSheets",
-      ])
-    );
-  }
-
-  async updateProfile(id: number, updateUserDto: UpdateUserDto): Promise<User> {
-    await update(
-      id,
-      updateUserDto as unknown as Record<string, unknown>,
-      this.repository,
-      "user"
-    );
-
-    return <User>await this.findOne("id", id);
+    return <User>await this.profile(user.id);
   }
 }

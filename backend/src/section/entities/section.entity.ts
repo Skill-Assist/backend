@@ -15,6 +15,9 @@ export class Section extends SQLBaseEntity {
   @Column()
   description: string;
 
+  @Column()
+  weight: number;
+
   @Column({ nullable: true })
   startDate: Date;
 
@@ -27,8 +30,8 @@ export class Section extends SQLBaseEntity {
   @Column({ default: false })
   hasProctoring: boolean;
 
-  @Column({ type: "simple-array" })
-  questionId: string[];
+  @Column({ type: "json", nullable: true })
+  questionId: { id: string; weight: number }[];
 
   @Exclude()
   @Column({ default: true })

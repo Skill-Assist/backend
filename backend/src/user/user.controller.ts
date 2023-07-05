@@ -21,7 +21,6 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 /** utils */
 import { Roles } from "./decorators/roles.decorator";
 import { PassportRequest } from "../auth/auth.controller";
-// import { InvitationCreatedAtInterceptor } from "./interceptors/invitation-createdAt-interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("user")
@@ -30,10 +29,51 @@ import { PassportRequest } from "../auth/auth.controller";
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  /** basic CRUD endpoints */
+  @Get()
+  @Roles(UserRole.ADMIN)
+  findAll(
+    @Query("key") key?: string,
+    @Query("value") value?: unknown,
+    @Query("relations") relations?: string,
+    @Query("map") map?: boolean
+  ): Promise<User[]> {
+    return this.userService.findAll(
+      key,
+      value,
+      relations ? relations.split(",") : undefined,
+      map
+    );
+  }
+
+  @Get("findOne")
+  @Roles(UserRole.ADMIN)
+  findOne(
+    @Query("key") key: string,
+    @Query("value") value: unknown,
+    @Query("relations") relations?: string,
+    @Query("map") map?: boolean
+  ): Promise<User | null> {
+    return this.userService.findOne(
+      key,
+      value,
+      relations ? relations.split(",") : undefined,
+      map
+    );
+  }
+
+  /** custom endpoints */
   @Get("profile")
-  // @UseInterceptors(InvitationCreatedAtInterceptor)
   profile(@Req() req: PassportRequest): Promise<User> {
     return this.userService.profile(req.user!.id);
+  }
+
+  @Patch("updateProfile")
+  updateProfile(
+    @Req() req: PassportRequest,
+    @Body() updateUserDto: UpdateUserDto
+  ): Promise<User> {
+    return this.userService.updateProfile(req.user!.id, updateUserDto);
   }
 
   @Get("acceptInvitation")
@@ -52,13 +92,5 @@ export class UserController {
     @Query("invitationId") token: number
   ): Promise<User> {
     return this.userService.rejectInvitation(token, req.user!);
-  }
-
-  @Patch("updateProfile")
-  updateProfile(
-    @Req() req: PassportRequest,
-    @Body() updateUserDto: UpdateUserDto
-  ): Promise<User> {
-    return this.userService.updateProfile(req.user!.id, updateUserDto);
   }
 }

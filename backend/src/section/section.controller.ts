@@ -1,5 +1,6 @@
 /** nestjs */
 import {
+  Req,
   Get,
   Post,
   Body,
@@ -19,6 +20,7 @@ import { CreateSectionDto } from "./dto/create-section.dto";
 
 /** utils */
 import { UserRole } from "../user/entities/user.entity";
+import { PassportRequest } from "../auth/auth.controller";
 import { Roles } from "../user/decorators/roles.decorator";
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -31,13 +33,15 @@ export class SectionController {
   @Post()
   @Roles(UserRole.RECRUITER)
   create(
+    @Req() req: PassportRequest,
     @Body() createSectionDto: CreateSectionDto,
     @Query("examId") examId: number
   ): Promise<Section> {
-    return this.sectionService.create(examId, createSectionDto);
+    return this.sectionService.create(req.user!.id, examId, createSectionDto);
   }
 
   @Get()
+  @Roles(UserRole.ADMIN)
   findAll(
     @Query("key") key?: string,
     @Query("value") value?: unknown,
@@ -53,13 +57,16 @@ export class SectionController {
   }
 
   @Get("findOne")
+  @Roles(UserRole.RECRUITER)
   findOne(
+    @Req() req: PassportRequest,
     @Query("key") key: string,
     @Query("value") value: unknown,
     @Query("relations") relations?: string,
     @Query("map") map?: boolean
-  ): Promise<Section | null> {
+  ): Promise<Section> {
     return this.sectionService.findOne(
+      req.user!.id,
       key,
       value,
       relations ? relations.split(",") : undefined,

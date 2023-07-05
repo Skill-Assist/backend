@@ -1,18 +1,17 @@
 import {
+  IsIn,
   IsUrl,
-  IsEnum,
   IsEmail,
   Matches,
   IsHexColor,
   IsOptional,
   IsMobilePhone,
 } from "class-validator";
-import { UserRole } from "../entities/user.entity";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateUserDto {
-  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s]{3,20}$/, {
-    message: "Name must be between 3 and 20 characters long",
+  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s]{3,30}$/, {
+    message: "Name must be between 3 and 30 characters long",
   })
   name: string;
 
@@ -47,9 +46,9 @@ export class CreateUserDto {
   @IsUrl()
   logo: string;
 
-  @IsEnum(UserRole, {
+  @IsIn(["candidate", "recruiter"], {
     each: true,
-    message: "Role must be either candidate, recruiter or admin",
+    message: "Role must be either candidate or recruiter",
   })
   roles: string[];
 }

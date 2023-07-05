@@ -67,14 +67,6 @@ export class AnswerService {
     if (!question) throw new NotFoundException("Question not found.");
 
     // check if question belong to section
-    if (
-      !(await sectionToAnswerSheet.section).questionId.includes(
-        createAnswerDto.questionRef
-      )
-    )
-      throw new BadRequestException(
-        "Question is not in the section to answer sheet."
-      );
 
     // create answer
     const answer = await create(

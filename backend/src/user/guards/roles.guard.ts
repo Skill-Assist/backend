@@ -31,7 +31,7 @@ export class RolesGuard implements CanActivate {
 
     if (!allowAccess)
       throw new UnauthorizedException(
-        "Only recruiters and admins have permission to access this resource."
+        "You do not have permission to access this resource."
       );
 
     return true;
