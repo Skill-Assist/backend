@@ -10,43 +10,43 @@ import {
   IsBoolean,
   IsOptional,
 } from "class-validator";
+import { GradingRubric } from "../schemas/question.schema";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateQuestionDto {
   @IsEnum(["text", "multipleChoice", "programming", "challenge"], {
     message:
-      "Type must be either text, multipleChoice, programming or challenge",
+      "Type must be either text, multipleChoice, programming or challenge.",
   })
   type: string;
 
   @IsString()
   @Length(10, 500, {
-    message: "Statement must be between 10 and 500 characters long",
+    message: "Statement must be between 10 and 500 characters long.",
   })
   statement: string;
 
   @IsOptional()
   @IsObject()
-  options?: object;
+  options?: Record<string, string>;
 
   @IsObject()
-  gradingRubric: object;
+  gradingRubric: GradingRubric;
 
   @IsOptional()
   @Min(1)
   @Max(5)
   @IsNumber()
-  difficulty?: number = 2.5;
+  difficulty?: number;
 
   @IsOptional()
-  @Matches(/^[a-zA-Z\s]{3,10}$/, {
+  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s]{3,10}$/, {
     each: true,
-    message:
-      "Tags must be between 3 and 10 characters long and contain only letters",
+    message: "Tags must be between 3 and 10 characters long.",
   })
-  tags?: string[] = [];
+  tags?: string[];
 
   @IsOptional()
   @IsBoolean()
-  isShareable?: boolean = true;
+  isShareable?: boolean;
 }

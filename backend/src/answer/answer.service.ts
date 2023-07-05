@@ -219,7 +219,7 @@ export class AnswerService {
 
     let maxScore: number = 0;
     for (const rubric of Object.values(question.gradingRubric)) {
-      maxScore += rubric["pontos totais"];
+      maxScore += (rubric["pontos totais"] as Number).valueOf();
     }
 
     const generatedEval = await this.openaiService.createChatCompletion(

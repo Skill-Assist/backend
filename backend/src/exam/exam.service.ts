@@ -87,9 +87,7 @@ export class ExamService {
       this.examRepository,
       "exam",
       key,
-      value,
-      relations,
-      map
+      value
     )) as Exam;
 
     // check if exam exists
@@ -101,7 +99,14 @@ export class ExamService {
         "You are not authorized to access this exam."
       );
 
-    return exam;
+    return (await findOne(
+      this.examRepository,
+      "exam",
+      key,
+      value,
+      relations,
+      map
+    )) as Exam;
   }
 
   async update(

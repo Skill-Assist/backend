@@ -14,17 +14,11 @@ import { AxiosResponse } from "axios";
 
 /** utils */
 import { fetchUnzippedDocumentaryFromS3 } from "../utils/aws.utils";
+import { GradingRubric } from "../question/schemas/question.schema";
 ////////////////////////////////////////////////////////////////////////////////
 
 /** types */
 type Criteria = [string, number | { min: number; max: number }][];
-
-type GradingRubric = {
-  [category: string]: {
-    total_points: number;
-    [criterion: string]: number | { min: number; max: number };
-  };
-};
 
 export type ChatCompletionResponse = {
   [key: string]: CreateChatCompletionResponse;

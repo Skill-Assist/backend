@@ -4,6 +4,17 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 
 export type QuestionDocument = HydratedDocument<Question>;
 
+export interface GradingRubric {
+  [key: string]: {
+    [key: string]:
+      | number
+      | {
+          min: number;
+          max: number;
+        };
+  };
+}
+
 /** see https://mongoosejs.com/docs/guide.html#options */
 @Schema({ timestamps: true })
 export class Question {
@@ -17,7 +28,7 @@ export class Question {
   options: Record<string, string>;
 
   @Prop({ type: Object, required: true })
-  gradingRubric: Record<string, any>;
+  gradingRubric: GradingRubric;
 
   @Prop({ default: 2.5 })
   difficulty: number;
@@ -32,7 +43,7 @@ export class Question {
   createdBy: number;
 
   @Prop({ type: [Number], nullable: true, default: [] })
-  sections: string[];
+  sections: number[];
 
   @Prop({ default: true })
   isActive: boolean;

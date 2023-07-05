@@ -88,9 +88,7 @@ export class SectionService {
       this.sectionRepository,
       "section",
       key,
-      value,
-      relations,
-      map
+      value
     )) as Section;
 
     // check if section exists
@@ -103,14 +101,21 @@ export class SectionService {
         "You are not authorized to access this section."
       );
 
-    return section;
+    return (await findOne(
+      this.sectionRepository,
+      "section",
+      key,
+      value,
+      relations,
+      map
+    )) as Section;
   }
 
   /** custom methods */
   async addtoQuestion(id: number, payload: AddQuestionDto): Promise<void> {
     await update(
       id,
-      payload as unknown as Record<string, Array<string | ObjectId | number>>,
+      payload as unknown as Record<string, Record<string, ObjectId | number>[]>,
       this.sectionRepository,
       "section"
     );

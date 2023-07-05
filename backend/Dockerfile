@@ -13,11 +13,11 @@ COPY . .
 # Volume for node_modules
 VOLUME [ "/usr/src/app/node_modules" ]
 
-# Expose port 5500
-EXPOSE 5500
+# Expose port 80
+EXPOSE 80
 
 # Set environment variables
-ENV PORT=5500
+ENV PORT=80
 ENV SESSION_SECRET=secret
 ENV JWT_SECRET=secret
 ENV JWT_EXPIRES_IN=1d

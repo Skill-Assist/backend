@@ -12,6 +12,7 @@ Dockerfile
 
 # Environment variables
 .env
+.env.example
 
 # Database
 db.sqlite

@@ -102,7 +102,7 @@ export class ExamController {
     );
   }
 
-  @Get(":id/switchStatus")
+  @Get("switchStatus")
   @Roles(UserRole.RECRUITER)
   switchStatus(
     @Req() req: PassportRequest,
@@ -112,7 +112,7 @@ export class ExamController {
     return this.examService.switchStatus(req.user!.id, id, status);
   }
 
-  @Post(":id/invite")
+  @Post("sendInvitations")
   @Roles(UserRole.RECRUITER)
   sendInvitations(
     @Req() req: PassportRequest,

@@ -29,11 +29,12 @@ export class QuestionService {
     private readonly sectionService: SectionService
   ) {}
 
+  /** basic CRUD methods */
   async create(
     createQuestionDto: CreateQuestionDto,
     userId: number,
     sectionId?: number,
-    points?: number
+    weight?: number
   ): Promise<Question> {
     // if type is multipleChoice, check if there are at least 2 choices
     if (
@@ -45,20 +46,23 @@ export class QuestionService {
         "Multiple choice questions must have at least 2 choices."
       );
 
-    // if sectionId is provided, check if points is provided
-    if (sectionId && !points)
+    // if sectionId is provided, check if user owns section
+    if (sectionId) await this.sectionService.findOne(userId, "id", sectionId);
+
+    // if sectionId is provided, check if weight is provided
+    if (sectionId && !weight)
       throw new UnauthorizedException(
-        "You must provide the amount of points for this question."
+        "You must provide the relative weight this question will be worth in the current section."
       );
 
     try {
-      // create new question
+      // create new question with userId as createdBy
       const newQuestion = await this.questionModel.create({
         ...createQuestionDto,
         createdBy: userId,
       });
 
-      // add relationship with user
+      // add relationship with user who created question
       const user = await this.userService.findOne("id", userId);
 
       const ownedQuestions =
@@ -70,7 +74,7 @@ export class QuestionService {
 
       // add relationship with section if sectionId is provided
       return sectionId
-        ? await this.addToSection(userId, newQuestion._id, sectionId, points!)
+        ? await this.addToSection(userId, newQuestion._id, sectionId, weight!)
         : newQuestion;
     } catch (err) {
       // throw error if question could not be created
@@ -94,6 +98,7 @@ export class QuestionService {
     }
   }
 
+  /** custom methods */
   async addToSection(
     userId: number,
     questionId: ObjectId,
@@ -104,9 +109,8 @@ export class QuestionService {
     const question = await this.findOne(questionId);
     if (!question) throw new NotFoundException("Question not found.");
 
-    // check if section exists
-    const section = await this.sectionService.findOne(userId, "id", sectionId);
-    if (!section) throw new NotFoundException("Section not found.");
+    // check if section exists and is owned by user
+    await this.sectionService.findOne(userId, "id", sectionId);
 
     // add relationship between section and question
     this.sectionService.addtoQuestion(sectionId, {
@@ -114,14 +118,10 @@ export class QuestionService {
     });
 
     // add relationship between question and section
-    const updatedQuestion: Question | null =
-      await this.questionModel.findByIdAndUpdate(
-        questionId,
-        {
-          sections: [...question.sections, sectionId],
-        },
-        { new: true }
-      );
-    return updatedQuestion!;
+    return (await this.questionModel.findByIdAndUpdate(
+      questionId,
+      { sections: [...question.sections, sectionId] },
+      { new: true }
+    ))!;
   }
 }

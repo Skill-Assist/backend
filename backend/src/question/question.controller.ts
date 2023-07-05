@@ -14,6 +14,8 @@ import { CreateQuestionDto } from "./dto/create-question.dto";
 
 /** utils */
 import { PassportRequest } from "../auth/auth.controller";
+import { Roles } from "../user/decorators/roles.decorator";
+import { UserRole } from "../user/entities/user.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("question")
@@ -21,20 +23,24 @@ import { PassportRequest } from "../auth/auth.controller";
 export class QuestionController {
   constructor(private readonly questionService: QuestionService) {}
 
+  /** basic CRUD endpoints */
   @Post()
   create(
     @Req() req: PassportRequest,
     @Body() createQuestionDto: CreateQuestionDto,
-    @Query("sectionId") sectionId?: number
+    @Query("sectionId") sectionId?: number,
+    @Query("weight") weight?: number
   ): Promise<Question> {
     return this.questionService.create(
       createQuestionDto,
       req.user!.id,
-      sectionId
+      sectionId,
+      weight
     );
   }
 
   @Get()
+  @Roles(UserRole.ADMIN)
   findAll(): Promise<Question[]> {
     return this.questionService.findAll();
   }
