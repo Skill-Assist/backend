@@ -15,5 +15,5 @@ export class AddQuestionDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => QuestionItem)
-  questionId: QuestionItem[];
+  questions: QuestionItem[];
 }

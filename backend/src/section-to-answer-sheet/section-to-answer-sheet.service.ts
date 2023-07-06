@@ -1,7 +1,11 @@
 /** nestjs */
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Injectable, NotFoundException } from "@nestjs/common";
 
 /** providers */
 import { AnswerService } from "../answer/answer.service";
@@ -39,44 +43,49 @@ export class SectionToAnswerSheetService {
     sectionId: number,
     answerSheetId: number
   ): Promise<SectionToAnswerSheet> {
-    // check if section exists and is active
+    // check if section exists and user is enrolled in exam
     const section = await this.sectionService.findOne(userId, "id", sectionId);
-    if (!section) throw new NotFoundException("Section does not exist.");
 
-    // check if answer sheet exists and is active
+    // check if answer sheet exists and user owns it
     const answerSheet = await this.answerSheetService.findOne(
       userId,
       "id",
       answerSheetId
     );
-    if (!answerSheet)
-      throw new NotFoundException("Answer sheet does not exist.");
 
-    // create section to answer sheet
-    const sectionToAnswerSheet = await create(
+    // create section to answer sheet (SAS)
+    const sectionToAnswerSheet = (await create(
       this.queryRunner,
       this.sectionToAnswerSheetRepository
-    );
+    )) as SectionToAnswerSheet;
 
-    // set relation between section to answer sheet and section
+    // set relation between SAS and section and answer sheet
     await update(
       sectionToAnswerSheet.id,
-      { section },
+      { section, answerSheet },
       this.sectionToAnswerSheetRepository,
       "sectionToAnswerSheet"
     );
 
-    // set relation between section to answer sheet and answer sheet
-    await update(
-      sectionToAnswerSheet.id,
-      { answerSheet },
-      this.sectionToAnswerSheetRepository,
-      "sectionToAnswerSheet"
+    // set deadline for SAS
+    const durationInHours = (await sectionToAnswerSheet.section)
+      .durationInHours;
+
+    const deadline = new Date(
+      durationInHours
+        ? Math.min(
+            sectionToAnswerSheet.createdAt.getTime() +
+              durationInHours * 60 * 60 * 1000,
+            answerSheet.deadline.getTime()
+          )
+        : answerSheet.deadline.getTime()
     );
+
+    await this.update(userId, sectionToAnswerSheet.id, { deadline });
 
     // return updated section to answer sheet
     return <SectionToAnswerSheet>(
-      await this.findOne("id", sectionToAnswerSheet.id)
+      await this.findOne(userId, "id", sectionToAnswerSheet.id)
     );
   }
 
@@ -99,11 +108,33 @@ export class SectionToAnswerSheetService {
   }
 
   async findOne(
+    userId: number,
     key: string,
     value: unknown,
     relations?: string[],
     map?: boolean
-  ): Promise<SectionToAnswerSheet | null> {
+  ): Promise<SectionToAnswerSheet> {
+    const sas = (await findOne(
+      this.sectionToAnswerSheetRepository,
+      "sectionToAnswerSheet",
+      key,
+      value
+    )) as SectionToAnswerSheet;
+
+    // check if SAS exists
+    if (!sas) throw new NotFoundException("Section to answer sheet not found.");
+
+    // check if exam belongs to user or user is enrolled in exam
+    const section = await sas.section;
+    const exam = await section.exam;
+    if (
+      (await exam.createdBy).id !== userId &&
+      !(await exam.enrolledUsers).some((candidate) => candidate.id === userId)
+    )
+      throw new UnauthorizedException(
+        "You are not authorized to access this section to answer sheet."
+      );
+
     return (await findOne(
       this.sectionToAnswerSheetRepository,
       "sectionToAnswerSheet",
@@ -115,21 +146,24 @@ export class SectionToAnswerSheetService {
   }
 
   async update(
-    id: number,
-    updateSectionToAnswerSheetDto: Partial<UpdateSectionToAnswerSheetDto>
+    userId: number,
+    sasId: number,
+    updateSectionToAnswerSheetDto: UpdateSectionToAnswerSheetDto
   ): Promise<SectionToAnswerSheet> {
+    // check if SAS exists and user authorized to update it
+    await this.findOne(userId, "id", sasId);
+
     await update(
-      id,
-      updateSectionToAnswerSheetDto,
+      sasId,
+      updateSectionToAnswerSheetDto as Record<string, unknown>,
       this.sectionToAnswerSheetRepository,
       "sectionToAnswerSheet"
     );
 
-    return <SectionToAnswerSheet>await this.findOne("id", id);
+    return <SectionToAnswerSheet>await this.findOne(userId, "id", sasId);
   }
 
   /** custom methods */
-  // TODO : block double creation of section to answer sheet
   async createBatchAnswer(
     userId: number,
     sectionId: number,
@@ -151,18 +185,19 @@ export class SectionToAnswerSheetService {
 
     // for each question in the section, create an answer
     const section = await this.sectionService.findOne(userId, "id", sectionId);
-    const createAnswerDto = section!.questionId.map((question) => {
+    const createAnswerDto = section!.questions.map((question) => {
       return {
         questionRef: question.id,
       };
     });
 
     await this.answerService.createBatch(
+      userId,
       sectionToAnswerSheet.id,
       createAnswerDto
     );
 
     // return updated section to answer sheet
-    return (await this.findOne("id", sectionToAnswerSheet.id))!;
+    return (await this.findOne(userId, "id", sectionToAnswerSheet.id))!;
   }
 }

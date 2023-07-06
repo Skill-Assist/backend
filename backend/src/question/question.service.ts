@@ -114,7 +114,7 @@ export class QuestionService {
 
     // add relationship between section and question
     this.sectionService.addtoQuestion(sectionId, {
-      questionId: [{ id: questionId, weight }],
+      questions: [{ id: questionId, weight }],
     });
 
     // add relationship between question and section

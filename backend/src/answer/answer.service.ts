@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -47,6 +48,7 @@ export class AnswerService {
 
   /** basic CRUD methods */
   async create(
+    userId: number,
     sasId: number,
     createAnswerDto: CreateAnswerDto
   ): Promise<Answer> {
@@ -57,10 +59,12 @@ export class AnswerService {
         strict: false,
       });
 
-    // check if sectionToAnswerSheet exists
-    const sectionToAnswerSheet = await this.sasService.findOne("id", sasId);
-    if (!sectionToAnswerSheet)
-      throw new NotFoundException("Section to Answer Sheet not found.");
+    // check if sectionToAnswerSheet exists and belongs to user
+    const sectionToAnswerSheet = await this.sasService.findOne(
+      userId,
+      "id",
+      sasId
+    );
 
     // check if question exists
     const question = await this.questionService.findOne(
@@ -68,7 +72,12 @@ export class AnswerService {
     );
     if (!question) throw new NotFoundException("Question not found.");
 
-    // check if question belong to section
+    // check if question belongs to section
+    const section = await sectionToAnswerSheet.section;
+    if (!section.questions.some((q) => q.id === createAnswerDto.questionRef))
+      throw new BadRequestException(
+        "Question does not belong to sectionToAnswerSheet."
+      );
 
     // create answer
     const answer = await create(
@@ -86,13 +95,14 @@ export class AnswerService {
     );
 
     // return updated answer
-    return <Answer>await this.findOne("id", answer.id);
+    return <Answer>await this.findOne(userId, "id", answer.id);
   }
 
   async findAll(
     key?: string,
     value?: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<Answer[]> {
     if (key && !value) throw new NotFoundException("Value not provided.");
 
@@ -101,83 +111,121 @@ export class AnswerService {
       "answer",
       key,
       value,
-      relations
+      relations,
+      map
     )) as Answer[];
   }
 
   async findOne(
+    userId: number,
     key: string,
     value: unknown,
-    relations?: string[]
-  ): Promise<Answer | null> {
-    if (key && !value) throw new NotFoundException("Value not provided.");
+    relations?: string[],
+    map?: boolean
+  ): Promise<Answer> {
+    const answer = (await findOne(
+      this.answerRepository,
+      "answer",
+      key,
+      value
+    )) as Answer;
+
+    // check if answer exists
+    if (!answer) throw new NotFoundException("Answer with given id not found.");
+
+    // prettier-ignore
+    // check if exam belongs to user or user is enrolled in exam
+    const exam = await (
+      await (await answer.sectionToAnswerSheet).answerSheet
+    ).exam;
+
+    if (
+      userId !== (await exam.createdBy).id &&
+      !(await exam.enrolledUsers).some((candidate) => candidate.id === userId)
+    )
+      throw new UnauthorizedException(
+        "You are not authorized to access this answer."
+      );
 
     return (await findOne(
       this.answerRepository,
       "answer",
       key,
       value,
-      relations
+      relations,
+      map
     )) as Answer;
   }
 
-  async update(id: number, updateAnswerDto: UpdateAnswerDto): Promise<Answer> {
+  async update(
+    userId: number,
+    answerId: number,
+    updateAnswerDto: UpdateAnswerDto
+  ): Promise<Answer> {
+    // check if answer exists and user is authorized to update it
+    await this.findOne(userId, "id", answerId);
+
+    // update answer
     await update(
-      id,
+      answerId,
       updateAnswerDto as unknown as Record<string, unknown>,
       this.answerRepository,
       "answer"
     );
 
-    return <Answer>await this.findOne("id", id);
+    return <Answer>await this.findOne(userId, "id", answerId);
   }
 
   /** custom methods */
-  async submit(id: number, updateAnswerDto: UpdateAnswerDto): Promise<Answer> {
-    // check if answer exists
-    const answer = await this.findOne("id", id, ["sectionToAnswerSheet"]);
-    if (!answer) throw new NotFoundException("Answer not found.");
-
-    // check if sectionToAnswerSheet is already closed
-    if ((await answer.sectionToAnswerSheet).endDate)
-      throw new BadRequestException("Section is already closed.");
-
-    // update answer
-    return await this.update(id, updateAnswerDto);
-  }
-
   async createBatch(
+    userId: number,
     sasId: number,
     createAnswerDto: CreateAnswerDto[]
   ): Promise<Answer[]> {
     // for each answerDto in the batch, create it
     const answers: Answer[] = [];
     for (const answer of createAnswerDto) {
-      answers.push(await this.create(sasId, answer));
+      answers.push(await this.create(userId, sasId, answer));
     }
     return answers;
   }
 
-  async getQuestion(answerId: number): Promise<Partial<Question>> {
-    // try to find answer by id and throw error if not found
-    const answer = await this.findOne("id", answerId);
-    if (!answer) throw new NotFoundException("Answer not found.");
+  async getQuestion(
+    userId: number,
+    answerId: number
+  ): Promise<Partial<Question>> {
+    // check if answer exists
+    const answer = await this.findOne(userId, "id", answerId);
 
-    // try to find question by id and throw error if not found
-    const question = await this.questionService.findOne(
+    // check if question exists
+    const { statement, options, type } = (await this.questionService.findOne(
       new ObjectId(answer.questionRef)
-    );
-    if (!question) throw new NotFoundException("Question not found.");
+    )) as Question;
 
-    // return question without grading rubric
-    return {
-      statement: question.statement,
-      options: question.options,
-      type: question.type,
-    };
+    // return partial question
+    return { statement, options, type };
+  }
+
+  async submit(
+    userId: number,
+    answerId: number,
+    updateAnswerDto: UpdateAnswerDto
+  ): Promise<Answer> {
+    // check if answer exists and user is authorized to update it
+    const answer = await this.findOne(userId, "id", answerId, [
+      "sectionToAnswerSheet",
+    ]);
+
+    // check if sectionToAnswerSheet is already closed
+    if ((await answer.sectionToAnswerSheet).endDate)
+      throw new BadRequestException("Section is already closed.");
+
+    // update answer
+    return await this.update(userId, answerId, updateAnswerDto);
   }
 
   async submitAndCloseSection(
+    userId: number,
     answerId: number,
     updateAnswerAndCloseSectionDto: UpdateAnswerAndCloseSectionDto
   ): Promise<string> {
@@ -189,13 +237,13 @@ export class AnswerService {
       });
 
     // update answer with provided data
-    const answer: Answer = await this.update(answerId, {
+    const answer: Answer = await this.update(userId, answerId, {
       content: updateAnswerAndCloseSectionDto.content,
     });
 
     // update sectionToAnswerSheet with end date
     const _id = (await answer.sectionToAnswerSheet).id;
-    await this.sasService.update(_id, { endDate: new Date() });
+    await this.sasService.update(userId, _id, { endDate: new Date() });
 
     // write keyboard data to file
     await fs.appendFile(
@@ -212,31 +260,30 @@ export class AnswerService {
     return `Section ${_id} closed successfully at ${new Date()}.`;
   }
 
-  async generateEval(id: number): Promise<Answer> {
-    const answer: Answer | null = await this.findOne("id", id);
-    if (!answer) throw new NotFoundException("Answer not found.");
+  async generateEval(userId: number, answerId: number): Promise<Answer> {
+    const answer = await this.findOne(userId, "id", answerId);
 
-    const question: Question | null = await this.questionService.findOne(
-      new ObjectId(answer.questionRef)
-    );
-    if (!question) throw new NotFoundException("Question not found.");
+    const { gradingRubric, statement, type } =
+      (await this.questionService.findOne(
+        new ObjectId(answer.questionRef)
+      )) as Question;
 
     let maxScore: number = 0;
-    for (const rubric of Object.values(question.gradingRubric)) {
+    for (const rubric of Object.values(gradingRubric)) {
       maxScore += (rubric["pontos totais"] as Number).valueOf();
     }
 
     const generatedEval = await this.openaiService.createChatCompletion(
-      question.statement,
-      question.gradingRubric,
-      question.type === "challenge"
+      statement,
+      gradingRubric,
+      type === "challenge"
         ? JSON.stringify(
             (
               await this.openaiService.fetchUnzippedDocumentary(answer.content)
             ).documentaryContent
           )
         : answer.content,
-      question.type === "challenge" ? "gpt-3.5-turbo-16k" : "gpt-3.5-turbo"
+      type === "challenge" ? "gpt-3.5-turbo-16k" : "gpt-3.5-turbo"
     );
 
     let aiScore: number = 0;
@@ -256,14 +303,14 @@ export class AnswerService {
 
     // update answer with aiScore
     await this.answerRepository.update(
-      { id },
+      { id: answerId },
       { aiScore: (aiScore / maxScore) * 10 }
     );
 
     // update answer with aiFeedback
-    await this.answerRepository.update({ id }, { aiFeedback });
+    await this.answerRepository.update({ id: answerId }, { aiFeedback });
 
     // return updated answer
-    return (await this.findOne("id", id))!;
+    return await this.findOne(userId, "id", answerId);
   }
 }

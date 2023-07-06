@@ -18,8 +18,8 @@ import { SectionToAnswerSheet } from "./entities/section-to-answer-sheet.entity"
 
 /** utils */
 import { UserRole } from "../user/entities/user.entity";
-import { Roles } from "../user/decorators/roles.decorator";
 import { PassportRequest } from "../auth/auth.controller";
+import { Roles } from "../user/decorators/roles.decorator";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("section-to-answer-sheet")
@@ -46,6 +46,7 @@ export class SectionToAnswerSheetController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN)
   findAll(
     @Query("key") key: string,
     @Query("value") value: unknown,
@@ -55,21 +56,26 @@ export class SectionToAnswerSheetController {
     return this.sectionToAnswerSheetService.findAll(
       key,
       value,
-      relations ? relations.split(",") : undefined
+      relations ? relations.split(",") : undefined,
+      map
     );
   }
 
   @Get("findOne")
+  @Roles(UserRole.CANDIDATE)
   findOne(
+    @Req() req: PassportRequest,
     @Query("key") key: string,
     @Query("value") value: unknown,
     @Query("relations") relations: string,
     @Query("map") map: boolean
-  ): Promise<SectionToAnswerSheet | null> {
+  ): Promise<SectionToAnswerSheet> {
     return this.sectionToAnswerSheetService.findOne(
+      req.user!.id,
       key,
       value,
-      relations ? relations.split(",") : undefined
+      relations ? relations.split(",") : undefined,
+      map
     );
   }
 

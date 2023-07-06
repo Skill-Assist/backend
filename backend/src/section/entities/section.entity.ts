@@ -31,7 +31,7 @@ export class Section extends SQLBaseEntity {
   hasProctoring: boolean;
 
   @Column({ type: "json", nullable: true })
-  questionId: { id: string; weight: number }[];
+  questions: { id: string; weight: number }[];
 
   @Exclude()
   @Column({ default: true })
