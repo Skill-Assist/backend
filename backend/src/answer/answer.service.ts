@@ -23,7 +23,7 @@ import { Repository } from "typeorm";
 import { Answer } from "./entities/answer.entity";
 import { CreateAnswerDto } from "./dto/create-answer.dto";
 import { UpdateAnswerDto } from "./dto/update-answer.dto";
-import { Question } from "../question/schemas/question.schema";
+import { GradingRubric, Question } from "../question/schemas/question.schema";
 import { UpdateAnswerAndCloseSectionDto } from "./dto/update-answer-and-close-section.dto";
 
 /** OpenAI API */
@@ -267,48 +267,53 @@ export class AnswerService {
       (await this.questionService.findOne(
         new ObjectId(answer.questionRef)
       )) as Question;
+    if (type === "multipleChoice") {
+      await this.answerRepository.update(
+        { id: answerId },
+        { aiScore: answer.content === gradingRubric.answer.option ? 1 : 0 }
+      );
+    } else {
+      let maxScore: number = 0;
+      let aiScore: number = 0;
+      let aiFeedback: string = "";
 
-    let maxScore: number = 0;
-    for (const rubric of Object.values(gradingRubric)) {
-      maxScore += (rubric["pontos totais"] as Number).valueOf();
+      for (const rubric of Object.values(gradingRubric))
+        maxScore = maxScore + +Object.entries(rubric)[0][1];
+
+      const generatedEval = await this.openaiService.createChatCompletion(
+        statement,
+        gradingRubric as GradingRubric,
+        type === "challenge"
+          ? JSON.stringify(
+              (
+                await this.openaiService.fetchUnzippedDocumentary(
+                  answer.content
+                )
+              ).documentaryContent
+            )
+          : answer.content,
+        type === "challenge" ? "gpt-3.5-turbo-16k" : "gpt-3.5-turbo"
+      );
+
+      for (const key in generatedEval) {
+        const content = generatedEval[key].choices[0].message?.content;
+
+        const scoreRegex: RegExp = /Nota: (\d+)/;
+        const scoreMatch: RegExpMatchArray | null = content!.match(scoreRegex);
+        if (scoreMatch) aiScore += parseInt(scoreMatch[1]);
+
+        const feedbackRegex: RegExp = /Feedback: (.+)/;
+        const feedbackMatch: RegExpMatchArray | null =
+          content!.match(feedbackRegex);
+        if (feedbackMatch) aiFeedback += `${key}: ${feedbackMatch[1]}\n\n`;
+      }
+
+      // update answer with aiScore
+      await this.update(userId, answerId, { aiScore: aiScore / maxScore });
+
+      // update answer with aiFeedback
+      await this.update(userId, answerId, { aiFeedback });
     }
-
-    const generatedEval = await this.openaiService.createChatCompletion(
-      statement,
-      gradingRubric,
-      type === "challenge"
-        ? JSON.stringify(
-            (
-              await this.openaiService.fetchUnzippedDocumentary(answer.content)
-            ).documentaryContent
-          )
-        : answer.content,
-      type === "challenge" ? "gpt-3.5-turbo-16k" : "gpt-3.5-turbo"
-    );
-
-    let aiScore: number = 0;
-    let aiFeedback: string = "";
-    for (const key in generatedEval) {
-      const content = generatedEval[key].choices[0].message?.content;
-
-      const scoreRegex: RegExp = /Nota: (\d+)/;
-      const scoreMatch: RegExpMatchArray | null = content!.match(scoreRegex);
-      if (scoreMatch) aiScore += parseInt(scoreMatch[1]);
-
-      const feedbackRegex: RegExp = /Feedback: (.+)/;
-      const feedbackMatch: RegExpMatchArray | null =
-        content!.match(feedbackRegex);
-      if (feedbackMatch) aiFeedback += `${key}: ${feedbackMatch[1]}\n\n`;
-    }
-
-    // update answer with aiScore
-    await this.answerRepository.update(
-      { id: answerId },
-      { aiScore: (aiScore / maxScore) * 10 }
-    );
-
-    // update answer with aiFeedback
-    await this.answerRepository.update({ id: answerId }, { aiFeedback });
 
     // return updated answer
     return await this.findOne(userId, "id", answerId);

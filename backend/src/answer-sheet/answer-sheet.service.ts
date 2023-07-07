@@ -10,7 +10,9 @@ import { InjectRepository } from "@nestjs/typeorm";
 /** providers */
 import { UserService } from "../user/user.service";
 import { ExamService } from "../exam/exam.service";
+import { AnswerService } from "../answer/answer.service";
 import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { SectionToAnswerSheetService } from "../section-to-answer-sheet/section-to-answer-sheet.service";
 
 /** external dependencies */
 import { Repository } from "typeorm";
@@ -18,6 +20,7 @@ import { Repository } from "typeorm";
 /** entities */
 import { User } from "../user/entities/user.entity";
 import { AnswerSheet } from "./entities/answer-sheet.entity";
+import { UpdateAnswerSheetDto } from "./dto/update-answer-sheet.dto";
 
 /** utils */
 import { create, findAll, findOne, update } from "../utils/typeorm.utils";
@@ -26,13 +29,15 @@ import { create, findAll, findOne, update } from "../utils/typeorm.utils";
 @Injectable()
 export class AnswerSheetService {
   private userService: UserService;
+  private answerService: AnswerService;
 
   constructor(
     @InjectRepository(AnswerSheet)
     private readonly answerSheetRepository: Repository<AnswerSheet>,
     private readonly moduleRef: ModuleRef,
     private readonly examService: ExamService,
-    private readonly queryRunner: QueryRunnerFactory
+    private readonly queryRunner: QueryRunnerFactory,
+    private readonly sectionToAnswerSheetService: SectionToAnswerSheetService
   ) {}
 
   /** basic CRUD methods */
@@ -141,7 +146,7 @@ export class AnswerSheetService {
   async update(
     userId: number,
     answerSheetId: number,
-    updateAnswerSheetDto: Record<string, unknown>
+    updateAnswerSheetDto: UpdateAnswerSheetDto
   ): Promise<AnswerSheet> {
     // check if answer sheet exists and user allowed to update it
     await this.findOne(userId, "id", answerSheetId);
@@ -149,7 +154,7 @@ export class AnswerSheetService {
     // update answer sheet
     await update(
       answerSheetId,
-      updateAnswerSheetDto,
+      updateAnswerSheetDto as unknown as Record<string, unknown>,
       this.answerSheetRepository,
       "answerSheet"
     );
@@ -215,7 +220,7 @@ export class AnswerSheetService {
     // check if answer sheet does not contain any section
     if (!(await answerSheet.sectionToAnswerSheets).length)
       throw new UnauthorizedException(
-        "You can't submit the answer sheet because it does not contain any section."
+        "You can't submit the answer sheet because it does not contain any attempted section."
       );
 
     // check if all sections are closed
@@ -244,5 +249,55 @@ export class AnswerSheetService {
       .leftJoinAndSelect("exam.sections", "sections")
       .where("answerSheet.id = :answerSheetId", { answerSheetId })
       .getOne()) as AnswerSheet;
+  }
+
+  async submitAndGetEval(
+    userId: number,
+    answerSheetId: number
+  ): Promise<AnswerSheet> {
+    // get answerService from moduleRef
+    this.answerService =
+      this.answerService ??
+      this.moduleRef.get<AnswerService>(AnswerService, {
+        strict: false,
+      });
+
+    // submit answerSheet
+    const submittedAS = await this.submit(userId, answerSheetId);
+
+    let answerSheetScore: number = 0;
+    for (const sas of await submittedAS.sectionToAnswerSheets) {
+      // initialize SAS score at 0
+      let sasScore: number = 0;
+
+      // get section SAS is related to
+      const section = await sas.section;
+
+      // iterate over each answer in SAS
+      for (const answer of await sas.answers) {
+        // generate eval for answer
+        const evaluatedAnswer = await this.answerService.generateEval(
+          userId,
+          answer.id
+        );
+        // get relative weight of answer
+        const weight: number = section.questions.find(
+          (q) => q.id === answer.questionRef
+        )!.weight;
+        // add relative eval of answer to SAS score
+        sasScore += evaluatedAnswer.aiScore * weight;
+      }
+
+      // update current SAS with AI score
+      answerSheetScore += sasScore;
+      await this.sectionToAnswerSheetService.update(userId, sas.id, {
+        aiScore: sasScore,
+      });
+    }
+
+    // update answerSheet with AI score
+    return await this.update(userId, answerSheetId, {
+      aiScore: answerSheetScore,
+    });
   }
 }

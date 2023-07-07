@@ -11,8 +11,8 @@ import { isValid } from "date-fns";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateSectionDto {
-  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s]{3,20}$/, {
-    message: "Name must be between 3 and 20 characters long.",
+  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s]{3,50}$/, {
+    message: "Name must be between 3 and 50 characters long.",
   })
   name: string;
 
@@ -22,8 +22,8 @@ export class CreateSectionDto {
   description: string;
 
   @IsNumber()
-  @Min(1)
-  @Max(100)
+  @Min(0)
+  @Max(1)
   weight: number;
 
   @IsOptional()

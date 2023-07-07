@@ -14,15 +14,17 @@ import { SectionToAnswerSheetController } from "./section-to-answer-sheet.contro
 import { QueryRunnerFactory } from "../utils/query-runner.factory";
 import { SectionToAnswerSheetService } from "./section-to-answer-sheet.service";
 
+/** modules */
+
 /** entities */
 import { SectionToAnswerSheet } from "./entities/section-to-answer-sheet.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Module({
   imports: [
-    forwardRef(() => AnswerModule),
     SectionModule,
-    AnswerSheetModule,
+    forwardRef(() => AnswerModule),
+    forwardRef(() => AnswerSheetModule),
     TypeOrmModule.forFeature([SectionToAnswerSheet]),
   ],
   controllers: [SectionToAnswerSheetController],

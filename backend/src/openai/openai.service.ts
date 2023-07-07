@@ -18,7 +18,7 @@ import { GradingRubric } from "../question/schemas/question.schema";
 ////////////////////////////////////////////////////////////////////////////////
 
 /** types */
-type Criteria = [string, number | { min: number; max: number }][];
+type Criteria = [string, number | string | { min: number; max: number }][];
 
 export type ChatCompletionResponse = {
   [key: string]: CreateChatCompletionResponse;

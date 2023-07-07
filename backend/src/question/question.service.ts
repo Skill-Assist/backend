@@ -5,6 +5,7 @@ import {
   BadRequestException,
   UnauthorizedException,
 } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 import { InjectModel } from "@nestjs/mongoose";
 
 /** providers */
@@ -22,10 +23,12 @@ import { CreateQuestionDto } from "./dto/create-question.dto";
 
 @Injectable()
 export class QuestionService {
+  private userService: UserService;
+
   constructor(
     @InjectModel(Question.name)
     private readonly questionModel: Model<Question>,
-    private readonly userService: UserService,
+    private readonly moduleRef: ModuleRef,
     private readonly sectionService: SectionService
   ) {}
 
@@ -36,6 +39,13 @@ export class QuestionService {
     sectionId?: number,
     weight?: number
   ): Promise<Question> {
+    // get answerService from moduleRef
+    this.userService =
+      this.userService ??
+      this.moduleRef.get<UserService>(UserService, {
+        strict: false,
+      });
+
     // if type is multipleChoice, check if there are at least 2 choices
     if (
       createQuestionDto.type === "multipleChoice" &&
@@ -112,9 +122,20 @@ export class QuestionService {
     // check if section exists and is owned by user
     await this.sectionService.findOne(userId, "id", sectionId);
 
+    // check if weight is between 0 and 1
+    if (weight < 0 || weight > 1)
+      throw new BadRequestException("Weight should a number between 0 and 1.");
+
     // add relationship between section and question
+    const questions = (
+      await this.sectionService.findOne(userId, "id", sectionId)
+    ).questions;
+    console.log(questions);
+
     this.sectionService.addtoQuestion(sectionId, {
-      questions: [{ id: questionId, weight }],
+      questions: questions
+        ? [...questions, { id: questionId, weight }]
+        : [{ id: questionId, weight }],
     });
 
     // add relationship between question and section

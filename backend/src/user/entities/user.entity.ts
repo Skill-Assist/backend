@@ -1,5 +1,12 @@
+import {
+  Index,
+  Column,
+  Entity,
+  OneToMany,
+  ManyToMany,
+  BeforeInsert,
+} from "typeorm";
 import { Exclude } from "class-transformer";
-import { Index, Column, Entity, OneToMany, ManyToMany } from "typeorm";
 
 import { Exam } from "../../exam/entities/exam.entity";
 import { SQLBaseEntity } from "../../utils/base.entity";
@@ -17,6 +24,9 @@ export enum UserRole {
 export class User extends SQLBaseEntity {
   @Column()
   name: string;
+
+  @Column({ nullable: true })
+  nickname: string;
 
   @Column()
   @Index({ unique: true })
@@ -60,6 +70,12 @@ export class User extends SQLBaseEntity {
 
   @OneToMany(() => AnswerSheet, (answerSheet) => answerSheet.user)
   answerSheets: Promise<AnswerSheet[]>;
+
+  /** hooks */
+  @BeforeInsert()
+  createNickname() {
+    this.nickname = this.name.split(" ")[0];
+  }
 
   /** constructor */
   constructor(partial: Partial<User>) {

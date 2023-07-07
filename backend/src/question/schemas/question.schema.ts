@@ -8,6 +8,7 @@ export interface GradingRubric {
   [key: string]: {
     [key: string]:
       | number
+      | string
       | {
           min: number;
           max: number;

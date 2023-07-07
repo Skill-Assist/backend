@@ -99,4 +99,12 @@ export class AnswerSheetController {
   ): Promise<AnswerSheet> {
     return this.answerSheetService.fetchSections(req.user!.id, id);
   }
+
+  @Get("submitAndGetEval")
+  submitAndGetEval(
+    @Req() req: PassportRequest,
+    @Query("id") id: number
+  ): Promise<AnswerSheet> {
+    return this.answerSheetService.submitAndGetEval(req.user!.id, id);
+  }
 }

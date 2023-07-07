@@ -2,32 +2,36 @@
   "exams": [
     {
       "owner": "Ultrapar Participacoes SA",
-      "category": "Desenvolvedor",
-      "subCategory": "Front-end",
+      "title": "Desenvolvedor",
+      "subtitle": "Front-end",
       "level": "Pleno",
-      "durationInHours": 2,
-      "deadline": "2023-07-15T10:00:00Z"
+      "durationInHours": 120,
+      "submissionInHours": 360,
+      "dateToArchive": "2023-08-15T10:00:00Z"
     },
     {
       "owner": "Ambev SA",
-      "category": "Designer",
-      "subCategory": "UI/UX",
+      "title": "Designer",
+      "subtitle": "UI/UX",
       "level": "Sênior",
-      "durationInHours": 2,
-      "deadline": "2023-07-15T10:00:00Z"
+      "durationInHours": 120,
+      "submissionInHours": 360,
+      "dateToArchive": "2023-08-15T10:00:00Z"
     },
     {
       "owner": "Inteli - Instituto de Tecnologia e Liderança",
-      "category": "Candidato",
-      "subCategory": "Engenharia de Software",
-      "durationInHours": 2,
-      "deadline": "2023-07-15T10:00:00Z"
+      "title": "Candidato",
+      "subtitle": "Engenharia de Software",
+      "durationInHours": 120,
+      "submissionInHours": 360,
+      "dateToArchive": "2023-08-15T10:00:00Z"
     }
   ],
   "sections": [
     {
       "name": "Lógica de Programação",
       "description": "Avalia a capacidade de resolver problemas de forma lógica",
+      "weight": 0.5,
       "durationInHours": 1,
       "questions": [
         {
@@ -39,7 +43,7 @@
             "c": "NOT (!)",
             "d": "XOR (^)"
           },
-          "gradingRubric": { "a": 10 }
+          "gradingRubric": { "answer": { "option": "a " } }
         },
         {
           "type": "multipleChoice",
@@ -50,7 +54,7 @@
             "c": "Python",
             "d": "Java"
           },
-          "gradingRubric": { "b": 10 }
+          "gradingRubric": { "answer": { "option": "b " } }
         },
         {
           "type": "text",
@@ -99,6 +103,7 @@
     {
       "name": "Linguagens de Programação",
       "description": "Avalia a capacidade de desenvolver em uma linguagem específica",
+      "weight": 0.5,
       "durationInHours": 1,
       "questions": [
         {
@@ -120,6 +125,7 @@
     {
       "name": "Desenvolvimento Web",
       "description": "Avalia a capacidade de desenvolver uma aplicação web funcional",
+      "weight": 0.5,
       "durationInHours": 1,
       "questions": [
         {
@@ -181,6 +187,7 @@
     {
       "name": "Banco de Dados",
       "description": "Avalia a capacidade de estruturar e manipular dados",
+      "weight": 0.5,
       "durationInHours": 1,
       "questions": [
         {

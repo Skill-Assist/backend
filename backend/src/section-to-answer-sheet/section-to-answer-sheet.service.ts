@@ -27,14 +27,14 @@ import { create, findOne, findAll, update } from "../utils/typeorm.utils";
 @Injectable()
 export class SectionToAnswerSheetService {
   private answerService: AnswerService;
+  private answerSheetService: AnswerSheetService;
 
   constructor(
     @InjectRepository(SectionToAnswerSheet)
     private readonly sectionToAnswerSheetRepository: Repository<SectionToAnswerSheet>,
     private readonly moduleRef: ModuleRef,
     private readonly sectionService: SectionService,
-    private readonly queryRunner: QueryRunnerFactory,
-    private readonly answerSheetService: AnswerSheetService
+    private readonly queryRunner: QueryRunnerFactory
   ) {}
 
   /** basic CRUD methods */
@@ -43,6 +43,13 @@ export class SectionToAnswerSheetService {
     sectionId: number,
     answerSheetId: number
   ): Promise<SectionToAnswerSheet> {
+    // get answer service from moduleRef
+    this.answerSheetService =
+      this.answerSheetService ??
+      this.moduleRef.get<AnswerSheetService>(AnswerSheetService, {
+        strict: false,
+      });
+
     // check if section exists and user is enrolled in exam
     const section = await this.sectionService.findOne(userId, "id", sectionId);
 
@@ -118,7 +125,9 @@ export class SectionToAnswerSheetService {
       this.sectionToAnswerSheetRepository,
       "sectionToAnswerSheet",
       key,
-      value
+      value,
+      relations,
+      map
     )) as SectionToAnswerSheet;
 
     // check if SAS exists
