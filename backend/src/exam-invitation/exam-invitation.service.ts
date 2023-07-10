@@ -9,6 +9,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
 import { UserService } from "../user/user.service";
+import { ExamService } from "../exam/exam.service";
 import { QueryRunnerFactory } from "../utils/query-runner.factory";
 
 /** external dependencies */
@@ -27,6 +28,7 @@ import { create, findOne, findAll, update } from "../utils/typeorm.utils";
 @Injectable()
 export class ExamInvitationService {
   private userService: UserService;
+  private examService: ExamService;
 
   constructor(
     @InjectRepository(ExamInvitation)
@@ -290,5 +292,27 @@ export class ExamInvitationService {
       )
       .andWhere("examInvitation.email = :userEmail", { userEmail })
       .getMany()) as ExamInvitation[];
+  }
+
+  async fetchOwnInvitations(userId: number): Promise<ExamInvitation[]> {
+    // get userService from moduleRef
+    this.userService =
+      this.userService ??
+      this.moduleRef.get(UserService, {
+        strict: false,
+      });
+
+    // get examService from moduleRef
+    this.examService =
+      this.examService ??
+      this.moduleRef.get(ExamService, {
+        strict: false,
+      });
+
+    // get user by id
+    const user = (await this.userService.findOne("id", userId)) as User;
+
+    // get user owned invitations by email
+    return await this.findAll("email", user.email);
   }
 }

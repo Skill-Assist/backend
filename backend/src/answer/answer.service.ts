@@ -267,10 +267,16 @@ export class AnswerService {
       (await this.questionService.findOne(
         new ObjectId(answer.questionRef)
       )) as Question;
+
     if (type === "multipleChoice") {
       await this.answerRepository.update(
         { id: answerId },
-        { aiScore: answer.content === gradingRubric.answer.option ? 1 : 0 }
+        {
+          aiScore:
+            answer.content === new String(gradingRubric.answer.option).trim()
+              ? 1
+              : 0,
+        }
       );
     } else {
       let maxScore: number = 0;

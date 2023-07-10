@@ -59,8 +59,8 @@ export class QuestionService {
     // if sectionId is provided, check if user owns section
     if (sectionId) await this.sectionService.findOne(userId, "id", sectionId);
 
-    // if sectionId is provided, check if weight is provided
-    if (sectionId && !weight)
+    // if sectionId is provided, check if weight is provided and is between 0 and 1
+    if (sectionId && !weight && (weight! < 0 || weight! > 1))
       throw new UnauthorizedException(
         "You must provide the relative weight this question will be worth in the current section."
       );
@@ -109,6 +109,10 @@ export class QuestionService {
   }
 
   /** custom methods */
+  async fetchOwnQuestions(userId: number): Promise<Question[]> {
+    return await this.questionModel.find({ createdBy: userId });
+  }
+
   async addToSection(
     userId: number,
     questionId: ObjectId,
@@ -130,7 +134,6 @@ export class QuestionService {
     const questions = (
       await this.sectionService.findOne(userId, "id", sectionId)
     ).questions;
-    console.log(questions);
 
     this.sectionService.addtoQuestion(sectionId, {
       questions: questions

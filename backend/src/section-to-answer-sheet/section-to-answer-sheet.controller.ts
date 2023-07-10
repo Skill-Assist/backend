@@ -46,7 +46,7 @@ export class SectionToAnswerSheetController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN)
+  // @Roles(UserRole.ADMIN)
   findAll(
     @Query("key") key: string,
     @Query("value") value: unknown,

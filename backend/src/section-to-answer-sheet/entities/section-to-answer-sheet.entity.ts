@@ -13,10 +13,10 @@ export class SectionToAnswerSheet extends SQLBaseEntity {
   @Column({ default: () => "CURRENT_TIMESTAMP" })
   startDate: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: "decimal", precision: 5, scale: 2, default: 0 })
   aiScore: number;
 
-  @Column({ nullable: true })
+  @Column({ type: "decimal", precision: 5, scale: 2, default: 0 })
   revisedScore: number;
 
   @Column({ nullable: true })

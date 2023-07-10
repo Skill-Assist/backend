@@ -15,7 +15,7 @@ export class Section extends SQLBaseEntity {
   @Column()
   description: string;
 
-  @Column({ type: "decimal", precision: 2, scale: 1 })
+  @Column({ type: "decimal", precision: 4, scale: 1 })
   weight: number;
 
   @Column({ nullable: true })

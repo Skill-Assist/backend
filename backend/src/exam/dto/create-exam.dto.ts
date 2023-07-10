@@ -1,9 +1,10 @@
 import {
   Min,
   Max,
-  Matches,
+  Length,
   IsNumber,
   Validate,
+  IsString,
   IsBoolean,
   IsOptional,
 } from "class-validator";
@@ -11,21 +12,29 @@ import { isValid } from "date-fns";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateExamDto {
-  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s_-]{3,20}$/, {
+  @IsString({
+    message: "Title must be a string.",
+  })
+  @Length(3, 20, {
     message: "Title must be between 3 and 20 characters long.",
   })
   title: string;
 
   @IsOptional()
-  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s_-]{3,20}$/, {
-    message: "Subtitle must be between 3 and 20 characters long.",
+  @IsString({
+    message: "Title must be a string.",
+  })
+  @Length(3, 20, {
+    message: "Title must be between 3 and 20 characters long.",
   })
   subtitle?: string;
 
   @IsOptional()
-  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ\s_-]{3,20}$/, {
-    message:
-      "Level must be between 3 and 20 characters long and contain only letters. If number is required, please use roman numerals or contact support.",
+  @IsString({
+    message: "Title must be a string.",
+  })
+  @Length(3, 20, {
+    message: "Title must be between 3 and 20 characters long.",
   })
   level?: string;
 

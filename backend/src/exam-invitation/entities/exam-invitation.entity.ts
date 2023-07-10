@@ -12,7 +12,7 @@ export class ExamInvitation extends SQLBaseEntity {
   @Column()
   email: string;
 
-  @Column({ default: 24 })
+  @Column({ type: "decimal", precision: 4, scale: 1, default: 24 })
   expirationInHours: number;
 
   @Column({ nullable: true })

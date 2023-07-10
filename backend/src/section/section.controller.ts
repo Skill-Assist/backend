@@ -57,7 +57,6 @@ export class SectionController {
   }
 
   @Get("findOne")
-  @Roles(UserRole.RECRUITER)
   findOne(
     @Req() req: PassportRequest,
     @Query("key") key: string,

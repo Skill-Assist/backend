@@ -14,16 +14,21 @@ export class Answer extends SQLBaseEntity {
   @Column({ nullable: true })
   content: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "decimal", precision: 5, scale: 2, default: 0 })
   aiScore: number;
 
   @Column({ nullable: true, type: "longtext" })
   aiFeedback: string;
 
-  @Column({ nullable: true })
+  @Column({
+    type: "decimal",
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   revisedScore: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: "longtext" })
   revisedFeedback: string;
 
   @Exclude()

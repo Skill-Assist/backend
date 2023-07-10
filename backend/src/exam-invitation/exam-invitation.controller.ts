@@ -43,6 +43,7 @@ export class ExamInvitationController {
     );
   }
 
+  /** custom endpoints */
   @Get("resendInvitation")
   @Roles(UserRole.RECRUITER)
   async resendInvitation(
@@ -50,5 +51,12 @@ export class ExamInvitationController {
     @Query("id") id: number
   ): Promise<ExamInvitation[]> {
     return this.examInvitationService.resendInvitation(id, req.user!.id);
+  }
+
+  @Get("fetchOwnInvitations")
+  async fetchOwnInvitations(
+    @Req() req: PassportRequest
+  ): Promise<ExamInvitation[]> {
+    return this.examInvitationService.fetchOwnInvitations(req.user!.id);
   }
 }

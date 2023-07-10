@@ -60,7 +60,6 @@ export class ExamController {
   }
 
   @Get("findOne")
-  @Roles(UserRole.RECRUITER)
   findOne(
     @Req() req: PassportRequest,
     @Query("key") key: string,
@@ -88,14 +87,13 @@ export class ExamController {
   }
 
   /** custom endpoints */
-  @Get("fetchOwnedExams")
-  @Roles(UserRole.RECRUITER)
-  fetchOwnedExams(
+  @Get("fetchOwnExams")
+  fetchOwnExams(
     @Req() req: PassportRequest,
     @Query("relations") relations: string,
     @Query("map") map: boolean
   ): Promise<Exam[]> {
-    return this.examService.fetchOwnedExams(
+    return this.examService.fetchOwnExams(
       req.user!.id,
       relations ? relations.split(",") : undefined,
       map

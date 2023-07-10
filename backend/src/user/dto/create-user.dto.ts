@@ -6,17 +6,21 @@ import {
   IsHexColor,
   IsOptional,
   IsMobilePhone,
+  IsString,
+  Length,
 } from "class-validator";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateUserDto {
-  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s]{3,50}$/, {
+  @IsString()
+  @Length(3, 50, {
     message: "Name must be between 3 and 50 characters long",
   })
   name: string;
 
   @IsOptional()
-  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s]{3,12}$/, {
+  @IsString()
+  @Length(3, 12, {
     message: "Nickname must be between 3 and 12 characters long",
   })
   nickname?: string;

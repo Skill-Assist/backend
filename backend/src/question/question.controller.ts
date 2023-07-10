@@ -1,6 +1,6 @@
 /** nestjs */
 import { ApiTags } from "@nestjs/swagger";
-import { Controller, Req, Get, Post, Body, Param, Query } from "@nestjs/common";
+import { Controller, Req, Get, Post, Body, Query } from "@nestjs/common";
 
 /** providers */
 import { QuestionService } from "./question.service";
@@ -45,8 +45,14 @@ export class QuestionController {
     return this.questionService.findAll();
   }
 
-  @Get(":id")
-  findOne(@Param("id") id: ObjectId): any {
+  @Get("findOne")
+  findOne(@Query("id") id: ObjectId): Promise<Question | null> {
     return this.questionService.findOne(id);
+  }
+
+  /** custom endpoints */
+  @Get("fetchOwnQuestions")
+  fetchOwnQuestions(@Req() req: PassportRequest): Promise<Question[]> {
+    return this.questionService.fetchOwnQuestions(req.user!.id);
   }
 }

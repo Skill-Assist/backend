@@ -45,13 +45,6 @@ export class AnswerSheetService {
     // check if exam exists and if user is enrolled in it
     const exam = await this.examService.findOne(user.id, "id", examId);
 
-    // check if exam is live or published
-    if (!["live", "published"].includes(exam.status)) {
-      throw new UnauthorizedException(
-        "You can't start this exam because it is not live or published yet."
-      );
-    }
-
     // check if user has already attempted the exam
     for (const answerSheet of await exam.answerSheets) {
       if ((await answerSheet.user).id === user.id) {
@@ -280,16 +273,18 @@ export class AnswerSheetService {
           userId,
           answer.id
         );
+
         // get relative weight of answer
         const weight: number = section.questions.find(
           (q) => q.id === answer.questionRef
         )!.weight;
+
         // add relative eval of answer to SAS score
         sasScore += evaluatedAnswer.aiScore * weight;
       }
 
       // update current SAS with AI score
-      answerSheetScore += sasScore;
+      answerSheetScore += sasScore * section.weight;
       await this.sectionToAnswerSheetService.update(userId, sas.id, {
         aiScore: sasScore,
       });

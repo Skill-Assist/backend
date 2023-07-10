@@ -3,7 +3,6 @@ import {
   Max,
   Length,
   IsEnum,
-  Matches,
   IsNumber,
   IsString,
   IsObject,
@@ -40,9 +39,9 @@ export class CreateQuestionDto {
   difficulty?: number;
 
   @IsOptional()
-  @Matches(/^[a-zA-ZÀ-ÖØ-öø-ÿ0-9\s]{3,10}$/, {
-    each: true,
-    message: "Tags must be between 3 and 10 characters long.",
+  @IsString()
+  @Length(3, 15, {
+    message: "Tags must be between 3 and 15 characters long.",
   })
   tags?: string[];
 

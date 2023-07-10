@@ -132,12 +132,25 @@ export class ExamService {
   }
 
   /** custom methods */
-  async fetchOwnedExams(
+  async fetchOwnExams(
     userId: number,
     relations?: string[],
     map?: boolean
   ): Promise<Exam[]> {
-    return await this.findAll("createdBy", userId, relations, map);
+    // get exams created by user
+    const exams = await this.findAll("createdBy", userId, relations, map);
+
+    // get exams user is enrolled in
+    const enrolledExams = await this.examRepository
+      .createQueryBuilder("exam")
+      .leftJoinAndSelect("exam.enrolledUsers", "enrolledUsers")
+      .where("enrolledUsers.id = :userId", { userId })
+      .getMany();
+
+    // return exams removed duplicates
+    return [...exams, ...enrolledExams].filter(
+      (exam, index, self) => index === self.findIndex((t) => t.id === exam.id)
+    );
   }
 
   async switchStatus(
@@ -145,7 +158,7 @@ export class ExamService {
     examId: number,
     status: string
   ): Promise<Exam> {
-    // try to get exam by id
+    // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 
     // if status is published, check if exam is draft
