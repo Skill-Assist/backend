@@ -15,7 +15,7 @@ import { QuestionModule } from "./question/question.module";
 import { AnswerSheetModule } from "./answer-sheet/answer-sheet.module";
 import { ExamInvitationModule } from "./exam-invitation/exam-invitation.module";
 import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to-answer-sheet.module";
-import { HealthModule } from './health/health.module';
+import { HealthModule } from "./health/health.module";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Module({
@@ -61,7 +61,7 @@ import { HealthModule } from './health/health.module';
     /** see https://docs.nestjs.com/techniques/mongodb */
     MongooseModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => {
+      useFactory: (configService: ConfigService) => {
         const user = configService.get<string>("MONGO_USER");
         const pass = configService.get<string>("MONGO_USER_PASS");
         const host = configService.get<string>("MONGO_HOST");
