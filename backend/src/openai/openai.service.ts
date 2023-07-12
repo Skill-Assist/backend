@@ -83,13 +83,12 @@ export class OpenaiService {
         content: answerContent,
       });
 
-      const response: AxiosResponse<CreateChatCompletionResponse> =
-        await this.openAiApi.createChatCompletion({
-          model,
-          messages: chatHistory,
-          temperature: 0,
-          n: 1,
-        });
+      const response = (await this.openAiApi.createChatCompletion({
+        model,
+        messages: chatHistory,
+        temperature: 0,
+        n: 1,
+      })) as AxiosResponse<CreateChatCompletionResponse>;
 
       finalResponse[key] = response.data;
     }

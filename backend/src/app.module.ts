@@ -15,6 +15,7 @@ import { QuestionModule } from "./question/question.module";
 import { AnswerSheetModule } from "./answer-sheet/answer-sheet.module";
 import { ExamInvitationModule } from "./exam-invitation/exam-invitation.module";
 import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to-answer-sheet.module";
+import { HealthModule } from './health/health.module';
 ////////////////////////////////////////////////////////////////////////////////
 
 @Module({
@@ -65,11 +66,31 @@ import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to
         const pass = configService.get<string>("MONGO_USER_PASS");
         const host = configService.get<string>("MONGO_HOST");
         const db = configService.get<string>("MONGO_DATABASE");
-        return {
-          uri: `mongodb://${user}:${pass}@${host}:27017/${db}?authSource=admin`,
-        };
+        const script = configService.get<string>("npm_lifecycle_script");
+
+        // gracefully shutdown if NODE_ENV is not set
+        if (!script?.includes("NODE_ENV")) {
+          console.log("NODE_ENV is not set. Exiting...");
+          process.exit(1);
+        }
+
+        switch (script.includes("dev")) {
+          case true:
+            return {
+              uri: `mongodb://${user}:${pass}@${host}:27017/${db}?authSource=admin`,
+            };
+          case false:
+            return {
+              uri: `mongodb+srv://${user}:${pass}@${host}/`,
+            };
+          default:
+            return {
+              uri: `mongodb://${user}:${pass}@${host}:27017/${db}?authSource=admin`,
+            };
+        }
       },
     }),
+    HealthModule,
   ],
 })
 export class AppModule {}
