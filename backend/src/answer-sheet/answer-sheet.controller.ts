@@ -21,6 +21,7 @@ import { AnswerSheet } from "./entities/answer-sheet.entity";
 import { UserRole } from "../user/entities/user.entity";
 import { PassportRequest } from "../auth/auth.controller";
 import { Roles } from "../user/decorators/roles.decorator";
+import { AutocloseInterceptor } from "./interceptors/autoclose.interceptor";
 import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -40,6 +41,7 @@ export class AnswerSheetController {
     return this.answerSheetService.create(req.user!, examId);
   }
 
+  @UseInterceptors(AutocloseInterceptor, ExpirationFlagInterceptor)
   @Get()
   @Roles(UserRole.ADMIN)
   findAll(
@@ -56,7 +58,7 @@ export class AnswerSheetController {
     );
   }
 
-  @UseInterceptors(ExpirationFlagInterceptor)
+  @UseInterceptors(AutocloseInterceptor, ExpirationFlagInterceptor)
   @Get("findOne")
   @Roles(UserRole.CANDIDATE)
   findOne(
@@ -76,7 +78,6 @@ export class AnswerSheetController {
   }
 
   /** custom endpoints */
-  @UseInterceptors(ExpirationFlagInterceptor)
   @Get("start")
   @Roles(UserRole.CANDIDATE)
   start(
@@ -95,6 +96,7 @@ export class AnswerSheetController {
     return this.answerSheetService.submit(req.user!.id, id);
   }
 
+  @UseInterceptors(AutocloseInterceptor, ExpirationFlagInterceptor)
   @Get("fetchOwnAnswerSheets")
   @Roles(UserRole.CANDIDATE)
   fetchOwnAnswerSheets(
@@ -109,7 +111,7 @@ export class AnswerSheetController {
     );
   }
 
-  @UseInterceptors(ExpirationFlagInterceptor)
+  @UseInterceptors(AutocloseInterceptor, ExpirationFlagInterceptor)
   @Get("fetchSections")
   fetchSections(
     @Req() req: PassportRequest,

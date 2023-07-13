@@ -14,8 +14,11 @@ import { AnswerSheetController } from "./answer-sheet.controller";
 import { AnswerSheetService } from "./answer-sheet.service";
 import { QueryRunnerFactory } from "../utils/query-runner.factory";
 
-/** dependencies */
+/** entities */
 import { AnswerSheet } from "./entities/answer-sheet.entity";
+
+/** interceptors */
+import { AutocloseInterceptor } from "./interceptors/autoclose.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Module({
@@ -26,7 +29,7 @@ import { AnswerSheet } from "./entities/answer-sheet.entity";
     TypeOrmModule.forFeature([AnswerSheet]),
   ],
   controllers: [AnswerSheetController],
-  providers: [AnswerSheetService, QueryRunnerFactory],
+  providers: [AutocloseInterceptor, AnswerSheetService, QueryRunnerFactory],
   exports: [AnswerSheetService],
 })
 export class AnswerSheetModule {}

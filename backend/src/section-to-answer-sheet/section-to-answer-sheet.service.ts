@@ -223,4 +223,8 @@ export class SectionToAnswerSheetService {
     // return updated section to answer sheet
     return (await this.findOne(userId, "id", sectionToAnswerSheet.id))!;
   }
+
+  submit(userId: number, sasId: number): Promise<SectionToAnswerSheet> {
+    return this.update(userId, sasId, { endDate: new Date() });
+  }
 }

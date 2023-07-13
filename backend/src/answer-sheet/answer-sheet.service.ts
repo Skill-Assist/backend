@@ -210,7 +210,7 @@ export class AnswerSheetService {
     // check if answer sheet exists and candidate allowed to submit it
     const answerSheet = await this.findOne(userId, "id", answerSheetId);
 
-    // check if answer sheet does not contain any section
+    // check if answer sheet contains sections
     if (!(await answerSheet.sectionToAnswerSheets).length)
       throw new UnauthorizedException(
         "You can't submit the answer sheet because it does not contain any attempted section."
@@ -223,6 +223,18 @@ export class AnswerSheetService {
           "You can't submit the answer sheet until all sections are closed."
         );
     }
+
+    // check if answer sheet is expired
+    if (answerSheet.deadline.getTime() < new Date().getTime())
+      throw new UnauthorizedException(
+        "You can't submit the answer sheet because it is expired."
+      );
+
+    // check if answer sheet is already submitted
+    if (answerSheet.endDate !== null)
+      throw new UnauthorizedException(
+        "You have already submitted this answer sheet."
+      );
 
     await this.update(userId, answerSheetId, { endDate: new Date() });
 
