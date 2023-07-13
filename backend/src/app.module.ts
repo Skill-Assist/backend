@@ -43,18 +43,26 @@ import { HealthModule } from "./health/health.module";
       useFactory: async (configService: ConfigService) => {
         const user = configService.get<string>("MYSQL_USER");
         const pass = configService.get<string>("MYSQL_ROOT_PASS");
-        const host = configService.get<string>("MYSQL_HOST");
-        const db = configService.get<string>("MYSQL_DATABASE");
+        const hostDev = configService.get<string>("MYSQL_HOST_DEV");
+        const hostProd = configService.get<string>("MYSQL_HOST_PROD");
+        const script = configService.get<string>("npm_lifecycle_script");
+
+        // gracefully shutdown if NODE_ENV is not set
+        if (!script?.includes("NODE_ENV")) {
+          console.log("NODE_ENV is not set. Exiting...");
+          process.exit(1);
+        }
+
         return {
           type: "mysql",
-          host: host,
+          host: script.includes("prod") ? hostProd : hostDev,
           port: 3306,
           username: user,
           password: pass,
-          database: db,
+          database: script.includes("prod") ? "prod_db" : "dev_db",
           autoLoadEntities: true,
           cache: { duration: 30000 },
-          synchronize: process.env.NODE_ENV === "prod" ? false : true,
+          synchronize: script.includes("prod") ? false : true,
         };
       },
     }),
@@ -65,7 +73,6 @@ import { HealthModule } from "./health/health.module";
         const user = configService.get<string>("MONGO_USER");
         const pass = configService.get<string>("MONGO_USER_PASS");
         const host = configService.get<string>("MONGO_HOST");
-        const db = configService.get<string>("MONGO_DATABASE");
         const script = configService.get<string>("npm_lifecycle_script");
 
         // gracefully shutdown if NODE_ENV is not set
@@ -74,20 +81,11 @@ import { HealthModule } from "./health/health.module";
           process.exit(1);
         }
 
-        switch (script.includes("dev")) {
-          case true:
-            return {
-              uri: `mongodb://${user}:${pass}@${host}:27017/${db}?authSource=admin`,
-            };
-          case false:
-            return {
-              uri: `mongodb+srv://${user}:${pass}@${host}/`,
-            };
-          default:
-            return {
-              uri: `mongodb://${user}:${pass}@${host}:27017/${db}?authSource=admin`,
-            };
-        }
+        return {
+          uri: `mongodb+srv://${user}:${pass}@${host}/${
+            script.includes("prod") ? "prod_db" : "dev_db"
+          }?retryWrites=true&w=majority`,
+        };
       },
     }),
     HealthModule,

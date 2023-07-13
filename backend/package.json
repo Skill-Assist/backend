@@ -1,8 +1,8 @@
 {
   "name": "skill-assist",
   "version": "0.0.1",
-  "description": "Skill Assist",
-  "author": "Skill Assist Team [Florencio, Kama, Saadi]",
+  "description": "Skill Assist: Backend API",
+  "author": "Florencio, Kama",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
