@@ -60,6 +60,20 @@ export class SectionToAnswerSheetService {
       answerSheetId
     );
 
+    // check if section to answer sheet already exists
+    const sas = await this.sectionToAnswerSheetRepository
+      .createQueryBuilder("sectionToAnswerSheet")
+      .where("sectionToAnswerSheet.sectionId = :sectionId", { sectionId })
+      .andWhere("sectionToAnswerSheet.answerSheetId = :answerSheetId", {
+        answerSheetId,
+      })
+      .getOne();
+
+    if (sas)
+      throw new UnauthorizedException(
+        "You are not authorized to create this section to answer sheet."
+      );
+
     // create section to answer sheet (SAS)
     const sectionToAnswerSheet = (await create(
       this.queryRunner,

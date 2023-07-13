@@ -229,6 +229,19 @@ export class AnswerSheetService {
     return await this.findOne(userId, "id", answerSheetId);
   }
 
+  async fetchOwnAnswerSheets(
+    userId: number,
+    relations?: string[],
+    map?: boolean
+  ): Promise<AnswerSheet[]> {
+    return (await this.findAll(
+      "user",
+      userId,
+      relations,
+      map
+    )) as AnswerSheet[];
+  }
+
   async fetchSections(
     userId: number,
     answerSheetId: number

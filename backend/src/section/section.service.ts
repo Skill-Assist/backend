@@ -18,6 +18,7 @@ import { Repository } from "typeorm";
 import { Section } from "./entities/section.entity";
 import { AddQuestionDto } from "./dto/add-question.dto";
 import { CreateSectionDto } from "./dto/create-section.dto";
+import { UpdateSectionDto } from "./dto/update-section.dto";
 
 /** utils */
 import { create, findOne, findAll, update } from "../utils/typeorm.utils";
@@ -112,6 +113,24 @@ export class SectionService {
       relations,
       map
     )) as Section;
+  }
+
+  async update(
+    userId: number,
+    sectionId: number,
+    updateSectionDto: UpdateSectionDto
+  ): Promise<Section> {
+    // check if exam exists and is owned by user
+    await this.findOne(userId, "id", sectionId);
+
+    // update exam
+    await update(
+      sectionId,
+      updateSectionDto as Record<string, unknown>,
+      this.sectionRepository,
+      "exam"
+    );
+    return <Section>await this.findOne(userId, "id", sectionId);
   }
 
   /** custom methods */

@@ -5,6 +5,7 @@ import {
   Post,
   Body,
   Query,
+  Patch,
   Controller,
   UseInterceptors,
   ClassSerializerInterceptor,
@@ -17,6 +18,7 @@ import { SectionService } from "./section.service";
 /** entites & dtos */
 import { Section } from "./entities/section.entity";
 import { CreateSectionDto } from "./dto/create-section.dto";
+import { UpdateSectionDto } from "./dto/update-section.dto";
 
 /** utils */
 import { UserRole } from "../user/entities/user.entity";
@@ -30,6 +32,7 @@ import { Roles } from "../user/decorators/roles.decorator";
 export class SectionController {
   constructor(private readonly sectionService: SectionService) {}
 
+  /** basic CRUD endpoints */
   @Post()
   @Roles(UserRole.RECRUITER)
   create(
@@ -71,5 +74,15 @@ export class SectionController {
       relations ? relations.split(",") : undefined,
       map
     );
+  }
+
+  @Patch()
+  @Roles(UserRole.RECRUITER)
+  update(
+    @Req() req: PassportRequest,
+    @Query("id") id: number,
+    @Body() updateSectionDto: UpdateSectionDto
+  ): Promise<Section> {
+    return this.sectionService.update(req.user!.id, id, updateSectionDto);
   }
 }

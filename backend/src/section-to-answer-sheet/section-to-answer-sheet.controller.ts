@@ -20,6 +20,7 @@ import { SectionToAnswerSheet } from "./entities/section-to-answer-sheet.entity"
 import { UserRole } from "../user/entities/user.entity";
 import { PassportRequest } from "../auth/auth.controller";
 import { Roles } from "../user/decorators/roles.decorator";
+import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("section-to-answer-sheet")
@@ -31,6 +32,7 @@ export class SectionToAnswerSheetController {
   ) {}
 
   /** basic CRUD endpoints */
+  @UseInterceptors(ExpirationFlagInterceptor)
   @Post()
   @Roles(UserRole.CANDIDATE)
   create(
@@ -61,6 +63,7 @@ export class SectionToAnswerSheetController {
     );
   }
 
+  @UseInterceptors(ExpirationFlagInterceptor)
   @Get("findOne")
   @Roles(UserRole.CANDIDATE)
   findOne(
@@ -80,6 +83,7 @@ export class SectionToAnswerSheetController {
   }
 
   /** custom endpoints */
+  @UseInterceptors(ExpirationFlagInterceptor)
   @Post("batch-answer")
   @Roles(UserRole.CANDIDATE)
   createBatchAnswer(

@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  NotImplementedException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -166,6 +167,58 @@ export class ExamService {
       throw new UnauthorizedException(
         "Exam is not in draft status. Process was aborted."
       );
+
+    // if status is live, check if exam is draft or published
+    if (status === "live" && !(exam!.status === "draft" || "published"))
+      throw new UnauthorizedException(
+        "Exam is not in draft or published status. Process was aborted."
+      );
+
+    // if status is draft or archived, throw not implemented exception
+    if (status === "draft" || status === "archived")
+      throw new NotImplementedException(
+        "Switching exam status to draft or archived is not implemented yet."
+      );
+
+    // if status is published or live check if:
+    if (status === "published" || status === "live") {
+      // exam has sections
+      const sections = await exam!.sections;
+      if (sections.length === 0)
+        throw new UnauthorizedException(
+          "Exam has no sections. Process was aborted."
+        );
+
+      let examWeight = 0;
+
+      for (const section of sections) {
+        // sections have questions
+        if (section.questions.length === 0)
+          throw new UnauthorizedException(
+            "Exam has sections without questions. Process was aborted."
+          );
+
+        let sectionWeight = 0;
+
+        for (const question of section.questions) {
+          sectionWeight += question.weight;
+        }
+
+        // questions's weights on each section add to 1
+        if (sectionWeight !== 1)
+          throw new UnauthorizedException(
+            `Section ${section.id} has questions that do not add to 1. Process was aborted.`
+          );
+
+        examWeight += section.weight;
+      }
+
+      // sections's weights add to 1
+      if (examWeight !== 1)
+        throw new UnauthorizedException(
+          "Exam has sections with weights that do not add to 1. Process was aborted."
+        );
+    }
 
     // switch status of exam
     await this.examRepository

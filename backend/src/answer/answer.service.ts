@@ -236,13 +236,22 @@ export class AnswerService {
         strict: false,
       });
 
+    // check if answer exists and user is authorized to update it
+    const answer = await this.findOne(userId, "id", answerId, [
+      "sectionToAnswerSheet",
+    ]);
+
+    // check if sectionToAnswerSheet is already closed
+    if ((await answer.sectionToAnswerSheet).endDate)
+      throw new BadRequestException("Section is already closed.");
+
     // update answer with provided data
-    const answer: Answer = await this.update(userId, answerId, {
+    const updatedAnswer: Answer = await this.update(userId, answerId, {
       content: updateAnswerAndCloseSectionDto.content,
     });
 
     // update sectionToAnswerSheet with end date
-    const _id = (await answer.sectionToAnswerSheet).id;
+    const _id = (await updatedAnswer.sectionToAnswerSheet).id;
     await this.sasService.update(userId, _id, { endDate: new Date() });
 
     // write keyboard data to file

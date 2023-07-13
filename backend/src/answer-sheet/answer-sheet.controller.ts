@@ -21,6 +21,7 @@ import { AnswerSheet } from "./entities/answer-sheet.entity";
 import { UserRole } from "../user/entities/user.entity";
 import { PassportRequest } from "../auth/auth.controller";
 import { Roles } from "../user/decorators/roles.decorator";
+import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 ApiTags("answer-sheet");
@@ -55,6 +56,7 @@ export class AnswerSheetController {
     );
   }
 
+  @UseInterceptors(ExpirationFlagInterceptor)
   @Get("findOne")
   @Roles(UserRole.CANDIDATE)
   findOne(
@@ -74,6 +76,7 @@ export class AnswerSheetController {
   }
 
   /** custom endpoints */
+  @UseInterceptors(ExpirationFlagInterceptor)
   @Get("start")
   @Roles(UserRole.CANDIDATE)
   start(
@@ -92,6 +95,21 @@ export class AnswerSheetController {
     return this.answerSheetService.submit(req.user!.id, id);
   }
 
+  @Get("fetchOwnAnswerSheets")
+  @Roles(UserRole.CANDIDATE)
+  fetchOwnAnswerSheets(
+    @Req() req: PassportRequest,
+    @Query("relations") relations: string,
+    @Query("map") map: boolean
+  ): Promise<AnswerSheet[]> {
+    return this.answerSheetService.fetchOwnAnswerSheets(
+      req.user!.id,
+      relations ? relations.split(",") : undefined,
+      map
+    );
+  }
+
+  @UseInterceptors(ExpirationFlagInterceptor)
   @Get("fetchSections")
   fetchSections(
     @Req() req: PassportRequest,
