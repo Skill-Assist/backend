@@ -128,7 +128,7 @@ export class SectionService {
       sectionId,
       updateSectionDto as Record<string, unknown>,
       this.sectionRepository,
-      "exam"
+      "section"
     );
     return <Section>await this.findOne(userId, "id", sectionId);
   }
