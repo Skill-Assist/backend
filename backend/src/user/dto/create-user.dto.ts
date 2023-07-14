@@ -1,13 +1,13 @@
 import {
   IsIn,
   IsUrl,
+  Length,
   IsEmail,
   Matches,
+  IsString,
   IsHexColor,
   IsOptional,
   IsMobilePhone,
-  IsString,
-  Length,
 } from "class-validator";
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -28,14 +28,17 @@ export class CreateUserDto {
   @IsEmail()
   email: string;
 
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-    {
-      message:
-        "Password must be at least 8 characters long and contain at least 1 uppercase, 1 lowercase, 1 number and 1 special character",
-    }
-  )
+  @IsString()
+  @Length(8, 20, {
+    message: "Password must be between 8 and 20 characters long",
+  })
   password: string;
+
+  @IsString()
+  @Length(8, 20, {
+    message: "Password confirm must be between 8 and 20 characters long",
+  })
+  passwordConfirm: string;
 
   @IsOptional()
   @IsMobilePhone("pt-BR")

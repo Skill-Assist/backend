@@ -43,8 +43,7 @@ import { HealthModule } from "./health/health.module";
       useFactory: async (configService: ConfigService) => {
         const user = configService.get<string>("MYSQL_USER");
         const pass = configService.get<string>("MYSQL_ROOT_PASS");
-        const hostDev = configService.get<string>("MYSQL_HOST_DEV");
-        const hostProd = configService.get<string>("MYSQL_HOST_PROD");
+        const host = configService.get<string>("MYSQL_HOST");
         const script = configService.get<string>("npm_lifecycle_script");
 
         // gracefully shutdown if NODE_ENV is not set
@@ -55,10 +54,10 @@ import { HealthModule } from "./health/health.module";
 
         return {
           type: "mysql",
-          host: script.includes("prod") ? hostProd : hostDev,
+          host: script.includes("prod") ? host : "mysql",
           port: 3306,
-          username: user,
-          password: pass,
+          username: script.includes("prod") ? user : "root",
+          password: script.includes("prod") ? pass : "password",
           database: script.includes("prod") ? "prod_db" : "dev_db",
           autoLoadEntities: true,
           cache: { duration: 30000 },
@@ -81,10 +80,9 @@ import { HealthModule } from "./health/health.module";
           process.exit(1);
         }
 
+        const db = script.includes("prod") ? "prod_db" : "dev_db";
         return {
-          uri: `mongodb+srv://${user}:${pass}@${host}/${
-            script.includes("prod") ? "prod_db" : "dev_db"
-          }?retryWrites=true&w=majority`,
+          uri: `mongodb+srv://${user}:${pass}@${host}/${db}?retryWrites=true&w=majority`,
         };
       },
     }),

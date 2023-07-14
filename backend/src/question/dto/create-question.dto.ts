@@ -40,8 +40,8 @@ export class CreateQuestionDto {
 
   @IsOptional()
   @IsString()
-  @Length(3, 15, {
-    message: "Tags must be between 3 and 15 characters long.",
+  @Length(3, 25, {
+    message: "Tags must be between 3 and 25 characters long.",
   })
   tags?: string[];
 

@@ -5,6 +5,7 @@ import {
   OneToMany,
   ManyToMany,
   BeforeInsert,
+  BeforeUpdate,
 } from "typeorm";
 import { Exclude } from "class-transformer";
 
@@ -32,9 +33,13 @@ export class User extends SQLBaseEntity {
   @Index({ unique: true })
   email: string;
 
-  @Exclude()
+  // @Exclude()
   @Column()
   password: string;
+
+  // @Exclude()
+  @Column({ nullable: true })
+  passwordConfirm: string;
 
   @Column({ nullable: true })
   mobilePhone: string;
@@ -77,9 +82,26 @@ export class User extends SQLBaseEntity {
     this.nickname = this.name.split(" ")[0];
   }
 
+  @BeforeInsert()
+  @BeforeUpdate()
+  async passwordMatch() {
+    console.log("a");
+    if (this.password !== this.passwordConfirm) {
+      throw new Error("Password and password confirm must match");
+    }
+
+    this.password = await this.hash(this.password);
+    this.passwordConfirm = "";
+  }
+
   /** constructor */
   constructor(partial: Partial<User>) {
     super();
     Object.assign(this, partial);
+  }
+
+  /** methods */
+  async hash(password: string): Promise<string> {
+    return password;
   }
 }
