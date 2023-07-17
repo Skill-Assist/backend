@@ -198,18 +198,6 @@ export class ExamService {
             "Exam has sections without questions. Process was aborted."
           );
 
-        let sectionWeight = 0;
-
-        for (const question of section.questions) {
-          sectionWeight += question.weight;
-        }
-
-        // questions's weights on each section add to 1
-        if (sectionWeight !== 1)
-          throw new UnauthorizedException(
-            `Section ${section.id} has questions that do not add to 1. Process was aborted.`
-          );
-
         examWeight += +section.weight;
       }
 

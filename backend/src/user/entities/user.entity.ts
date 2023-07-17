@@ -34,11 +34,11 @@ export class User extends SQLBaseEntity {
   @Index({ unique: true })
   email: string;
 
-  // @Exclude()
+  @Exclude()
   @Column()
   password: string;
 
-  // @Exclude()
+  @Exclude()
   @Column()
   passwordConfirm: string;
 

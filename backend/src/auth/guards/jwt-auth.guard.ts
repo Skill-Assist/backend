@@ -1,8 +1,8 @@
 /** nestjs */
 import {
-  ExecutionContext,
   Injectable,
-  UnauthorizedException,
+  ExecutionContext,
+  ImATeapotException,
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { Reflector } from "@nestjs/core";
@@ -32,7 +32,7 @@ export class JwtAuthGuard extends AuthGuard("jwt") {
   }
 
   handleRequest(err: any, user: any) {
-    if (err || !user) throw new UnauthorizedException("User not found");
+    if (err || !user) throw new ImATeapotException("Invalid token. Try again.");
 
     return user;
   }

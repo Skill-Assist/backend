@@ -21,6 +21,8 @@ export class AuthService {
       this.userService.findOne("email", email)
     ));
 
+    if (!user) return null;
+
     return (await decryptPassword(pass, user?.password)) ? user : null;
   }
 
