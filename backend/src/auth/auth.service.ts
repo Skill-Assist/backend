@@ -6,7 +6,7 @@ import { Injectable } from "@nestjs/common";
 import { UserService } from "../user/user.service";
 
 /** entities */
-import { User } from "../user/entities/user.entity";
+import { User, decryptPassword } from "../user/entities/user.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -20,7 +20,8 @@ export class AuthService {
     const user = await (<Promise<User>>(
       this.userService.findOne("email", email)
     ));
-    return user?.password === pass ? user : null;
+
+    return (await decryptPassword(pass, user?.password)) ? user : null;
   }
 
   async login(user: User) {

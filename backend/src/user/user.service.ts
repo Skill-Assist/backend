@@ -12,7 +12,7 @@ import { ExamInvitationService } from "../exam-invitation/exam-invitation.servic
 import { Repository } from "typeorm";
 
 /** entities & dtos */
-import { User, passwordMatch } from "./entities/user.entity";
+import { User } from "./entities/user.entity";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { AddQuestionDto } from "./dto/add-question.dto";
@@ -127,7 +127,10 @@ export class UserService {
   }
 
   async updateProfile(id: number, updateUserDto: UpdateUserDto): Promise<User> {
-    if (updateUserDto.password) await passwordMatch.call(updateUserDto);
+    if (updateUserDto.password || updateUserDto.passwordConfirm)
+      throw new UnauthorizedException(
+        "Password update not allowed. Process aborted"
+      );
 
     await update(
       id,

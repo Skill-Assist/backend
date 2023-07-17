@@ -30,6 +30,7 @@
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/swagger": "^6.3.0",
     "@nestjs/terminus": "^10.0.1",
+    "@nestjs/throttler": "^4.2.1",
     "@nestjs/typeorm": "^9.0.1",
     "aws-sdk": "^2.1409.0",
     "axios": "^1.4.0",

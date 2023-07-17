@@ -34,11 +34,11 @@ export class User extends SQLBaseEntity {
   @Index({ unique: true })
   email: string;
 
-  @Exclude()
+  // @Exclude()
   @Column()
   password: string;
 
-  @Exclude()
+  // @Exclude()
   @Column()
   passwordConfirm: string;
 
@@ -79,12 +79,9 @@ export class User extends SQLBaseEntity {
 
   /** hooks */
   @BeforeInsert()
-  createNickname() {
+  async insertionHook() {
     this.nickname = this.name.split(" ")[0];
-  }
 
-  @BeforeInsert()
-  async checkAndHashPassword() {
     await passwordMatch.call(this);
   }
 
@@ -95,6 +92,7 @@ export class User extends SQLBaseEntity {
   }
 }
 
+/** helper authentication methods */
 export async function passwordMatch(this: Partial<User>) {
   if (this.password !== this.passwordConfirm) {
     throw new UnauthorizedException(
@@ -102,14 +100,22 @@ export async function passwordMatch(this: Partial<User>) {
     );
   }
 
-  this.password = await hash(this.password!);
+  this.password = await encryptPassword(this.password!);
   this.passwordConfirm = "";
 
   return this;
 }
 
-export async function hash(password: string): Promise<string> {
+export async function encryptPassword(password: string): Promise<string> {
   const saltOrRounds = 10;
-  // const salt = await bcrypt.genSalt();
+  const salt = await bcrypt.genSalt();
+  console.log("salt: ", salt);
   return await bcrypt.hash(password, saltOrRounds);
+}
+
+export async function decryptPassword(
+  payload: string,
+  password: string
+): Promise<boolean> {
+  return await bcrypt.compare(payload, password);
 }

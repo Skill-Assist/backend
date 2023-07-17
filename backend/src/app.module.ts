@@ -1,8 +1,10 @@
 /** nestjs */
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { MongooseModule } from "@nestjs/mongoose";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 
 /** modules */
 import { AuthModule } from "./auth/auth.module";
@@ -86,7 +88,18 @@ import { HealthModule } from "./health/health.module";
         };
       },
     }),
+    /** see https://docs.nestjs.com/security/rate-limiting */
+    ThrottlerModule.forRoot({
+      ttl: 60,
+      limit: 10,
+    }),
     HealthModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}
