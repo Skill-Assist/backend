@@ -6,14 +6,14 @@ import {
   ManyToMany,
   BeforeInsert,
 } from "typeorm";
-import { Exclude } from "class-transformer";
 import * as bcrypt from "bcrypt";
+import { Exclude } from "class-transformer";
+import { UnauthorizedException } from "@nestjs/common";
 
 import { Exam } from "../../exam/entities/exam.entity";
 import { SQLBaseEntity } from "../../utils/base.entity";
 import { AnswerSheet } from "../../answer-sheet/entities/answer-sheet.entity";
 import { ExamInvitation } from "../../exam-invitation/entities/exam-invitation.entity";
-import { UnauthorizedException } from "@nestjs/common";
 ////////////////////////////////////////////////////////////////////////////////
 
 export enum UserRole {
@@ -39,7 +39,7 @@ export class User extends SQLBaseEntity {
   password: string;
 
   @Exclude()
-  @Column()
+  @Column({ nullable: true })
   passwordConfirm: string;
 
   @Column({ nullable: true })
@@ -80,8 +80,10 @@ export class User extends SQLBaseEntity {
   /** hooks */
   @BeforeInsert()
   async insertionHook() {
+    // set nickname
     this.nickname = this.name.split(" ")[0];
 
+    // check password match and encrypt password
     await passwordMatch.call(this);
   }
 
@@ -94,28 +96,30 @@ export class User extends SQLBaseEntity {
 
 /** helper authentication methods */
 export async function passwordMatch(this: Partial<User>) {
+  if (!this.password || !this.passwordConfirm)
+    throw new UnauthorizedException(
+      "Password and password confirmation required"
+    );
+
   if (this.password !== this.passwordConfirm) {
     throw new UnauthorizedException(
       "Password and password confirmation must match"
     );
   }
 
-  this.password = await encryptPassword(this.password!);
-  this.passwordConfirm = "";
+  this.password = await encryptPassword(this.password);
+  this.passwordConfirm = undefined;
 
   return this;
 }
 
 export async function encryptPassword(password: string): Promise<string> {
-  const saltOrRounds = 10;
-  const salt = await bcrypt.genSalt();
-  console.log("salt: ", salt);
-  return await bcrypt.hash(password, saltOrRounds);
+  return await bcrypt.hash(password, 10);
 }
 
 export async function decryptPassword(
-  payload: string,
-  password: string
+  password: string,
+  hash: string
 ): Promise<boolean> {
-  return await bcrypt.compare(payload, password);
+  return await bcrypt.compare(password, hash);
 }

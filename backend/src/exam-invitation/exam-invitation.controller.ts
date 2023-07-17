@@ -16,9 +16,9 @@ import { ExamInvitationService } from "./exam-invitation.service";
 import { ExamInvitation } from "./entities/exam-invitation.entity";
 
 /** helpers */
-import { PassportRequest } from "../auth/auth.controller";
+import { PassportRequest } from "../utils/types.utils";
 import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
-import { Roles } from "../user/decorators/roles.decorator";
+import { Roles } from "../auth/decorators/roles.decorator";
 import { UserRole } from "../user/entities/user.entity";
 ////////////////////////////////////////////////////////////////////////////////
 

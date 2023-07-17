@@ -18,6 +18,7 @@ import { AnswerSheetModule } from "./answer-sheet/answer-sheet.module";
 import { ExamInvitationModule } from "./exam-invitation/exam-invitation.module";
 import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to-answer-sheet.module";
 import { HealthModule } from "./health/health.module";
+import { QueryRunnerModule } from './query-runner/query-runner.module';
 ////////////////////////////////////////////////////////////////////////////////
 
 @Module({
@@ -38,6 +39,11 @@ import { HealthModule } from "./health/health.module";
       cache: true,
       isGlobal: true,
       ignoreEnvFile: process.env.NODE_ENV === "prod" ? true : false,
+    }),
+    /** see https://docs.nestjs.com/security/rate-limiting */
+    ThrottlerModule.forRoot({
+      ttl: 60,
+      limit: 10,
     }),
     /** see https://typeorm.io/data-source-options */
     TypeOrmModule.forRootAsync({
@@ -88,12 +94,8 @@ import { HealthModule } from "./health/health.module";
         };
       },
     }),
-    /** see https://docs.nestjs.com/security/rate-limiting */
-    ThrottlerModule.forRoot({
-      ttl: 60,
-      limit: 10,
-    }),
     HealthModule,
+    QueryRunnerModule,
   ],
   providers: [
     {

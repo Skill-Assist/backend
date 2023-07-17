@@ -13,8 +13,8 @@ import { Question } from "./schemas/question.schema";
 import { CreateQuestionDto } from "./dto/create-question.dto";
 
 /** utils */
-import { PassportRequest } from "../auth/auth.controller";
-import { Roles } from "../user/decorators/roles.decorator";
+import { PassportRequest } from "../utils/types.utils";
+import { Roles } from "../auth/decorators/roles.decorator";
 import { UserRole } from "../user/entities/user.entity";
 ////////////////////////////////////////////////////////////////////////////////
 

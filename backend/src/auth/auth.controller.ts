@@ -18,30 +18,19 @@ import { AuthService } from "./auth.service";
 import { UserService } from "../user/user.service";
 
 /** entities & dtos */
-import { User } from "../user/entities/user.entity";
 import { CreateUserDto } from "../user/dto/create-user.dto";
 
 /** guards */
 import { AllowAnon } from "./guards/allow-anon.guard";
+
+/** utils */
+import {
+  PassportJwt,
+  SessionRequest,
+  PassportRequest,
+} from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-export interface PassportJwt {
-  access_token: string;
-}
-
-export interface PassportRequest extends Request {
-  user?: User;
-}
-
-export interface SessionRequest extends PassportRequest {
-  session: {
-    user: {
-      [userId: number]: {
-        visits: number;
-      };
-    };
-  };
-}
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {
@@ -61,7 +50,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post("signin")
   async signin(@Req() req: SessionRequest): Promise<PassportJwt> {
-    if (!req.user) throw new UnauthorizedException("User not found");
+    if (!req.user)
+      throw new UnauthorizedException("User not found. Please try again.");
 
     if (!req.session.user) {
       req.session.user = {

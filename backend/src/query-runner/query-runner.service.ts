@@ -4,48 +4,14 @@ import { Injectable } from "@nestjs/common";
 /** external dependencies */
 import { DataSource, QueryRunner } from "typeorm";
 
-/** entities */
-import { Exam } from "../exam/entities/exam.entity";
-import { User } from "../user/entities/user.entity";
-import { Answer } from "../answer/entities/answer.entity";
-import { Section } from "../section/entities/section.entity";
-import { Question } from "../question/schemas/question.schema";
-import { AnswerSheet } from "../answer-sheet/entities/answer-sheet.entity";
-import { ExamInvitation } from "../exam-invitation/entities/exam-invitation.entity";
-import { SectionToAnswerSheet } from "../section-to-answer-sheet/entities/section-to-answer-sheet.entity";
+/** utils */
+import { QueryRunnerInterface, QueryRunnerEntity } from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * QueryRunnerEntity
- * @description this type defines the entities that can be passed to the
- * QueryRunnerFactory.
- */
-type QueryRunnerEntity =
-  | User
-  | Exam
-  | Section
-  | Question
-  | Answer
-  | AnswerSheet
-  | SectionToAnswerSheet
-  | ExamInvitation;
-
-/**
- * QueryRunnerInterface
- * @description this interface defines the methods that a query runner must implement.
- */
-interface QueryRunnerInterface {
-  connect(): Promise<void>;
-  startTransaction(): Promise<void>;
-  commitTransaction(obj: QueryRunnerEntity): Promise<QueryRunnerEntity>;
-  rollbackTransaction(): Promise<void>;
-  release(): Promise<void>;
-}
-
-/**
- * QueryRunnerFactory
+ * QueryRunnerService
  *
- * @description QueryRunnerFactory is implemented as a helper class to enable
+ * @description QueryRunnerService is implemented as a helper service to enable
  * testing without mocking the entire DataSource object (which exposes several methods).
  * @implements {QueryRunnerInterface} with a limited set of methods required to
  * maintain transactions, making testing more straightforward.
@@ -53,7 +19,7 @@ interface QueryRunnerInterface {
  * @see https://docs.nestjs.com/techniques/database#typeorm-transactions
  */
 @Injectable()
-export class QueryRunnerFactory implements QueryRunnerInterface {
+export class QueryRunnerService implements QueryRunnerInterface {
   private queryRunner: QueryRunner;
 
   constructor(private readonly dataSource: DataSource) {}

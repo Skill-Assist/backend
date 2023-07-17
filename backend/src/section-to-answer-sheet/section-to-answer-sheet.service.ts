@@ -10,7 +10,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 /** providers */
 import { AnswerService } from "../answer/answer.service";
 import { SectionService } from "../section/section.service";
-import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { AnswerSheetService } from "../answer-sheet/answer-sheet.service";
 
 /** external dependencies */
@@ -34,7 +34,7 @@ export class SectionToAnswerSheetService {
     private readonly sectionToAnswerSheetRepository: Repository<SectionToAnswerSheet>,
     private readonly moduleRef: ModuleRef,
     private readonly sectionService: SectionService,
-    private readonly queryRunner: QueryRunnerFactory
+    private readonly queryRunner: QueryRunnerService
   ) {}
 
   /** basic CRUD methods */

@@ -22,7 +22,7 @@ import * as cookieParser from "cookie-parser";
 import { SigninDto } from "./auth/dto/signin.dto";
 
 /** guards */
-import { RolesGuard } from "./user/guards/roles.guard";
+import { AuthorizationGuard } from "./auth/guards/authorization.guard";
 ////////////////////////////////////////////////////////////////////////////////
 
 /** bootstrap project */
@@ -67,7 +67,7 @@ import { RolesGuard } from "./user/guards/roles.guard";
   );
 
   /** authorization guard */
-  app.useGlobalGuards(new RolesGuard(new Reflector()));
+  app.useGlobalGuards(new AuthorizationGuard(new Reflector()));
 
   /** swagger */
   const config = new DocumentBuilder()

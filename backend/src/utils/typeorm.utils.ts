@@ -2,7 +2,7 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 
 /** providers */
-import { QueryRunnerFactory } from "./query-runner.factory";
+import { QueryRunnerService } from "../query-runner/query-runner.service";
 
 /** external dependencies */
 import { Repository } from "typeorm";
@@ -48,7 +48,7 @@ type HandlerDto =
   | CreateAnswerDto;
 
 export async function create(
-  queryRunner: QueryRunnerFactory,
+  queryRunner: QueryRunnerService,
   repository: Repository<HandlerEntity>,
   createDto?: HandlerDto
 ): Promise<HandlerEntity> {

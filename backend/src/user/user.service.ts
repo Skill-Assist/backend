@@ -4,7 +4,7 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 
 /** providers */
 import { ExamService } from "../exam/exam.service";
-import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { AnswerSheetService } from "../answer-sheet/answer-sheet.service";
 import { ExamInvitationService } from "../exam-invitation/exam-invitation.service";
 
@@ -26,8 +26,8 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly repository: Repository<User>,
-    private readonly queryRunner: QueryRunnerFactory,
     private readonly examService: ExamService,
+    private readonly queryRunner: QueryRunnerService,
     private readonly answerSheetService: AnswerSheetService,
     private readonly examInvitationService: ExamInvitationService
   ) {}

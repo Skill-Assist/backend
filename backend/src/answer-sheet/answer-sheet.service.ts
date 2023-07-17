@@ -11,7 +11,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { UserService } from "../user/user.service";
 import { ExamService } from "../exam/exam.service";
 import { AnswerService } from "../answer/answer.service";
-import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { SectionToAnswerSheetService } from "../section-to-answer-sheet/section-to-answer-sheet.service";
 
 /** external dependencies */
@@ -36,7 +36,7 @@ export class AnswerSheetService {
     private readonly answerSheetRepository: Repository<AnswerSheet>,
     private readonly moduleRef: ModuleRef,
     private readonly examService: ExamService,
-    private readonly queryRunner: QueryRunnerFactory,
+    private readonly queryRunner: QueryRunnerService,
     private readonly sectionToAnswerSheetService: SectionToAnswerSheetService
   ) {}
 

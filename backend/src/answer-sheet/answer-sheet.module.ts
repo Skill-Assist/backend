@@ -12,7 +12,7 @@ import { AnswerSheetController } from "./answer-sheet.controller";
 
 /** providers */
 import { AnswerSheetService } from "./answer-sheet.service";
-import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { QueryRunnerService } from "../query-runner/query-runner.service";
 
 /** entities */
 import { AnswerSheet } from "./entities/answer-sheet.entity";
@@ -29,7 +29,7 @@ import { AutocloseInterceptor } from "./interceptors/autoclose.interceptor";
     TypeOrmModule.forFeature([AnswerSheet]),
   ],
   controllers: [AnswerSheetController],
-  providers: [AutocloseInterceptor, AnswerSheetService, QueryRunnerFactory],
+  providers: [AutocloseInterceptor, AnswerSheetService, QueryRunnerService],
   exports: [AnswerSheetService],
 })
 export class AnswerSheetModule {}

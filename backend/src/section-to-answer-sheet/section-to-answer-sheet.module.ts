@@ -11,7 +11,7 @@ import { AnswerSheetModule } from "../answer-sheet/answer-sheet.module";
 import { SectionToAnswerSheetController } from "./section-to-answer-sheet.controller";
 
 /** providers */
-import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { SectionToAnswerSheetService } from "./section-to-answer-sheet.service";
 
 /** modules */
@@ -28,7 +28,7 @@ import { SectionToAnswerSheet } from "./entities/section-to-answer-sheet.entity"
     TypeOrmModule.forFeature([SectionToAnswerSheet]),
   ],
   controllers: [SectionToAnswerSheetController],
-  providers: [SectionToAnswerSheetService, QueryRunnerFactory],
+  providers: [SectionToAnswerSheetService, QueryRunnerService],
   exports: [SectionToAnswerSheetService],
 })
 export class SectionToAnswerSheetModule {}

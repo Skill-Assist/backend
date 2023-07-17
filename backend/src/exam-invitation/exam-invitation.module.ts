@@ -10,7 +10,7 @@ import { ExamInvitationController } from "./exam-invitation.controller";
 
 /** providers */
 import { ExamInvitationService } from "./exam-invitation.service";
-import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { QueryRunnerService } from "../query-runner/query-runner.service";
 
 /** entities & dtos */
 import { ExamInvitation } from "./entities/exam-invitation.entity";
@@ -22,7 +22,7 @@ import { ExamInvitation } from "./entities/exam-invitation.entity";
     TypeOrmModule.forFeature([ExamInvitation]),
   ],
   controllers: [ExamInvitationController],
-  providers: [ExamInvitationService, QueryRunnerFactory],
+  providers: [ExamInvitationService, QueryRunnerService],
   exports: [ExamInvitationService],
 })
 export class ExamInvitationModule {}

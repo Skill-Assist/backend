@@ -12,7 +12,7 @@ import { AnswerController } from "./answer.controller";
 
 /** services */
 import { AnswerService } from "./answer.service";
-import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { QueryRunnerService } from "../query-runner/query-runner.service";
 
 /** entities */
 import { Answer } from "./entities/answer.entity";
@@ -26,7 +26,7 @@ import { Answer } from "./entities/answer.entity";
     TypeOrmModule.forFeature([Answer]),
   ],
   controllers: [AnswerController],
-  providers: [AnswerService, QueryRunnerFactory],
+  providers: [AnswerService, QueryRunnerService],
   exports: [AnswerService],
 })
 export class AnswerModule {}

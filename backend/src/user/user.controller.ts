@@ -15,12 +15,14 @@ import { ApiTags } from "@nestjs/swagger";
 import { UserService } from "./user.service";
 
 /** entities & dtos */
-import { User, UserRole } from "./entities/user.entity";
 import { UpdateUserDto } from "./dto/update-user.dto";
+import { User, UserRole } from "./entities/user.entity";
+
+/** decorators */
+import { Roles } from "../auth/decorators/roles.decorator";
 
 /** utils */
-import { Roles } from "./decorators/roles.decorator";
-import { PassportRequest } from "../auth/auth.controller";
+import { PassportRequest } from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("user")

@@ -18,8 +18,8 @@ import { SectionToAnswerSheet } from "./entities/section-to-answer-sheet.entity"
 
 /** utils */
 import { UserRole } from "../user/entities/user.entity";
-import { PassportRequest } from "../auth/auth.controller";
-import { Roles } from "../user/decorators/roles.decorator";
+import { PassportRequest } from "../utils/types.utils";
+import { Roles } from "../auth/decorators/roles.decorator";
 import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 

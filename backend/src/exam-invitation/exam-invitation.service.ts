@@ -10,7 +10,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 /** providers */
 import { UserService } from "../user/user.service";
 import { ExamService } from "../exam/exam.service";
-import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { QueryRunnerService } from "../query-runner/query-runner.service";
 
 /** external dependencies */
 import { Repository } from "typeorm";
@@ -34,7 +34,7 @@ export class ExamInvitationService {
     @InjectRepository(ExamInvitation)
     private readonly examInvitationRepository: Repository<ExamInvitation>,
     private readonly moduleRef: ModuleRef,
-    private readonly queryRunner: QueryRunnerFactory
+    private readonly queryRunner: QueryRunnerService
   ) {}
 
   /** basic CRUD methods */

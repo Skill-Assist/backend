@@ -5,12 +5,12 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { UserRole } from "../entities/user.entity";
+import { UserRole } from "../../user/entities/user.entity";
 import { ROLES_KEY } from "../decorators/roles.decorator";
 //////////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
-export class RolesGuard implements CanActivate {
+export class AuthorizationGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {

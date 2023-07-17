@@ -10,7 +10,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
 import { QuestionService } from "../question/question.service";
-import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { SectionToAnswerSheetService } from "../section-to-answer-sheet/section-to-answer-sheet.service";
 
 /** external dependencies */
@@ -42,7 +42,7 @@ export class AnswerService {
     private readonly answerRepository: Repository<Answer>,
     private readonly moduleRef: ModuleRef,
     private readonly openaiService: OpenaiService,
-    private readonly queryRunner: QueryRunnerFactory,
+    private readonly queryRunner: QueryRunnerService,
     private readonly questionService: QuestionService
   ) {}
 

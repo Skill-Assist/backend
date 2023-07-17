@@ -8,7 +8,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
 import { ExamService } from "../exam/exam.service";
-import { QueryRunnerFactory } from "../utils/query-runner.factory";
+import { QueryRunnerService } from "../query-runner/query-runner.service";
 
 /** external dependencies */
 import { ObjectId } from "mongodb";
@@ -30,7 +30,7 @@ export class SectionService {
     @InjectRepository(Section)
     private readonly sectionRepository: Repository<Section>,
     private readonly examService: ExamService,
-    private readonly queryRunner: QueryRunnerFactory
+    private readonly queryRunner: QueryRunnerService
   ) {}
 
   /** basic CRUD methods */
