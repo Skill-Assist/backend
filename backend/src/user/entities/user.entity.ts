@@ -5,14 +5,15 @@ import {
   OneToMany,
   ManyToMany,
   BeforeInsert,
-  BeforeUpdate,
 } from "typeorm";
 import { Exclude } from "class-transformer";
+import * as bcrypt from "bcrypt";
 
 import { Exam } from "../../exam/entities/exam.entity";
 import { SQLBaseEntity } from "../../utils/base.entity";
 import { AnswerSheet } from "../../answer-sheet/entities/answer-sheet.entity";
 import { ExamInvitation } from "../../exam-invitation/entities/exam-invitation.entity";
+import { UnauthorizedException } from "@nestjs/common";
 ////////////////////////////////////////////////////////////////////////////////
 
 export enum UserRole {
@@ -33,12 +34,12 @@ export class User extends SQLBaseEntity {
   @Index({ unique: true })
   email: string;
 
-  // @Exclude()
+  @Exclude()
   @Column()
   password: string;
 
-  // @Exclude()
-  @Column({ nullable: true })
+  @Exclude()
+  @Column()
   passwordConfirm: string;
 
   @Column({ nullable: true })
@@ -83,15 +84,8 @@ export class User extends SQLBaseEntity {
   }
 
   @BeforeInsert()
-  @BeforeUpdate()
-  async passwordMatch() {
-    console.log("a");
-    if (this.password !== this.passwordConfirm) {
-      throw new Error("Password and password confirm must match");
-    }
-
-    this.password = await this.hash(this.password);
-    this.passwordConfirm = "";
+  async checkAndHashPassword() {
+    await passwordMatch.call(this);
   }
 
   /** constructor */
@@ -99,9 +93,23 @@ export class User extends SQLBaseEntity {
     super();
     Object.assign(this, partial);
   }
+}
 
-  /** methods */
-  async hash(password: string): Promise<string> {
-    return password;
+export async function passwordMatch(this: Partial<User>) {
+  if (this.password !== this.passwordConfirm) {
+    throw new UnauthorizedException(
+      "Password and password confirmation must match"
+    );
   }
+
+  this.password = await hash(this.password!);
+  this.passwordConfirm = "";
+
+  return this;
+}
+
+export async function hash(password: string): Promise<string> {
+  const saltOrRounds = 10;
+  // const salt = await bcrypt.genSalt();
+  return await bcrypt.hash(password, saltOrRounds);
 }

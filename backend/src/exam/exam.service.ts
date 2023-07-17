@@ -210,7 +210,7 @@ export class ExamService {
             `Section ${section.id} has questions that do not add to 1. Process was aborted.`
           );
 
-        examWeight += section.weight;
+        examWeight += +section.weight;
       }
 
       // sections's weights add to 1

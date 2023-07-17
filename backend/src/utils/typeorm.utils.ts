@@ -64,9 +64,7 @@ export async function create(
   } catch (err) {
     // rollback changes made in case of error
     await queryRunner.rollbackTransaction();
-    throw new BadRequestException(
-      `An error ocurred while creating the entity: ${err}`
-    );
+    throw new BadRequestException(err.message);
   } finally {
     // release queryRunner after transaction
     await queryRunner.release();

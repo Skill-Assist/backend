@@ -39,8 +39,9 @@ export class CreateQuestionDto {
   difficulty?: number;
 
   @IsOptional()
-  @IsString()
+  @IsString({ each: true })
   @Length(3, 25, {
+    each: true,
     message: "Tags must be between 3 and 25 characters long.",
   })
   tags?: string[];
