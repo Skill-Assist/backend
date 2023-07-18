@@ -60,6 +60,12 @@ export class SectionToAnswerSheetService {
       answerSheetId
     );
 
+    // check if answer sheet is started
+    if (!answerSheet.deadline)
+      throw new UnauthorizedException(
+        "Answer sheet is not started. You are not authorized to create this section to answer sheet."
+      );
+
     // check if section to answer sheet already exists
     const sas = await this.sectionToAnswerSheetRepository
       .createQueryBuilder("sectionToAnswerSheet")

@@ -1,22 +1,7 @@
-import { HydratedDocument } from "mongoose";
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { GradingRubric } from "../../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-export type QuestionDocument = HydratedDocument<Question>;
-
-export interface GradingRubric {
-  [key: string]: {
-    [key: string]:
-      | number
-      | string
-      | {
-          min: number;
-          max: number;
-        };
-  };
-}
-
-/** see https://mongoosejs.com/docs/guide.html#options */
 @Schema({ timestamps: true })
 export class Question {
   @Prop({ required: true })

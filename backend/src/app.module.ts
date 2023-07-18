@@ -15,10 +15,11 @@ import { OpenaiModule } from "./openai/openai.module";
 import { SectionModule } from "./section/section.module";
 import { QuestionModule } from "./question/question.module";
 import { AnswerSheetModule } from "./answer-sheet/answer-sheet.module";
+import { QueryRunnerModule } from "./query-runner/query-runner.module";
 import { ExamInvitationModule } from "./exam-invitation/exam-invitation.module";
 import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to-answer-sheet.module";
 import { HealthModule } from "./health/health.module";
-import { QueryRunnerModule } from './query-runner/query-runner.module';
+import { AwsModule } from './aws/aws.module';
 ////////////////////////////////////////////////////////////////////////////////
 
 @Module({
@@ -31,6 +32,7 @@ import { QueryRunnerModule } from './query-runner/query-runner.module';
     SectionModule,
     QuestionModule,
     AnswerSheetModule,
+    QueryRunnerModule,
     ExamInvitationModule,
     SectionToAnswerSheetModule,
     /** runtime environment variables (e.g. OS shell exports) take precedence */
@@ -43,7 +45,7 @@ import { QueryRunnerModule } from './query-runner/query-runner.module';
     /** see https://docs.nestjs.com/security/rate-limiting */
     ThrottlerModule.forRoot({
       ttl: 60,
-      limit: 10,
+      limit: 250,
     }),
     /** see https://typeorm.io/data-source-options */
     TypeOrmModule.forRootAsync({
@@ -95,7 +97,7 @@ import { QueryRunnerModule } from './query-runner/query-runner.module';
       },
     }),
     HealthModule,
-    QueryRunnerModule,
+    AwsModule,
   ],
   providers: [
     {

@@ -9,8 +9,6 @@ import { QueryRunnerInterface, QueryRunnerEntity } from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * QueryRunnerService
- *
  * @description QueryRunnerService is implemented as a helper service to enable
  * testing without mocking the entire DataSource object (which exposes several methods).
  * @implements {QueryRunnerInterface} with a limited set of methods required to

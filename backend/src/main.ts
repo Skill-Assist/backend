@@ -44,10 +44,12 @@ import { AuthorizationGuard } from "./auth/guards/authorization.guard";
   app.use(cookieParser());
   app.use(
     session({
-      secret: process.env.SESSION_SECRET!,
+      secret: configService.get("SESSION_SECRET")!,
       cookie: {
         maxAge: 3600000,
-        secure: process.env.NODE_ENV === "prod" ? true : false,
+        secure: configService.get("npm_lifecycle_script").includes("prod")
+          ? true
+          : false,
       },
       resave: false, // TODO : check store if this is needed
       saveUninitialized: false,
@@ -61,8 +63,11 @@ import { AuthorizationGuard } from "./auth/guards/authorization.guard";
       transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
-      disableErrorMessages:
-        app.get(ConfigService).get("NODE_ENV") === "prod" ? true : false,
+      disableErrorMessages: configService
+        .get("npm_lifecycle_script")
+        .includes("prod")
+        ? true
+        : false,
     })
   );
 

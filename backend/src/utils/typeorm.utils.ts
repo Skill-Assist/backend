@@ -16,12 +16,8 @@ import { AnswerSheet } from "../answer-sheet/entities/answer-sheet.entity";
 import { ExamInvitation } from "../exam-invitation/entities/exam-invitation.entity";
 import { SectionToAnswerSheet } from "../section-to-answer-sheet/entities/section-to-answer-sheet.entity";
 
-/** dtos */
-import { CreateUserDto } from "../user/dto/create-user.dto";
-import { CreateExamDto } from "../exam/dto/create-exam.dto";
-import { CreateAnswerDto } from "../answer/dto/create-answer.dto";
-import { CreateSectionDto } from "../section/dto/create-section.dto";
-import { CreateExamInvitationDto } from "../exam-invitation/dto/create-exam-invitation.dto";
+/** utils */
+import { HandlerEntity, HandlerDto } from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -29,23 +25,6 @@ import { CreateExamInvitationDto } from "../exam-invitation/dto/create-exam-invi
  * can be used to handle basid CRUD operations in a generic way. This is useful
  * to avoid repeating the same code in different services.
  */
-
-type HandlerEntity =
-  | User
-  | Exam
-  | Section
-  | ExamInvitation
-  | AnswerSheet
-  | SectionToAnswerSheet
-  | Answer;
-
-type HandlerDto =
-  | CreateUserDto
-  | (CreateUserDto & { ownedQuestions: [] })
-  | CreateExamDto
-  | (CreateSectionDto & { questionId: [] })
-  | CreateExamInvitationDto
-  | CreateAnswerDto;
 
 export async function create(
   queryRunner: QueryRunnerService,

@@ -9,6 +9,8 @@ import { ModuleRef } from "@nestjs/core";
 import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
+import { AwsService } from "../aws/aws.service";
+import { OpenaiService } from "../openai/openai.service";
 import { QuestionService } from "../question/question.service";
 import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { SectionToAnswerSheetService } from "../section-to-answer-sheet/section-to-answer-sheet.service";
@@ -23,14 +25,12 @@ import { Repository } from "typeorm";
 import { Answer } from "./entities/answer.entity";
 import { CreateAnswerDto } from "./dto/create-answer.dto";
 import { UpdateAnswerDto } from "./dto/update-answer.dto";
-import { GradingRubric, Question } from "../question/schemas/question.schema";
+import { Question } from "../question/schemas/question.schema";
 import { UpdateAnswerAndCloseSectionDto } from "./dto/update-answer-and-close-section.dto";
-
-/** OpenAI API */
-import { OpenaiService } from "../openai/openai.service";
 
 /** utils */
 import { create, findOne, findAll, update } from "../utils/typeorm.utils";
+import { GradingRubric } from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -41,6 +41,7 @@ export class AnswerService {
     @InjectRepository(Answer)
     private readonly answerRepository: Repository<Answer>,
     private readonly moduleRef: ModuleRef,
+    private readonly awsService: AwsService,
     private readonly openaiService: OpenaiService,
     private readonly queryRunner: QueryRunnerService,
     private readonly questionService: QuestionService
@@ -301,9 +302,7 @@ export class AnswerService {
         type === "challenge"
           ? JSON.stringify(
               (
-                await this.openaiService.fetchUnzippedDocumentary(
-                  answer.content
-                )
+                await this.awsService.fetchUnzippedDocumentary(answer.content)
               ).documentaryContent
             )
           : answer.content,

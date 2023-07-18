@@ -9,22 +9,20 @@ import {
   ChatCompletionRequestMessage,
   CreateChatCompletionResponse,
 } from "openai";
-import * as AWS from "aws-sdk";
 import { AxiosResponse } from "axios";
 
 /** utils */
-import { fetchUnzippedDocumentaryFromS3 } from "../utils/aws.utils";
-import { GradingRubric } from "../question/schemas/question.schema";
+import {
+  Criteria,
+  GradingRubric,
+  ChatCompletionResponse,
+} from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-/** types */
-type Criteria = [string, number | string | { min: number; max: number }][];
-
-export type ChatCompletionResponse = {
-  [key: string]: CreateChatCompletionResponse;
-};
-////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * @description OpenAiService is implemented as a helper service to enable
+ * the OpenAI API to be used throughout the application.
+ */
 @Injectable()
 export class OpenaiService {
   private _openAiApi: OpenAIApi;
@@ -41,26 +39,6 @@ export class OpenaiService {
     }
 
     return this._openAiApi;
-  }
-
-  /** content manipulation methods */
-  async fetchUnzippedDocumentary(pathToZip: string): Promise<any> {
-    const credentials = new AWS.Credentials({
-      accessKeyId: this.configService.get<string>("AWS_ACCESS_KEY_ID")!,
-      secretAccessKey: this.configService.get<string>("AWS_SECRET_ACCESS_KEY")!,
-    });
-
-    const s3 = new AWS.S3({
-      credentials: credentials,
-      region: "sa-east-1",
-    });
-
-    const getObjectParams = {
-      Bucket: this.configService.get<string>("AWS_S3_BUCKET_NAME")!,
-      Key: pathToZip,
-    };
-
-    return await fetchUnzippedDocumentaryFromS3(s3, getObjectParams);
   }
 
   /** prompt engineering methods */

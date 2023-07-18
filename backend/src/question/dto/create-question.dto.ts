@@ -9,7 +9,7 @@ import {
   IsBoolean,
   IsOptional,
 } from "class-validator";
-import { GradingRubric } from "../schemas/question.schema";
+import { GradingRubric } from "../../utils/types.utils";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateQuestionDto {
