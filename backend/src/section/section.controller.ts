@@ -15,15 +15,19 @@ import { ApiTags } from "@nestjs/swagger";
 /** providers */
 import { SectionService } from "./section.service";
 
-/** entites & dtos */
+/** entites */
 import { Section } from "./entities/section.entity";
+import { UserRole } from "../user/entities/user.entity";
+
+/** dtos */
 import { CreateSectionDto } from "./dto/create-section.dto";
 import { UpdateSectionDto } from "./dto/update-section.dto";
 
-/** utils */
-import { UserRole } from "../user/entities/user.entity";
-import { PassportRequest } from "../utils/types.utils";
+/** decorators */
 import { Roles } from "../auth/decorators/roles.decorator";
+
+/** utils */
+import { PassportRequest } from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("section")

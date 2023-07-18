@@ -15,10 +15,12 @@ import { QueryRunnerService } from "../query-runner/query-runner.service";
 /** external dependencies */
 import { Repository } from "typeorm";
 
-/** entities & dtos */
+/** entities */
 import { User } from "../user/entities/user.entity";
 import { Exam } from "../exam/entities/exam.entity";
 import { ExamInvitation } from "./entities/exam-invitation.entity";
+
+/** dtos */
 import { CreateExamInvitationDto } from "./dto/create-exam-invitation.dto";
 
 /** utils */
@@ -162,8 +164,7 @@ export class ExamInvitationService {
     invitationId: number,
     payload: Record<string, unknown>
   ): Promise<void> {
-    // check if invitation exists, and if user owns invitation/exam
-    //  or user email is invitee email
+    // check if invitation exists, and if user owns invitation/exam or user email is invitee email
     await this.findOne(userId, "id", invitationId);
 
     await update(
@@ -175,10 +176,7 @@ export class ExamInvitationService {
   }
 
   /** custom methods */
-  async acceptInvitation(
-    invitationId: number,
-    userId: number
-  ): Promise<ExamInvitation> {
+  async accept(invitationId: number, userId: number): Promise<ExamInvitation> {
     // check if invitation exists
     const invitation = await this.findOne(userId, "id", invitationId);
 
@@ -208,10 +206,7 @@ export class ExamInvitationService {
     return <ExamInvitation>await this.findOne(userId, "id", invitation.id);
   }
 
-  async rejectInvitation(
-    invitationId: number,
-    userId: number
-  ): Promise<ExamInvitation> {
+  async reject(invitationId: number, userId: number): Promise<ExamInvitation> {
     // check if invitation exists
     const invitation = await this.findOne(userId, "id", invitationId);
 
@@ -241,7 +236,7 @@ export class ExamInvitationService {
     return <ExamInvitation>await this.findOne(userId, "id", invitation.id);
   }
 
-  async resendInvitation(
+  async resend(
     invitationId: number,
     userId: number
   ): Promise<ExamInvitation[]> {
@@ -283,7 +278,7 @@ export class ExamInvitationService {
     return <ExamInvitation[]>await this.findAll("id", invitation.id);
   }
 
-  async findPendingInvitations(userEmail: string): Promise<ExamInvitation[]> {
+  async findPending(userEmail: string): Promise<ExamInvitation[]> {
     return (await this.examInvitationRepository
       .createQueryBuilder("examInvitation")
       .where(
@@ -294,7 +289,7 @@ export class ExamInvitationService {
       .getMany()) as ExamInvitation[];
   }
 
-  async fetchOwnInvitations(userId: number): Promise<ExamInvitation[]> {
+  async fetchOwn(userId: number): Promise<ExamInvitation[]> {
     // get userService from moduleRef
     this.userService =
       this.userService ??

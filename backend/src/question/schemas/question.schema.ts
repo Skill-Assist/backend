@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { GradingRubric } from "../../utils/types.utils";
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Schema({ timestamps: true })

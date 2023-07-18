@@ -1,4 +1,3 @@
-import { Exclude } from "class-transformer";
 import { Column, Entity, ManyToOne } from "typeorm";
 
 import { SQLBaseEntity } from "../../utils/base.entity";
@@ -30,10 +29,6 @@ export class Answer extends SQLBaseEntity {
 
   @Column({ nullable: true, type: "longtext" })
   revisedFeedback: string;
-
-  @Exclude()
-  @Column({ default: true })
-  isActive: boolean;
 
   /** relations */
   @ManyToOne(

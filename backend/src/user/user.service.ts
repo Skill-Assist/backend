@@ -11,8 +11,10 @@ import { ExamInvitationService } from "../exam-invitation/exam-invitation.servic
 /** external dependencies */
 import { Repository } from "typeorm";
 
-/** entities & dtos */
+/** entities */
 import { User } from "./entities/user.entity";
+
+/** dtos */
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { AddQuestionDto } from "./dto/add-question.dto";
@@ -47,8 +49,9 @@ export class UserService {
 
     // if user is candidate, check for pending invitations
     if (user.roles.includes("candidate")) {
-      const invitations =
-        await this.examInvitationService.findPendingInvitations(user.email);
+      const invitations = await this.examInvitationService.findPending(
+        user.email
+      );
 
       //  set relation between invitation and user
       for (const invitation of invitations) {
@@ -152,7 +155,7 @@ export class UserService {
   }
 
   async acceptInvitation(invitationId: number, user: User): Promise<User> {
-    const invitation = await this.examInvitationService.acceptInvitation(
+    const invitation = await this.examInvitationService.accept(
       invitationId,
       user.id
     );
@@ -167,7 +170,7 @@ export class UserService {
   }
 
   async rejectInvitation(invitationId: number, user: User): Promise<User> {
-    await this.examInvitationService.rejectInvitation(invitationId, user.id);
+    await this.examInvitationService.reject(invitationId, user.id);
     return <User>await this.profile(user.id);
   }
 }

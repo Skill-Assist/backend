@@ -1,4 +1,5 @@
 import {
+  Column,
   VersionColumn,
   CreateDateColumn,
   UpdateDateColumn,
@@ -17,6 +18,11 @@ export abstract class SQLBaseEntity extends TypeOrmBaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Exclude()
+  @Column({ default: true })
+  isActive: boolean;
+
+  @Exclude()
   @CreateDateColumn()
   createdAt: Date;
 

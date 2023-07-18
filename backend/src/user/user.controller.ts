@@ -14,9 +14,11 @@ import { ApiTags } from "@nestjs/swagger";
 /** providers */
 import { UserService } from "./user.service";
 
-/** entities & dtos */
-import { UpdateUserDto } from "./dto/update-user.dto";
+/** entities */
 import { User, UserRole } from "./entities/user.entity";
+
+/** dtos */
+import { UpdateUserDto } from "./dto/update-user.dto";
 
 /** decorators */
 import { Roles } from "../auth/decorators/roles.decorator";

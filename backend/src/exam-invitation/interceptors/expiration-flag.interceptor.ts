@@ -40,6 +40,7 @@ export class ExpirationFlagInterceptor<T>
             updatedAt,
             deletedAt,
             version,
+            isActive,
             ...itemWithoutProperties
           } = item;
           return itemWithoutProperties;

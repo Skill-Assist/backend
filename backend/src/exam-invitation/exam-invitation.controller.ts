@@ -13,13 +13,17 @@ import { ApiTags } from "@nestjs/swagger";
 import { ExamInvitationService } from "./exam-invitation.service";
 
 /** entities */
+import { UserRole } from "../user/entities/user.entity";
 import { ExamInvitation } from "./entities/exam-invitation.entity";
 
-/** helpers */
-import { PassportRequest } from "../utils/types.utils";
-import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
+/** decorators */
 import { Roles } from "../auth/decorators/roles.decorator";
-import { UserRole } from "../user/entities/user.entity";
+
+/** interceptors */
+import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
+
+/** utils */
+import { PassportRequest } from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("examInvitation")
@@ -44,19 +48,17 @@ export class ExamInvitationController {
   }
 
   /** custom endpoints */
-  @Get("resendInvitation")
+  @Get("resend")
   @Roles(UserRole.RECRUITER)
-  async resendInvitation(
+  async resend(
     @Req() req: PassportRequest,
     @Query("id") id: number
   ): Promise<ExamInvitation[]> {
-    return this.examInvitationService.resendInvitation(id, req.user!.id);
+    return this.examInvitationService.resend(id, req.user!.id);
   }
 
-  @Get("fetchOwnInvitations")
-  async fetchOwnInvitations(
-    @Req() req: PassportRequest
-  ): Promise<ExamInvitation[]> {
-    return this.examInvitationService.fetchOwnInvitations(req.user!.id);
+  @Get("fetchOwn")
+  async fetchOwn(@Req() req: PassportRequest): Promise<ExamInvitation[]> {
+    return this.examInvitationService.fetchOwn(req.user!.id);
   }
 }

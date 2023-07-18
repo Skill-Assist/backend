@@ -29,7 +29,7 @@ export class CreateSectionDto {
   description: string;
 
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   @Max(1)
   weight: number;
 

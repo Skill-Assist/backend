@@ -14,8 +14,10 @@ import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { ObjectId } from "mongodb";
 import { Repository } from "typeorm";
 
-/** entities & dtos */
+/** entities */
 import { Section } from "./entities/section.entity";
+
+/** dtos */
 import { AddQuestionDto } from "./dto/add-question.dto";
 import { CreateSectionDto } from "./dto/create-section.dto";
 import { UpdateSectionDto } from "./dto/update-section.dto";
@@ -49,6 +51,17 @@ export class SectionService {
         "You cannot create a section for an exam that is not in draft state."
       );
 
+    // check if exam's sections's weights are less than or equal to 1
+    if (
+      (await exam.sections).reduce(
+        (acc, curr) => acc + +curr.weight,
+        createSectionDto.weight
+      ) > 1
+    )
+      throw new UnauthorizedException(
+        "The sum of all sections' weights cannot be greater than 1."
+      );
+
     // create section
     const section = await create(this.queryRunner, this.sectionRepository, {
       ...createSectionDto,
@@ -68,6 +81,8 @@ export class SectionService {
     relations?: string[],
     map?: boolean
   ): Promise<Section[]> {
+    if (key && !value) throw new NotFoundException("Value not provided.");
+
     return (await findAll(
       this.sectionRepository,
       "section",
@@ -121,7 +136,24 @@ export class SectionService {
     updateSectionDto: UpdateSectionDto
   ): Promise<Section> {
     // check if exam exists and is owned by user
-    await this.findOne(userId, "id", sectionId);
+    const section = await this.findOne(userId, "id", sectionId);
+
+    // check if exam is in draft state
+    if ((await section.exam).status !== "draft")
+      throw new UnauthorizedException(
+        "You cannot update a section for an exam that is not in draft state."
+      );
+
+    // check if exam's sections's weights are less than or equal to 1
+    const updatedWeight =
+      (await (await section.exam).sections).reduce((acc, curr, idx) => {
+        return acc + +curr.weight;
+      }, updateSectionDto.weight!) - section.weight;
+
+    if (updateSectionDto.weight && updatedWeight > 1)
+      throw new UnauthorizedException(
+        "The sum of all sections' weights cannot be greater than 1."
+      );
 
     // update exam
     await update(

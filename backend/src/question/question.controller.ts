@@ -8,14 +8,14 @@ import { QuestionService } from "./question.service";
 /** external dependencies */
 import { ObjectId } from "mongodb";
 
-/** schemas & dtos */
+/** schemas */
 import { Question } from "./schemas/question.schema";
+
+/** dtos */
 import { CreateQuestionDto } from "./dto/create-question.dto";
 
 /** utils */
 import { PassportRequest } from "../utils/types.utils";
-import { Roles } from "../auth/decorators/roles.decorator";
-import { UserRole } from "../user/entities/user.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("question")
@@ -40,7 +40,6 @@ export class QuestionController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN)
   findAll(): Promise<Question[]> {
     return this.questionService.findAll();
   }
@@ -51,8 +50,8 @@ export class QuestionController {
   }
 
   /** custom endpoints */
-  @Get("fetchOwnQuestions")
-  fetchOwnQuestions(@Req() req: PassportRequest): Promise<Question[]> {
-    return this.questionService.fetchOwnQuestions(req.user!.id);
+  @Get("fetchOwn")
+  fetchOwn(@Req() req: PassportRequest): Promise<Question[]> {
+    return this.questionService.fetchOwn(req.user!.id);
   }
 }

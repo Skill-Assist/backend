@@ -16,10 +16,12 @@ import { ExamInvitationService } from "../exam-invitation/exam-invitation.servic
 /** external dependencies */
 import { Repository } from "typeorm";
 
-/** entities & dtos */
-import { InviteDto } from "./dto/invite.dto";
+/** entities */
 import { Exam } from "./entities/exam.entity";
 import { User } from "../user/entities/user.entity";
+
+/** dtos */
+import { InviteDto } from "./dto/invite.dto";
 import { CreateExamDto } from "./dto/create-exam.dto";
 import { UpdateExamDto } from "./dto/update-exam.dto";
 
@@ -133,7 +135,7 @@ export class ExamService {
   }
 
   /** custom methods */
-  async fetchOwnExams(
+  async fetchOwn(
     userId: number,
     relations?: string[],
     map?: boolean
@@ -162,14 +164,21 @@ export class ExamService {
     // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 
+    // validate status. allowed: draft, published, live, archived
+    if (!["draft", "published", "live", "archived"].includes(status))
+      throw new UnauthorizedException("Invalid status. Process was aborted.");
+
     // if status is published, check if exam is draft
-    if (status === "published" && exam!.status !== "draft")
+    if (status === "published" && exam.status !== "draft")
       throw new UnauthorizedException(
         "Exam is not in draft status. Process was aborted."
       );
 
     // if status is live, check if exam is draft or published
-    if (status === "live" && !(exam!.status === "draft" || "published"))
+    if (
+      status === "live" &&
+      !(exam.status === "draft" || exam.status === "published")
+    )
       throw new UnauthorizedException(
         "Exam is not in draft or published status. Process was aborted."
       );
@@ -193,7 +202,7 @@ export class ExamService {
 
       for (const section of sections) {
         // sections have questions
-        if (section.questions.length === 0)
+        if (!section.questions || !section.questions.length)
           throw new UnauthorizedException(
             "Exam has sections without questions. Process was aborted."
           );
@@ -234,7 +243,7 @@ export class ExamService {
         strict: false,
       });
 
-    // try to get exam by id
+    // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 
     // check if exam is published or live

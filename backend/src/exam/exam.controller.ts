@@ -15,16 +15,20 @@ import { ApiTags } from "@nestjs/swagger";
 /** providers */
 import { ExamService } from "./exam.service";
 
-/** entities & dtos */
-import { InviteDto } from "./dto/invite.dto";
+/** entities */
 import { Exam } from "./entities/exam.entity";
+import { UserRole } from "../user/entities/user.entity";
+
+/** dtos */
+import { InviteDto } from "./dto/invite.dto";
 import { CreateExamDto } from "./dto/create-exam.dto";
 import { UpdateExamDto } from "./dto/update-exam.dto";
 
-/** utils */
-import { UserRole } from "../user/entities/user.entity";
-import { PassportRequest } from "../utils/types.utils";
+/** decorators */
 import { Roles } from "../auth/decorators/roles.decorator";
+
+/** utils */
+import { PassportRequest } from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("exam")
@@ -87,13 +91,13 @@ export class ExamController {
   }
 
   /** custom endpoints */
-  @Get("fetchOwnExams")
-  fetchOwnExams(
+  @Get("fetchOwn")
+  fetchOwn(
     @Req() req: PassportRequest,
     @Query("relations") relations: string,
     @Query("map") map: boolean
   ): Promise<Exam[]> {
-    return this.examService.fetchOwnExams(
+    return this.examService.fetchOwn(
       req.user!.id,
       relations ? relations.split(",") : undefined,
       map

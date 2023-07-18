@@ -1,4 +1,3 @@
-import { Exclude } from "class-transformer";
 import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
 
 import { Exam } from "../../exam/entities/exam.entity";
@@ -15,7 +14,7 @@ export class Section extends SQLBaseEntity {
   @Column()
   description: string;
 
-  @Column({ type: "decimal", precision: 4, scale: 1 })
+  @Column({ type: "decimal", precision: 4, scale: 2 })
   weight: number;
 
   @Column({ nullable: true })
@@ -32,10 +31,6 @@ export class Section extends SQLBaseEntity {
 
   @Column({ type: "json", nullable: true })
   questions: { id: string; weight: number }[];
-
-  @Exclude()
-  @Column({ default: true })
-  isActive: boolean;
 
   /** relations */
   @ManyToOne(() => Exam, (exam) => exam.sections)

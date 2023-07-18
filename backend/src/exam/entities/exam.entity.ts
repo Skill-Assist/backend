@@ -5,11 +5,7 @@ import {
   JoinTable,
   ManyToOne,
   ManyToMany,
-  BeforeInsert,
-  BeforeUpdate,
 } from "typeorm";
-import { Exclude } from "class-transformer";
-import { BadRequestException } from "@nestjs/common";
 
 import { User } from "../../user/entities/user.entity";
 import { SQLBaseEntity } from "../../utils/base.entity";
@@ -45,12 +41,8 @@ export class Exam extends SQLBaseEntity {
   @Column({ default: false })
   isPublic: boolean;
 
-  @Column()
+  @Column({ default: "draft" })
   status: string;
-
-  @Exclude()
-  @Column({ default: true })
-  isActive: boolean;
 
   /** relations */
   @ManyToOne(() => User, (user) => user.ownedExams)
@@ -68,21 +60,6 @@ export class Exam extends SQLBaseEntity {
 
   @OneToMany(() => AnswerSheet, (answerSheet) => answerSheet.exam)
   answerSheets: Promise<AnswerSheet[]>;
-
-  /** hooks */
-  @BeforeInsert()
-  @BeforeUpdate()
-  validateStatus() {
-    const validStatuses = ["draft", "published", "live", "archived"];
-
-    if (!this.status) {
-      this.status = "draft";
-    }
-
-    if (!validStatuses.includes(this.status)) {
-      throw new BadRequestException("Invalid status value");
-    }
-  }
 
   /** constructor */
   constructor(partial: Partial<Exam>) {

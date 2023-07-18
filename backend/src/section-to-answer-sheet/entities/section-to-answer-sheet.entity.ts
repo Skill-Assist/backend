@@ -1,4 +1,3 @@
-import { Exclude } from "class-transformer";
 import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
 
 import { SQLBaseEntity } from "../../utils/base.entity";
@@ -24,10 +23,6 @@ export class SectionToAnswerSheet extends SQLBaseEntity {
 
   @Column({ nullable: true })
   deadline: Date;
-
-  @Exclude()
-  @Column({ default: true })
-  isActive: boolean;
 
   /** relations */
   @ManyToOne(() => Section)

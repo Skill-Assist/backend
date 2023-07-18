@@ -1,4 +1,3 @@
-import { Exclude } from "class-transformer";
 import { Column, Entity, ManyToOne } from "typeorm";
 
 import { Exam } from "../../exam/entities/exam.entity";
@@ -17,10 +16,6 @@ export class ExamInvitation extends SQLBaseEntity {
 
   @Column({ nullable: true })
   accepted: boolean;
-
-  @Exclude()
-  @Column({ default: true })
-  isActive: boolean;
 
   /** relations */
   @ManyToOne(() => Exam, (exam) => exam.invitations)

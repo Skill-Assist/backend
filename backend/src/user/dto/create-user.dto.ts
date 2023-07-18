@@ -20,7 +20,7 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
-  @Length(3, 12, {
+  @Length(2, 12, {
     message: "Nickname must be between 3 and 12 characters long",
   })
   nickname?: string;

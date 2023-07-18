@@ -1,6 +1,6 @@
 /** nestjs */
-import { Module, forwardRef } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { Module, forwardRef } from "@nestjs/common";
 
 /** modules */
 import { ExamModule } from "../exam/exam.module";
@@ -12,7 +12,7 @@ import { ExamInvitationController } from "./exam-invitation.controller";
 import { ExamInvitationService } from "./exam-invitation.service";
 import { QueryRunnerService } from "../query-runner/query-runner.service";
 
-/** entities & dtos */
+/** entities */
 import { ExamInvitation } from "./entities/exam-invitation.entity";
 //////////////////////////////////////////////////////////////////////////////////////
 

@@ -60,10 +60,6 @@ export class User extends SQLBaseEntity {
   @Column({ type: "simple-array" })
   ownedQuestions: string[];
 
-  @Exclude()
-  @Column({ default: true })
-  isActive: boolean;
-
   /** relations */
   @OneToMany(() => Exam, (exam) => exam.createdBy)
   ownedExams: Promise<Exam[]>;
@@ -81,7 +77,7 @@ export class User extends SQLBaseEntity {
   @BeforeInsert()
   async insertionHook() {
     // set nickname
-    this.nickname = this.name.split(" ")[0];
+    if (!this.nickname) this.nickname = this.name.split(" ")[0];
 
     // check password match and encrypt password
     await passwordMatch.call(this);

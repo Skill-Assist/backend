@@ -1,1 +1,0 @@
-[{"altAmount":0,"ctrlCAmount":0,"ctrlVAmount":0,"keysProctoring":["a","b"]}]
