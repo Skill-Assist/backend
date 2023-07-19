@@ -9,9 +9,6 @@ import { AnswerSheet } from "../../answer-sheet/entities/answer-sheet.entity";
 @Entity()
 export class SectionToAnswerSheet extends SQLBaseEntity {
   /** columns */
-  @Column({ default: () => "CURRENT_TIMESTAMP" })
-  startDate: Date;
-
   @Column({ type: "decimal", precision: 5, scale: 2, default: 0 })
   aiScore: number;
 

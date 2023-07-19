@@ -1,6 +1,6 @@
 /** nesjs */
-import { Module, forwardRef } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { Module, forwardRef } from "@nestjs/common";
 
 /** modules */
 import { AnswerModule } from "../answer/answer.module";
@@ -13,8 +13,6 @@ import { SectionToAnswerSheetController } from "./section-to-answer-sheet.contro
 /** providers */
 import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { SectionToAnswerSheetService } from "./section-to-answer-sheet.service";
-
-/** modules */
 
 /** entities */
 import { SectionToAnswerSheet } from "./entities/section-to-answer-sheet.entity";

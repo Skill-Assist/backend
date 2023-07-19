@@ -16,13 +16,17 @@ import { AnswerSheetService } from "./answer-sheet.service";
 
 /** entities */
 import { AnswerSheet } from "./entities/answer-sheet.entity";
-
-/** utils */
 import { UserRole } from "../user/entities/user.entity";
-import { PassportRequest } from "../utils/types.utils";
+
+/** decorators */
 import { Roles } from "../auth/decorators/roles.decorator";
+
+/** interceptors */
 import { AutocloseInterceptor } from "./interceptors/autoclose.interceptor";
 import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
+
+/** utils */
+import { PassportRequest } from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 ApiTags("answer-sheet");
@@ -33,7 +37,7 @@ export class AnswerSheetController {
 
   /** basic CRUD endpoints */
   @Post()
-  @Roles(UserRole.CANDIDATE)
+  @Roles(UserRole.ADMIN)
   create(
     @Req() req: PassportRequest,
     @Query("examId") examId: number
@@ -41,7 +45,6 @@ export class AnswerSheetController {
     return this.answerSheetService.create(req.user!, examId);
   }
 
-  @UseInterceptors(AutocloseInterceptor, ExpirationFlagInterceptor)
   @Get()
   @Roles(UserRole.ADMIN)
   findAll(
@@ -60,7 +63,6 @@ export class AnswerSheetController {
 
   @UseInterceptors(AutocloseInterceptor, ExpirationFlagInterceptor)
   @Get("findOne")
-  @Roles(UserRole.CANDIDATE)
   findOne(
     @Req() req: PassportRequest,
     @Query("key") key: string,
@@ -97,14 +99,13 @@ export class AnswerSheetController {
   }
 
   @UseInterceptors(AutocloseInterceptor, ExpirationFlagInterceptor)
-  @Get("fetchOwnAnswerSheets")
-  @Roles(UserRole.CANDIDATE)
-  fetchOwnAnswerSheets(
+  @Get("fetchOwn")
+  fetchOwn(
     @Req() req: PassportRequest,
     @Query("relations") relations: string,
     @Query("map") map: boolean
   ): Promise<AnswerSheet[]> {
-    return this.answerSheetService.fetchOwnAnswerSheets(
+    return this.answerSheetService.fetchOwn(
       req.user!.id,
       relations ? relations.split(",") : undefined,
       map
@@ -121,6 +122,7 @@ export class AnswerSheetController {
   }
 
   @Get("submitAndGetEval")
+  @Roles(UserRole.CANDIDATE)
   submitAndGetEval(
     @Req() req: PassportRequest,
     @Query("id") id: number

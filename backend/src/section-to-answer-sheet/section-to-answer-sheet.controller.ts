@@ -14,13 +14,17 @@ import { ApiTags } from "@nestjs/swagger";
 import { SectionToAnswerSheetService } from "./section-to-answer-sheet.service";
 
 /** entities */
+import { UserRole } from "../user/entities/user.entity";
 import { SectionToAnswerSheet } from "./entities/section-to-answer-sheet.entity";
 
-/** utils */
-import { UserRole } from "../user/entities/user.entity";
-import { PassportRequest } from "../utils/types.utils";
+/** decorators */
 import { Roles } from "../auth/decorators/roles.decorator";
+
+/** interceptors */
 import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
+
+/** utils */
+import { PassportRequest } from "../utils/types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("section-to-answer-sheet")
@@ -32,23 +36,8 @@ export class SectionToAnswerSheetController {
   ) {}
 
   /** basic CRUD endpoints */
-  @UseInterceptors(ExpirationFlagInterceptor)
-  @Post()
-  @Roles(UserRole.CANDIDATE)
-  create(
-    @Req() req: PassportRequest,
-    @Query("sectionId") sectionId: number,
-    @Query("answerSheetId") answerSheetId: number
-  ): Promise<SectionToAnswerSheet> {
-    return this.sectionToAnswerSheetService.create(
-      req.user!.id,
-      sectionId,
-      answerSheetId
-    );
-  }
-
   @Get()
-  // @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN)
   findAll(
     @Query("key") key: string,
     @Query("value") value: unknown,

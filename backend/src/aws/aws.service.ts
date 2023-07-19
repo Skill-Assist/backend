@@ -1,6 +1,6 @@
 /** nestjs */
-import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Injectable, UnprocessableEntityException } from "@nestjs/common";
 
 /** external dependencies */
 import * as AWS from "aws-sdk";
@@ -17,14 +17,14 @@ import { Documentary, DocumentaryContent } from "../utils/types.utils";
  */
 @Injectable()
 export class AwsService {
-  private _s3: AWS.S3;
+  private _bucket: AWS.S3;
 
   constructor(private readonly configService: ConfigService) {}
 
   /** create the AWS S3 instance */
-  get s3(): AWS.S3 {
-    if (!this._s3) {
-      this._s3 = new AWS.S3({
+  get bucket(): AWS.S3 {
+    if (!this._bucket) {
+      this._bucket = new AWS.S3({
         credentials: new AWS.Credentials({
           accessKeyId: this.configService.get<string>("AWS_ACCESS_KEY_ID")!,
           secretAccessKey: this.configService.get<string>(
@@ -35,12 +35,32 @@ export class AwsService {
       });
     }
 
-    return this._s3;
+    return this._bucket;
+  }
+
+  async uploadFileToS3(
+    pathToFile: string,
+    file: Express.Multer.File
+  ): Promise<void> {
+    const putObjectParams: AWS.S3.PutObjectRequest = {
+      Bucket: this.configService.get<string>("AWS_S3_BUCKET_NAME")!,
+      Key: pathToFile,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    };
+
+    try {
+      await this.bucket.putObject(putObjectParams).promise();
+    } catch (error) {
+      throw new UnprocessableEntityException(
+        `Error uploading file to S3 bucket: ${error.message}`
+      );
+    }
   }
 
   async fetchUnzippedDocumentary(pathToZip: string): Promise<Documentary> {
-    return await this.fetchZipFromS3(this.s3, {
-      Bucket: this.configService.get<string>("AWS_S3_BUCKET_NAME")!,
+    return await this.fetchZipFromS3(this.bucket, {
+      Bucket: this.configService.get<string>("AWS_bucket_BUCKET_NAME")!,
       Key: pathToZip,
     });
   }

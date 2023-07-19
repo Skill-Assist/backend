@@ -7,6 +7,14 @@ export class UpdateAnswerDto {
   content?: string;
 
   @IsOptional()
+  @IsString()
+  keyboard?: string;
+
+  @IsOptional()
+  @IsString()
+  mouse?: string;
+
+  @IsOptional()
   @IsNumber()
   aiScore?: number;
 

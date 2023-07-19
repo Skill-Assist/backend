@@ -16,8 +16,10 @@ import { AnswerSheetService } from "../answer-sheet/answer-sheet.service";
 /** external dependencies */
 import { Repository } from "typeorm";
 
-/** entities & dtos */
+/** entities */
 import { SectionToAnswerSheet } from "./entities/section-to-answer-sheet.entity";
+
+/** dtos */
 import { UpdateSectionToAnswerSheetDto } from "./dto/update-section-to-answer-sheet.dto";
 
 /** utils */
@@ -153,12 +155,13 @@ export class SectionToAnswerSheetService {
     // check if SAS exists
     if (!sas) throw new NotFoundException("Section to answer sheet not found.");
 
-    // check if exam belongs to user or user is enrolled in exam
+    // check if exam belongs to user or user owns section to answer sheet
     const section = await sas.section;
     const exam = await section.exam;
+    const answerSheet = await sas.answerSheet;
     if (
       (await exam.createdBy).id !== userId &&
-      !(await exam.enrolledUsers).some((candidate) => candidate.id === userId)
+      (await answerSheet.user).id !== userId
     )
       throw new UnauthorizedException(
         "You are not authorized to access this section to answer sheet."
@@ -230,7 +233,20 @@ export class SectionToAnswerSheetService {
     return (await this.findOne(userId, "id", sectionToAnswerSheet.id))!;
   }
 
-  submit(userId: number, sasId: number): Promise<SectionToAnswerSheet> {
+  async submit(userId: number, sasId: number): Promise<SectionToAnswerSheet> {
+    // check if SAS exists and user authorized to update it
+    const sas = await this.findOne(userId, "id", sasId);
+
+    // check if SAS is expired
+    if (sas.deadline.getTime() < new Date().getTime())
+      throw new UnauthorizedException("Section to answer sheet is expired.");
+
+    // check if SAS is already submitted
+    if (sas.endDate)
+      throw new UnauthorizedException(
+        "Section to answer sheet is already submitted."
+      );
+
     return this.update(userId, sasId, { endDate: new Date() });
   }
 }

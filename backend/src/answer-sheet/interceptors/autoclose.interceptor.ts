@@ -33,7 +33,6 @@ export class AutocloseInterceptor implements NestInterceptor {
           }
         } else {
           updatedData.push(await this.autoclose(data, userId));
-          console.log(updatedData);
         }
 
         return updatedData;

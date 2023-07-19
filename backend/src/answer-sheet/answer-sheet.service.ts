@@ -241,17 +241,24 @@ export class AnswerSheetService {
     return await this.findOne(userId, "id", answerSheetId);
   }
 
-  async fetchOwnAnswerSheets(
+  async fetchOwn(
     userId: number,
     relations?: string[],
     map?: boolean
   ): Promise<AnswerSheet[]> {
-    return (await this.findAll(
-      "user",
-      userId,
-      relations,
-      map
-    )) as AnswerSheet[];
+    // get answerSheets created by user
+    const answerSheets = await this.findAll("user", userId, relations, map);
+
+    // get answerSheets user owns the exam of
+    const exams = await this.examService.findAll("createdBy", userId, [
+      "answerSheets",
+    ]);
+    const answerSheetsOfOwnedExams = exams
+      .map((exam) => exam.answerSheets)
+      .flat() as unknown as AnswerSheet[];
+
+    // return answerSheets created by user or user owns the exam of
+    return answerSheets.concat(answerSheetsOfOwnedExams);
   }
 
   async fetchSections(
@@ -283,13 +290,28 @@ export class AnswerSheetService {
     // submit answerSheet
     const submittedAS = await this.submit(userId, answerSheetId);
 
+    return await this.fetchEval(userId, submittedAS);
+  }
+
+  async fetchEval(
+    userId: number,
+    answerSheet: AnswerSheet
+  ): Promise<AnswerSheet> {
+    // initialize answerSheet score at 0
     let answerSheetScore: number = 0;
-    for (const sas of await submittedAS.sectionToAnswerSheets) {
+
+    for (const sas of await answerSheet.sectionToAnswerSheets) {
       // initialize SAS score at 0
       let sasScore: number = 0;
 
       // get section SAS is related to
       const section = await sas.section;
+
+      // get sum of weights of questions in section
+      const sumOfWeights = section.questions.reduce(
+        (acc, curr) => acc + curr.weight,
+        0
+      );
 
       // iterate over each answer in SAS
       for (const answer of await sas.answers) {
@@ -299,13 +321,13 @@ export class AnswerSheetService {
           answer.id
         );
 
-        // get relative weight of answer
-        const weight: number = section.questions.find(
+        // get weight of answer in section
+        const weight = section.questions.find(
           (q) => q.id === answer.questionRef
         )!.weight;
 
         // add relative eval of answer to SAS score
-        sasScore += evaluatedAnswer.aiScore * weight;
+        sasScore += (evaluatedAnswer.aiScore * weight) / sumOfWeights;
       }
 
       // update current SAS with AI score
@@ -316,7 +338,7 @@ export class AnswerSheetService {
     }
 
     // update answerSheet with AI score
-    return await this.update(userId, answerSheetId, {
+    return await this.update(userId, answerSheet.id, {
       aiScore: answerSheetScore,
     });
   }

@@ -3,29 +3,36 @@ import {
   Req,
   Get,
   Body,
-  Post,
   Patch,
   Query,
   Controller,
+  UploadedFile,
   UseInterceptors,
   ClassSerializerInterceptor,
+  UnprocessableEntityException,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+import { FileInterceptor } from "@nestjs/platform-express";
 
 /** providers */
 import { AnswerService } from "./answer.service";
 
-/** entities & dtos */
+/** entities & schemas */
 import { Answer } from "./entities/answer.entity";
-import { CreateAnswerDto } from "./dto/create-answer.dto";
-import { UpdateAnswerDto } from "./dto/update-answer.dto";
+import { UserRole } from "../user/entities/user.entity";
 import { Question } from "../question/schemas/question.schema";
-import { UpdateAnswerAndCloseSectionDto } from "./dto/update-answer-and-close-section.dto";
+
+/** dtos */
+import { UpdateAnswerDto } from "./dto/update-answer.dto";
+
+/** decorators */
+import { Roles } from "../auth/decorators/roles.decorator";
+
+/** external dependencies */
+import { Express } from "express";
 
 /** utils */
-import { UserRole } from "../user/entities/user.entity";
 import { PassportRequest } from "../utils/types.utils";
-import { Roles } from "../auth/decorators/roles.decorator";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("answer")
@@ -35,22 +42,8 @@ export class AnswerController {
   constructor(private readonly answerService: AnswerService) {}
 
   /** basic CRUD endpoints */
-  @Post()
-  @Roles(UserRole.CANDIDATE)
-  create(
-    @Req() req: PassportRequest,
-    @Query("sectionToAnswerSheetId") sectionToAnswerSheetId: number,
-    @Body() createAnswerDto: CreateAnswerDto
-  ): Promise<Answer> {
-    return this.answerService.create(
-      req.user!.id,
-      sectionToAnswerSheetId,
-      createAnswerDto
-    );
-  }
-
   @Get()
-  // @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN)
   findAll(
     @Query("key") key: string,
     @Query("value") value: unknown,
@@ -83,20 +76,6 @@ export class AnswerController {
   }
 
   /** custom endpoints */
-  @Post("batch")
-  @Roles(UserRole.CANDIDATE)
-  createBatch(
-    @Req() req: PassportRequest,
-    @Query("sectionToAnswerSheetId") sectionToAnswerSheetId: number,
-    @Body() createAnswerDto: CreateAnswerDto[]
-  ): Promise<Answer[]> {
-    return this.answerService.createBatch(
-      req.user!.id,
-      sectionToAnswerSheetId,
-      createAnswerDto
-    );
-  }
-
   @Get("getQuestion")
   getQuestion(
     @Req() req: PassportRequest,
@@ -106,32 +85,55 @@ export class AnswerController {
   }
 
   @Patch("submit")
+  @UseInterceptors(FileInterceptor("file"))
   @Roles(UserRole.CANDIDATE)
   submit(
     @Req() req: PassportRequest,
     @Query("id") id: number,
-    @Body() updateAnswerDto: UpdateAnswerDto
+    @Body() updateAnswerDto: UpdateAnswerDto,
+    @UploadedFile()
+    file?: Express.Multer.File
   ): Promise<Answer> {
-    return this.answerService.submit(req.user!.id, id, updateAnswerDto);
+    if (
+      file &&
+      (file?.mimetype !== "application/zip" || file?.size > 10 * 1024 * 1024)
+    )
+      throw new UnprocessableEntityException(
+        "File must be a zip file and less than 10MB"
+      );
+
+    return this.answerService.submit(req.user!.id, id, updateAnswerDto, file);
   }
 
-  @Patch("closeSection")
+  @Patch("submitAndCloseSection")
+  @UseInterceptors(FileInterceptor("file"))
   @Roles(UserRole.CANDIDATE)
-  closeSection(
+  submitAndCloseSection(
     @Req() req: PassportRequest,
     @Query("id") id: number,
-    @Body() updateAnswerAndCloseSectionDto: UpdateAnswerAndCloseSectionDto
-  ): Promise<string> {
+    @Body() updateAnswerAndCloseSectionDto: UpdateAnswerDto,
+    @UploadedFile()
+    file?: Express.Multer.File
+  ): Promise<Answer> {
+    if (
+      file &&
+      (file?.mimetype !== "application/zip" || file?.size > 10 * 1024 * 1024)
+    )
+      throw new UnprocessableEntityException(
+        "File must be a zip file and less than 10MB"
+      );
+
     return this.answerService.submitAndCloseSection(
       req.user!.id,
       id,
-      updateAnswerAndCloseSectionDto
+      updateAnswerAndCloseSectionDto,
+      file
     );
   }
 
   @Get("generateEval")
   @Roles(UserRole.RECRUITER)
-  generateResponse(
+  generateEval(
     @Req() req: PassportRequest,
     @Query("id") id: number
   ): Promise<Answer> {

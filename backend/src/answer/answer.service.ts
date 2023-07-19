@@ -16,21 +16,20 @@ import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { SectionToAnswerSheetService } from "../section-to-answer-sheet/section-to-answer-sheet.service";
 
 /** external dependencies */
-import * as path from "path";
 import { ObjectId } from "mongodb";
-import { promises as fs } from "fs";
 import { Repository } from "typeorm";
 
-/** entities & dtos */
+/** entities & schemas */
 import { Answer } from "./entities/answer.entity";
+import { Question } from "../question/schemas/question.schema";
+
+/** dtos */
 import { CreateAnswerDto } from "./dto/create-answer.dto";
 import { UpdateAnswerDto } from "./dto/update-answer.dto";
-import { Question } from "../question/schemas/question.schema";
-import { UpdateAnswerAndCloseSectionDto } from "./dto/update-answer-and-close-section.dto";
 
 /** utils */
-import { create, findOne, findAll, update } from "../utils/typeorm.utils";
 import { GradingRubric } from "../utils/types.utils";
+import { create, findOne, findAll, update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -134,15 +133,12 @@ export class AnswerService {
     // check if answer exists
     if (!answer) throw new NotFoundException("Answer with given id not found.");
 
-    // prettier-ignore
-    // check if exam belongs to user or user is enrolled in exam
-    const exam = await (
-      await (await answer.sectionToAnswerSheet).answerSheet
-    ).exam;
-
+    // check if exam belongs to user or user owns answer sheet
+    const answerSheet = await (await answer.sectionToAnswerSheet).answerSheet;
+    const exam = await answerSheet.exam;
     if (
       userId !== (await exam.createdBy).id &&
-      !(await exam.enrolledUsers).some((candidate) => candidate.id === userId)
+      userId !== (await answerSheet.user).id
     )
       throw new UnauthorizedException(
         "You are not authorized to access this answer."
@@ -195,10 +191,9 @@ export class AnswerService {
     userId: number,
     answerId: number
   ): Promise<Partial<Question>> {
-    // check if answer exists
+    // check if answer exists and user is authorized to access it
     const answer = await this.findOne(userId, "id", answerId);
 
-    // check if question exists
     const { statement, options, type } = (await this.questionService.findOne(
       new ObjectId(answer.questionRef)
     )) as Question;
@@ -210,7 +205,8 @@ export class AnswerService {
   async submit(
     userId: number,
     answerId: number,
-    updateAnswerDto: UpdateAnswerDto
+    updateAnswerDto: UpdateAnswerDto,
+    file?: Express.Multer.File
   ): Promise<Answer> {
     // check if answer exists and user is authorized to update it
     const answer = await this.findOne(userId, "id", answerId, [
@@ -221,6 +217,13 @@ export class AnswerService {
     if ((await answer.sectionToAnswerSheet).endDate)
       throw new BadRequestException("Section is already closed.");
 
+    // upload file to s3 bucket
+    if (file)
+      await this.awsService.uploadFileToS3(
+        `answers/${answer.questionRef}/${answerId}/archive.zip`,
+        file
+      );
+
     // update answer
     return await this.update(userId, answerId, updateAnswerDto);
   }
@@ -228,8 +231,9 @@ export class AnswerService {
   async submitAndCloseSection(
     userId: number,
     answerId: number,
-    updateAnswerAndCloseSectionDto: UpdateAnswerAndCloseSectionDto
-  ): Promise<string> {
+    updateAnswerDto: UpdateAnswerDto,
+    file?: Express.Multer.File
+  ): Promise<Answer> {
     // get sectionToAnswerSheetService from moduleRef
     this.sasService =
       this.sasService ??
@@ -237,37 +241,39 @@ export class AnswerService {
         strict: false,
       });
 
-    // check if answer exists and user is authorized to update it
-    const answer = await this.findOne(userId, "id", answerId, [
-      "sectionToAnswerSheet",
-    ]);
+    // update answer with submitted content
+    const answer = await this.submit(
+      userId,
+      answerId,
+      {
+        content: updateAnswerDto.content,
+      },
+      file
+    );
 
-    // check if sectionToAnswerSheet is already closed
-    if ((await answer.sectionToAnswerSheet).endDate)
-      throw new BadRequestException("Section is already closed.");
-
-    // update answer with provided data
-    const updatedAnswer: Answer = await this.update(userId, answerId, {
-      content: updateAnswerAndCloseSectionDto.content,
-    });
-
-    // update sectionToAnswerSheet with end date
-    const _id = (await updatedAnswer.sectionToAnswerSheet).id;
-    await this.sasService.update(userId, _id, { endDate: new Date() });
-
-    // write keyboard data to file
-    await fs.appendFile(
-      path.join(`${__dirname}/../..`, "proctoring", "keyboard.txt"),
-      JSON.stringify(updateAnswerAndCloseSectionDto.keyboard)
+    // write keyboard proctoring data to s3 bucket
+    await this.awsService.uploadFileToS3(
+      `proctoring/${answer.questionRef}/${answerId}/keyboard.txt`,
+      {
+        buffer: Buffer.from(JSON.stringify(updateAnswerDto.keyboard)),
+        mimetype: "text/plain",
+      } as Express.Multer.File
     );
 
     // write mouse data to file
-    await fs.appendFile(
-      path.join(`${__dirname}/../..`, "proctoring", "mouse.txt"),
-      JSON.stringify(updateAnswerAndCloseSectionDto.mouse)
+    await this.awsService.uploadFileToS3(
+      `proctoring/${answer.questionRef}/${answerId}/mouse.txt`,
+      {
+        buffer: Buffer.from(JSON.stringify(updateAnswerDto.mouse)),
+        mimetype: "text/plain",
+      } as Express.Multer.File
     );
 
-    return `Section ${_id} closed successfully at ${new Date()}.`;
+    // update sectionToAnswerSheet with end date
+    const sasId = (await answer.sectionToAnswerSheet).id;
+    await this.sasService.submit(userId, sasId);
+
+    return answer;
   }
 
   async generateEval(userId: number, answerId: number): Promise<Answer> {
