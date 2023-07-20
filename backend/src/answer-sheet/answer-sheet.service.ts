@@ -184,20 +184,21 @@ export class AnswerSheetService {
       startDate: new Date(),
     });
 
-    // set deadline for answer sheet
+    // calculate deadline by duration
     const deadlineByDuration =
       updatedAnswerSheet.startDate.getTime() +
       exam.durationInHours * 60 * 60 * 1000;
 
+    // calculate deadline by submission
     const user = await this.userService.findOne("id", userId);
     const invitation = (await exam.invitations).find(
       (invite) => invite.email === user!.email
     );
-
     const deadlineBySubmission = invitation
       ? invitation.createdAt.getTime() + exam.submissionInHours * 60 * 60 * 1000
       : exam.submissionInHours * 60 * 60 * 1000;
 
+    // update answer sheet with the lowest deadline
     await this.update(userId, answerSheet.id, {
       deadline: new Date(Math.min(deadlineByDuration, deadlineBySubmission)),
     });
@@ -207,14 +208,8 @@ export class AnswerSheetService {
   }
 
   async submit(userId: number, answerSheetId: number): Promise<AnswerSheet> {
-    // check if answer sheet exists and candidate allowed to submit it
+    // check if answer sheet exists and user allowed to submit it
     const answerSheet = await this.findOne(userId, "id", answerSheetId);
-
-    // check if answer sheet contains sections
-    if (!(await answerSheet.sectionToAnswerSheets).length)
-      throw new UnauthorizedException(
-        "You can't submit the answer sheet because it does not contain any attempted section."
-      );
 
     // check if all sections are closed
     for (const section of await answerSheet.sectionToAnswerSheets) {
@@ -223,12 +218,6 @@ export class AnswerSheetService {
           "You can't submit the answer sheet until all sections are closed."
         );
     }
-
-    // check if answer sheet is expired
-    if (answerSheet.deadline.getTime() < new Date().getTime())
-      throw new UnauthorizedException(
-        "You can't submit the answer sheet because it is expired."
-      );
 
     // check if answer sheet is already submitted
     if (answerSheet.endDate !== null)

@@ -68,6 +68,12 @@ export class SectionToAnswerSheetService {
         "Answer sheet is not started. You are not authorized to create this section to answer sheet."
       );
 
+    // check if answer sheet is not submitted
+    if (answerSheet.endDate)
+      throw new UnauthorizedException(
+        "Answer sheet is already submitted. You are not authorized to create this section to answer sheet."
+      );
+
     // check if section to answer sheet already exists
     const sas = await this.sectionToAnswerSheetRepository
       .createQueryBuilder("sectionToAnswerSheet")
@@ -236,10 +242,6 @@ export class SectionToAnswerSheetService {
   async submit(userId: number, sasId: number): Promise<SectionToAnswerSheet> {
     // check if SAS exists and user authorized to update it
     const sas = await this.findOne(userId, "id", sasId);
-
-    // check if SAS is expired
-    if (sas.deadline.getTime() < new Date().getTime())
-      throw new UnauthorizedException("Section to answer sheet is expired.");
 
     // check if SAS is already submitted
     if (sas.endDate)

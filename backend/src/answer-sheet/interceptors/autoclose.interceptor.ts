@@ -27,22 +27,25 @@ export class AutocloseInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map(async (data) => {
-        let updatedData: any[] = [];
-        if (data.length) {
-          for (const answerSheet of data) {
-            updatedData.push(await this.autoclose(answerSheet, userId));
+        let updatedData: AnswerSheet[] = [];
+
+        for (const input of await data) {
+          if ((await input).length) {
+            for (const i of await input) {
+              updatedData.push(await this.autoclose(i, userId));
+            }
+          } else {
+            updatedData.push(await this.autoclose(data, userId));
           }
-        } else {
-          updatedData.push(await this.autoclose(data, userId));
         }
 
-        return updatedData;
+        return updatedData.length === 1 ? updatedData[0] : updatedData;
       })
     );
   }
 
   async autoclose(as: AnswerSheet, userId: number): Promise<AnswerSheet> {
-    if (!as.deadline || new Date(as.deadline) > new Date()) {
+    if (as.endDate || !as.deadline || new Date(as.deadline) > new Date()) {
       return as;
     }
 
@@ -58,7 +61,6 @@ export class AutocloseInterceptor implements NestInterceptor {
     }
 
     await this.answerSheetService.submit(userId, as.id);
-    await this.answerSheetService.generateEval(userId, as.id);
 
     return await this.answerSheetService.findOne(userId, "id", as.id);
   }

@@ -26,10 +26,10 @@ export class Exam extends SQLBaseEntity {
   @Column({ nullable: true })
   level: string;
 
-  @Column()
+  @Column({ type: "decimal", precision: 6, scale: 3 })
   durationInHours: number;
 
-  @Column()
+  @Column({ type: "decimal", precision: 6, scale: 3 })
   submissionInHours: number;
 
   @Column({ nullable: true })
