@@ -24,6 +24,7 @@ import { Question } from "../question/schemas/question.schema";
 
 /** dtos */
 import { UpdateAnswerDto } from "./dto/update-answer.dto";
+import { SubmitAnswersDto } from "./dto/submit-answers.dto";
 
 /** decorators */
 import { Roles } from "../auth/decorators/roles.decorator";
@@ -111,7 +112,7 @@ export class AnswerController {
   submitAndCloseSection(
     @Req() req: PassportRequest,
     @Query("id") id: number,
-    @Body() updateAnswerAndCloseSectionDto: UpdateAnswerDto,
+    @Body() submitAnswersDto: SubmitAnswersDto,
     @UploadedFile()
     file?: Express.Multer.File
   ): Promise<Answer> {
@@ -126,7 +127,7 @@ export class AnswerController {
     return this.answerService.submitAndCloseSection(
       req.user!.id,
       id,
-      updateAnswerAndCloseSectionDto,
+      submitAnswersDto,
       file
     );
   }

@@ -12,6 +12,7 @@ import { map } from "rxjs/operators";
 /** providers */
 import { AnswerSheetService } from "../answer-sheet.service";
 import { SectionToAnswerSheetService } from "../../section-to-answer-sheet/section-to-answer-sheet.service";
+import { AnswerSheet } from "../entities/answer-sheet.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -40,15 +41,15 @@ export class AutocloseInterceptor implements NestInterceptor {
     );
   }
 
-  async autoclose(data: any, userId: number): Promise<any> {
-    if (!data.deadline || new Date(data.deadline) > new Date()) {
-      return data;
+  async autoclose(as: AnswerSheet, userId: number): Promise<AnswerSheet> {
+    if (!as.deadline || new Date(as.deadline) > new Date()) {
+      return as;
     }
 
     const answerSheet = await this.answerSheetService.findOne(
       userId,
       "id",
-      data.id
+      as.id
     );
 
     for (const sas of await answerSheet.sectionToAnswerSheets) {
@@ -56,6 +57,9 @@ export class AutocloseInterceptor implements NestInterceptor {
         await this.sectionToAnswerSheetService.submit(userId, sas.id);
     }
 
-    return await this.answerSheetService.submitAndGetEval(userId, data.id);
+    await this.answerSheetService.submit(userId, as.id);
+    await this.answerSheetService.generateEval(userId, as.id);
+
+    return await this.answerSheetService.findOne(userId, "id", as.id);
   }
 }

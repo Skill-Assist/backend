@@ -12,7 +12,6 @@ export class ExpirationFlagInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): any {
     return next.handle().pipe(
       map((data) => {
-        data.startDate = data.createdAt;
         data.isExpired = data.deadline ? data.deadline < Date.now() : false;
 
         return data;

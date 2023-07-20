@@ -276,9 +276,9 @@ export class AnswerSheetService {
       .getOne()) as AnswerSheet;
   }
 
-  async submitAndGetEval(
+  async generateEval(
     userId: number,
-    answerSheetId: number
+    answerSheetID: number
   ): Promise<AnswerSheet> {
     // get answerService from moduleRef
     this.answerService =
@@ -287,18 +287,11 @@ export class AnswerSheetService {
         strict: false,
       });
 
-    // submit answerSheet
-    const submittedAS = await this.submit(userId, answerSheetId);
-
-    return await this.fetchEval(userId, submittedAS);
-  }
-
-  async fetchEval(
-    userId: number,
-    answerSheet: AnswerSheet
-  ): Promise<AnswerSheet> {
     // initialize answerSheet score at 0
     let answerSheetScore: number = 0;
+
+    // get answerSheet
+    const answerSheet = await this.findOne(userId, "id", answerSheetID);
 
     for (const sas of await answerSheet.sectionToAnswerSheets) {
       // initialize SAS score at 0
@@ -316,6 +309,7 @@ export class AnswerSheetService {
       // iterate over each answer in SAS
       for (const answer of await sas.answers) {
         // generate eval for answer
+
         const evaluatedAnswer = await this.answerService.generateEval(
           userId,
           answer.id
@@ -332,6 +326,7 @@ export class AnswerSheetService {
 
       // update current SAS with AI score
       answerSheetScore += sasScore * section.weight;
+
       await this.sectionToAnswerSheetService.update(userId, sas.id, {
         aiScore: sasScore,
       });

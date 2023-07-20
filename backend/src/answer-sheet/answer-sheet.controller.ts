@@ -3,7 +3,6 @@ import {
   Get,
   Req,
   Post,
-  Patch,
   Query,
   Controller,
   UseInterceptors,
@@ -89,7 +88,7 @@ export class AnswerSheetController {
     return this.answerSheetService.start(req.user!.id, id);
   }
 
-  @Patch("submit")
+  @Get("submit")
   @Roles(UserRole.CANDIDATE)
   submit(
     @Req() req: PassportRequest,
@@ -121,12 +120,12 @@ export class AnswerSheetController {
     return this.answerSheetService.fetchSections(req.user!.id, id);
   }
 
-  @Get("submitAndGetEval")
-  @Roles(UserRole.CANDIDATE)
-  submitAndGetEval(
+  @Get("generateEval")
+  @Roles(UserRole.RECRUITER)
+  generateEval(
     @Req() req: PassportRequest,
     @Query("id") id: number
   ): Promise<AnswerSheet> {
-    return this.answerSheetService.submitAndGetEval(req.user!.id, id);
+    return this.answerSheetService.generateEval(req.user!.id, id);
   }
 }

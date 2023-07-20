@@ -26,6 +26,7 @@ import { Question } from "../question/schemas/question.schema";
 /** dtos */
 import { CreateAnswerDto } from "./dto/create-answer.dto";
 import { UpdateAnswerDto } from "./dto/update-answer.dto";
+import { SubmitAnswersDto } from "./dto/submit-answers.dto";
 
 /** utils */
 import { GradingRubric } from "../utils/types.utils";
@@ -154,25 +155,6 @@ export class AnswerService {
     )) as Answer;
   }
 
-  async update(
-    userId: number,
-    answerId: number,
-    updateAnswerDto: UpdateAnswerDto
-  ): Promise<Answer> {
-    // check if answer exists and user is authorized to update it
-    await this.findOne(userId, "id", answerId);
-
-    // update answer
-    await update(
-      answerId,
-      updateAnswerDto as unknown as Record<string, unknown>,
-      this.answerRepository,
-      "answer"
-    );
-
-    return <Answer>await this.findOne(userId, "id", answerId);
-  }
-
   /** custom methods */
   async createBatch(
     userId: number,
@@ -220,18 +202,25 @@ export class AnswerService {
     // upload file to s3 bucket
     if (file)
       await this.awsService.uploadFileToS3(
-        `answers/${answer.questionRef}/${answerId}/archive.zip`,
+        `answers/${answer.questionRef}/${answerId}.zip`,
         file
       );
 
     // update answer
-    return await this.update(userId, answerId, updateAnswerDto);
+    await update(
+      answerId,
+      updateAnswerDto as unknown as Record<string, unknown>,
+      this.answerRepository,
+      "answer"
+    );
+
+    return <Answer>await this.findOne(userId, "id", answerId);
   }
 
   async submitAndCloseSection(
     userId: number,
     answerId: number,
-    updateAnswerDto: UpdateAnswerDto,
+    submitAnswersDto: SubmitAnswersDto,
     file?: Express.Multer.File
   ): Promise<Answer> {
     // get sectionToAnswerSheetService from moduleRef
@@ -246,7 +235,7 @@ export class AnswerService {
       userId,
       answerId,
       {
-        content: updateAnswerDto.content,
+        content: submitAnswersDto.content,
       },
       file
     );
@@ -255,16 +244,16 @@ export class AnswerService {
     await this.awsService.uploadFileToS3(
       `proctoring/${answer.questionRef}/${answerId}/keyboard.txt`,
       {
-        buffer: Buffer.from(JSON.stringify(updateAnswerDto.keyboard)),
+        buffer: Buffer.from(JSON.stringify(submitAnswersDto.keyboard)),
         mimetype: "text/plain",
       } as Express.Multer.File
     );
 
-    // write mouse data to file
+    // write mouse data to s3 bucket
     await this.awsService.uploadFileToS3(
       `proctoring/${answer.questionRef}/${answerId}/mouse.txt`,
       {
-        buffer: Buffer.from(JSON.stringify(updateAnswerDto.mouse)),
+        buffer: Buffer.from(JSON.stringify(submitAnswersDto.mouse)),
         mimetype: "text/plain",
       } as Express.Multer.File
     );
@@ -277,13 +266,16 @@ export class AnswerService {
   }
 
   async generateEval(userId: number, answerId: number): Promise<Answer> {
+    // check if answer exists and user is authorized to access it
     const answer = await this.findOne(userId, "id", answerId);
 
+    // fetch grading rubric, statement and type from question
     const { gradingRubric, statement, type } =
       (await this.questionService.findOne(
         new ObjectId(answer.questionRef)
       )) as Question;
 
+    // if question is of type multipleChoice, evaluate it objectively
     if (type === "multipleChoice") {
       await this.answerRepository.update(
         { id: answerId },
@@ -294,7 +286,10 @@ export class AnswerService {
               : 0,
         }
       );
-    } else {
+    }
+
+    // if question is of type text, programming or challenge, evaluate using AI
+    if (type !== "multipleChoice") {
       let maxScore: number = 0;
       let aiScore: number = 0;
       let aiFeedback: string = "";
@@ -308,7 +303,10 @@ export class AnswerService {
         type === "challenge"
           ? JSON.stringify(
               (
-                await this.awsService.fetchUnzippedDocumentary(answer.content)
+                await this.awsService.fetchUnzippedDocumentary(
+                  answer.questionRef,
+                  answerId
+                )
               ).documentaryContent
             )
           : answer.content,
@@ -329,10 +327,13 @@ export class AnswerService {
       }
 
       // update answer with aiScore
-      await this.update(userId, answerId, { aiScore: aiScore / maxScore });
+      await this.answerRepository.update(
+        { id: answerId },
+        { aiScore: aiScore / maxScore }
+      );
 
       // update answer with aiFeedback
-      await this.update(userId, answerId, { aiFeedback });
+      await this.answerRepository.update({ id: answerId }, { aiFeedback });
     }
 
     // return updated answer

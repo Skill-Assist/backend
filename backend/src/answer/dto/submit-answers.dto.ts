@@ -1,8 +1,16 @@
 import { IsString, IsOptional } from "class-validator";
 //////////////////////////////////////////////////////////////////////////////////////
 
-export class UpdateAnswerDto {
+export class SubmitAnswersDto {
   @IsOptional()
   @IsString()
   content: string;
+
+  @IsOptional()
+  @IsString()
+  keyboard: string;
+
+  @IsOptional()
+  @IsString()
+  mouse: string;
 }

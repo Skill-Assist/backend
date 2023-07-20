@@ -58,10 +58,13 @@ export class AwsService {
     }
   }
 
-  async fetchUnzippedDocumentary(pathToZip: string): Promise<Documentary> {
+  async fetchUnzippedDocumentary(
+    questionId: string,
+    answerId: number
+  ): Promise<Documentary> {
     return await this.fetchZipFromS3(this.bucket, {
-      Bucket: this.configService.get<string>("AWS_bucket_BUCKET_NAME")!,
-      Key: pathToZip,
+      Bucket: this.configService.get<string>("AWS_S3_BUCKET_NAME")!,
+      Key: `answers/${questionId}/${answerId}.zip`,
     });
   }
 
@@ -72,7 +75,8 @@ export class AwsService {
     try {
       // get the file from S3
       const response = await bucket.getObject(getObjectParams).promise();
-      if (!response.Body) throw new Error("No file found in S3 bucket");
+      if (!response.Body)
+        throw new UnprocessableEntityException("No file found in S3 bucket");
 
       // create a readable stream from the file
       const fileStream = new Readable();
