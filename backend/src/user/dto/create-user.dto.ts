@@ -9,9 +9,11 @@ import {
   IsOptional,
   IsMobilePhone,
 } from "class-validator";
+import { Transform } from "class-transformer";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateUserDto {
+  @Transform((name) => name.value.trim())
   @IsString()
   @Length(3, 50, {
     message: "Name must be between 3 and 50 characters long",
@@ -25,6 +27,7 @@ export class CreateUserDto {
   })
   nickname?: string;
 
+  @Transform((email) => email.value.toLowerCase())
   @IsEmail()
   email: string;
 
