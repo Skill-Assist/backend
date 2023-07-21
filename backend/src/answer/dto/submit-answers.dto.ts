@@ -8,9 +8,9 @@ export class SubmitAnswersDto {
 
   @IsOptional()
   @IsString()
-  keyboard: string;
+  keyboard: any;
 
   @IsOptional()
   @IsString()
-  mouse: string;
+  mouse: any;
 }

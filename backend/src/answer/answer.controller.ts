@@ -97,7 +97,10 @@ export class AnswerController {
   ): Promise<Answer> {
     if (
       file &&
-      (file?.mimetype !== "application/zip" || file?.size > 10 * 1024 * 1024)
+      (!["application/zip", "application/x-zip-compressed"].includes(
+        file?.mimetype
+      ) ||
+        file?.size > 10 * 1024 * 1024)
     )
       throw new UnprocessableEntityException(
         "File must be a zip file and less than 10MB"
@@ -118,7 +121,10 @@ export class AnswerController {
   ): Promise<Answer> {
     if (
       file &&
-      (file?.mimetype !== "application/zip" || file?.size > 10 * 1024 * 1024)
+      (!["application/zip", "application/x-zip-compressed"].includes(
+        file?.mimetype
+      ) ||
+        file?.size > 10 * 1024 * 1024)
     )
       throw new UnprocessableEntityException(
         "File must be a zip file and less than 10MB"
