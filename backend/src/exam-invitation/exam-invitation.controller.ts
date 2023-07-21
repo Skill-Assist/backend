@@ -31,25 +31,6 @@ import { PassportRequest } from "../utils/types.utils";
 @Controller("examInvitation")
 export class ExamInvitationController {
   constructor(private readonly examInvitationService: ExamInvitationService) {}
-
-  /** basic CRUD endpoints */
-  @Get()
-  @Roles(UserRole.ADMIN)
-  findAll(
-    @Query("key") key: string,
-    @Query("value") value: unknown,
-    @Query("relations") relations: string,
-    @Query("map") map: boolean
-  ): Promise<ExamInvitation[]> {
-    return this.examInvitationService.findAll(
-      key,
-      value,
-      relations ? relations.split(",") : undefined,
-      map
-    );
-  }
-
-  /** custom endpoints */
   @Get("resend")
   @Roles(UserRole.RECRUITER)
   async resend(

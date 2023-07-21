@@ -1,6 +1,10 @@
 /** nestjs */
 import { InjectRepository } from "@nestjs/typeorm";
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  Injectable,
+  NotImplementedException,
+  UnauthorizedException,
+} from "@nestjs/common";
 
 /** providers */
 import { ExamService } from "../exam/exam.service";
@@ -20,7 +24,7 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 import { AddQuestionDto } from "./dto/add-question.dto";
 
 /** utils */
-import { create, findOne, findAll, update } from "../utils/typeorm.utils";
+import { create, findOne, update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -40,6 +44,12 @@ export class UserService {
     if (await this.findOne("email", createUserDto.email)) {
       throw new UnauthorizedException("Email already exists");
     }
+
+    // check if multiple roles are provided
+    if (createUserDto.roles.length > 1)
+      throw new NotImplementedException(
+        "Multiple roles are not implemented yet"
+      );
 
     // create user
     const user = <User>await create(this.queryRunner, this.repository, {
@@ -62,22 +72,6 @@ export class UserService {
     }
 
     return user;
-  }
-
-  async findAll(
-    key?: string,
-    value?: unknown,
-    relations?: string[],
-    map?: boolean
-  ): Promise<User[]> {
-    return (await findAll(
-      this.repository,
-      "section",
-      key,
-      value,
-      relations,
-      map
-    )) as User[];
   }
 
   async findOne(
@@ -130,11 +124,21 @@ export class UserService {
   }
 
   async updateProfile(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+    // check if user is trying to update password
     if (updateUserDto.password || updateUserDto.passwordConfirm)
-      throw new UnauthorizedException(
-        "Password update not allowed. Process aborted"
+      throw new NotImplementedException(
+        "Password update is not implemented yet"
       );
 
+    // check if user is trying to update email
+    if (updateUserDto.email)
+      throw new NotImplementedException("Email update is not implemented yet");
+
+    // check if user is trying to update roles
+    if (updateUserDto.roles)
+      throw new NotImplementedException("Roles update is not implemented yet");
+
+    // update user
     await update(
       id,
       updateUserDto as unknown as Record<string, unknown>,

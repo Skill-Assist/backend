@@ -23,7 +23,7 @@ import { CreateSectionDto } from "./dto/create-section.dto";
 import { UpdateSectionDto } from "./dto/update-section.dto";
 
 /** utils */
-import { create, findOne, findAll, update } from "../utils/typeorm.utils";
+import { create, findOne, update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -73,24 +73,6 @@ export class SectionService {
 
     // return updated section
     return <Section>await this.findOne(userId, "id", section.id);
-  }
-
-  async findAll(
-    key?: string,
-    value?: unknown,
-    relations?: string[],
-    map?: boolean
-  ): Promise<Section[]> {
-    if (key && !value) throw new NotFoundException("Value not provided.");
-
-    return (await findAll(
-      this.sectionRepository,
-      "section",
-      key,
-      value,
-      relations,
-      map
-    )) as Section[];
   }
 
   async findOne(

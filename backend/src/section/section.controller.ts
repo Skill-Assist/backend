@@ -47,22 +47,6 @@ export class SectionController {
     return this.sectionService.create(req.user!.id, examId, createSectionDto);
   }
 
-  @Get()
-  @Roles(UserRole.ADMIN)
-  findAll(
-    @Query("key") key?: string,
-    @Query("value") value?: unknown,
-    @Query("relations") relations?: string,
-    @Query("map") map?: boolean
-  ): Promise<Section[]> {
-    return this.sectionService.findAll(
-      key,
-      value,
-      relations ? relations.split(",") : undefined,
-      map
-    );
-  }
-
   @Get("findOne")
   findOne(
     @Req() req: PassportRequest,

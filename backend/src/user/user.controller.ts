@@ -32,41 +32,6 @@ import { PassportRequest } from "../utils/types.utils";
 @Controller("user")
 export class UserController {
   constructor(private readonly userService: UserService) {}
-
-  /** basic CRUD endpoints */
-  @Get()
-  @Roles(UserRole.ADMIN)
-  findAll(
-    @Query("key") key?: string,
-    @Query("value") value?: unknown,
-    @Query("relations") relations?: string,
-    @Query("map") map?: boolean
-  ): Promise<User[]> {
-    return this.userService.findAll(
-      key,
-      value,
-      relations ? relations.split(",") : undefined,
-      map
-    );
-  }
-
-  @Get("findOne")
-  @Roles(UserRole.ADMIN)
-  findOne(
-    @Query("key") key: string,
-    @Query("value") value: unknown,
-    @Query("relations") relations?: string,
-    @Query("map") map?: boolean
-  ): Promise<User | null> {
-    return this.userService.findOne(
-      key,
-      value,
-      relations ? relations.split(",") : undefined,
-      map
-    );
-  }
-
-  /** custom endpoints */
   @Get("profile")
   profile(@Req() req: PassportRequest): Promise<User> {
     return this.userService.profile(req.user!.id);

@@ -47,22 +47,6 @@ export class ExamController {
     return this.examService.create(req.user!.id, createExamDto);
   }
 
-  @Get()
-  @Roles(UserRole.ADMIN)
-  findAll(
-    @Query("key") key: string,
-    @Query("value") value: unknown,
-    @Query("relations") relations: string,
-    @Query("map") map: boolean
-  ): Promise<Exam[]> {
-    return this.examService.findAll(
-      key,
-      value,
-      relations ? relations.split(",") : undefined,
-      map
-    );
-  }
-
   @Get("findOne")
   findOne(
     @Req() req: PassportRequest,

@@ -98,21 +98,14 @@ export class ExamInvitationService {
     return <ExamInvitation>await this.findOne(userId, "id", invitation.id);
   }
 
-  async findAll(
-    key?: string,
-    value?: unknown,
-    relations?: string[],
-    map?: boolean
-  ): Promise<ExamInvitation[]> {
+  async findAll(key?: string, value?: unknown): Promise<ExamInvitation[]> {
     if (key && !value) throw new UnauthorizedException("Value not provided.");
 
     return (await findAll(
       this.examInvitationRepository,
       "examInvitation",
       key,
-      value,
-      relations,
-      map
+      value
     )) as ExamInvitation[];
   }
 
@@ -304,7 +297,19 @@ export class ExamInvitationService {
     // get user by id
     const user = (await this.userService.findOne("id", userId)) as User;
 
-    // get user owned invitations by email
-    return await this.findAll("email", user.email);
+    // if user is candidate, fetch all invitations of owned email
+    if (user.roles.includes("candidate")) {
+      return await this.findAll("email", user.email);
+    }
+
+    // if user is recruiter, fetch all invitations of owned exams
+    const exams = await this.examService.findAll("createdBy", userId);
+    const invitations = [];
+    for (const exam of exams) {
+      const examInvitations = await this.findAll("exam", exam.id);
+      invitations.push(...examInvitations);
+    }
+
+    return invitations;
   }
 }

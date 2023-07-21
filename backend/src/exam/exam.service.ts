@@ -314,9 +314,7 @@ export class ExamService {
     // get exam invitations
     const examInvitations = await this.examInvitationService.findAll(
       "exam",
-      exam.id,
-      ["answerSheet"],
-      true
+      exam.id
     );
 
     let response = [];
