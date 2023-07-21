@@ -12,6 +12,7 @@ import { UserService } from "../user/user.service";
 import { ExamService } from "../exam/exam.service";
 import { AnswerService } from "../answer/answer.service";
 import { QueryRunnerService } from "../query-runner/query-runner.service";
+import { ExamInvitationService } from "../exam-invitation/exam-invitation.service";
 import { SectionToAnswerSheetService } from "../section-to-answer-sheet/section-to-answer-sheet.service";
 
 /** external dependencies */
@@ -37,11 +38,16 @@ export class AnswerSheetService {
     private readonly moduleRef: ModuleRef,
     private readonly examService: ExamService,
     private readonly queryRunner: QueryRunnerService,
+    private readonly examInvitationService: ExamInvitationService,
     private readonly sectionToAnswerSheetService: SectionToAnswerSheetService
   ) {}
 
   /** basic CRUD methods */
-  async create(user: User, examId: number): Promise<AnswerSheet> {
+  async create(
+    user: User,
+    examId: number,
+    invitationId: number
+  ): Promise<AnswerSheet> {
     // check if exam exists and if user is enrolled in it
     const exam = await this.examService.findOne(user.id, "id", examId);
 
@@ -53,6 +59,13 @@ export class AnswerSheetService {
         );
       }
     }
+
+    // check if invitation exists and if user is invitee
+    const invitation = await this.examInvitationService.findOne(
+      user.id,
+      "id",
+      invitationId
+    );
 
     // create answer sheet
     const answerSheet = (await create(
@@ -72,6 +85,14 @@ export class AnswerSheetService {
     await update(
       answerSheet.id,
       { exam },
+      this.answerSheetRepository,
+      "answerSheet"
+    );
+
+    // set relation between answer sheet and invitation
+    await update(
+      answerSheet.id,
+      { invitation },
       this.answerSheetRepository,
       "answerSheet"
     );

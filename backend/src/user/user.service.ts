@@ -155,16 +155,18 @@ export class UserService {
   }
 
   async acceptInvitation(invitationId: number, user: User): Promise<User> {
+    // accept invitation
     const invitation = await this.examInvitationService.accept(
       invitationId,
       user.id
     );
 
     // set relation between enrolled user and exam
+    const exam = await invitation.exam;
     await this.examService.enrollUser(await invitation.exam, user);
 
     // create empty answer sheet for user
-    await this.answerSheetService.create(user, (await invitation.exam).id);
+    await this.answerSheetService.create(user, exam.id, invitationId);
 
     return <User>await this.profile(user.id);
   }

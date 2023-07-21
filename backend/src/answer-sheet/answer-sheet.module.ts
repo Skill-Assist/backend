@@ -5,6 +5,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 /** modules */
 import { ExamModule } from "../exam/exam.module";
 import { AnswerModule } from "../answer/answer.module";
+import { ExamInvitationModule } from "../exam-invitation/exam-invitation.module";
 import { SectionToAnswerSheetModule } from "../section-to-answer-sheet/section-to-answer-sheet.module";
 
 /** controllers */
@@ -25,6 +26,7 @@ import { AutocloseInterceptor } from "./interceptors/autoclose.interceptor";
   imports: [
     ExamModule,
     AnswerModule,
+    ExamInvitationModule,
     SectionToAnswerSheetModule,
     TypeOrmModule.forFeature([AnswerSheet]),
   ],

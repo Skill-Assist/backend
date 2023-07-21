@@ -1,13 +1,17 @@
-import { Column, Entity, ManyToOne } from "typeorm";
+import { Column, Entity, ManyToOne, OneToOne } from "typeorm";
 
 import { Exam } from "../../exam/entities/exam.entity";
 import { User } from "../../user/entities/user.entity";
 import { SQLBaseEntity } from "../../utils/base.entity";
+import { AnswerSheet } from "../../answer-sheet/entities/answer-sheet.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Entity()
 export class ExamInvitation extends SQLBaseEntity {
   /** columns */
+  @Column({ default: () => "CURRENT_TIMESTAMP" })
+  inviteDate: Date;
+
   @Column()
   email: string;
 
@@ -23,6 +27,9 @@ export class ExamInvitation extends SQLBaseEntity {
 
   @ManyToOne(() => User, (user) => user.invitations)
   user: Promise<User>;
+
+  @OneToOne(() => AnswerSheet, (answerSheet) => answerSheet.invitation)
+  answerSheet: Promise<AnswerSheet>;
 
   /** constructor */
   constructor(partial: Partial<ExamInvitation>) {

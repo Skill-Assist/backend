@@ -1,9 +1,17 @@
-import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+} from "typeorm";
 
 import { User } from "../../user/entities/user.entity";
 import { Exam } from "../../exam/entities/exam.entity";
 import { SQLBaseEntity } from "../../utils/base.entity";
 import { SectionToAnswerSheet } from "../../section-to-answer-sheet/entities/section-to-answer-sheet.entity";
+import { ExamInvitation } from "../../exam-invitation/entities/exam-invitation.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Entity()
@@ -12,10 +20,10 @@ export class AnswerSheet extends SQLBaseEntity {
   @Column({ nullable: true })
   startDate: Date;
 
-  @Column({ type: "decimal", precision: 5, scale: 2, default: 0 })
+  @Column({ type: "decimal", precision: 5, scale: 2, nullable: true })
   aiScore: number;
 
-  @Column({ type: "decimal", precision: 5, scale: 2, default: 0 })
+  @Column({ type: "decimal", precision: 5, scale: 2, nullable: true })
   revisedScore: number;
 
   @Column({ nullable: true })
@@ -30,6 +38,13 @@ export class AnswerSheet extends SQLBaseEntity {
 
   @ManyToOne(() => Exam, (exam) => exam.answerSheets)
   exam: Promise<Exam>;
+
+  @OneToOne(
+    () => ExamInvitation,
+    (examInvitation) => examInvitation.answerSheet
+  )
+  @JoinColumn()
+  invitation: Promise<ExamInvitation>;
 
   @OneToMany(
     () => SectionToAnswerSheet,

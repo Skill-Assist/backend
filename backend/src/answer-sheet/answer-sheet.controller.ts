@@ -2,7 +2,6 @@
 import {
   Get,
   Req,
-  Post,
   Query,
   Controller,
   UseInterceptors,
@@ -35,15 +34,6 @@ export class AnswerSheetController {
   constructor(private readonly answerSheetService: AnswerSheetService) {}
 
   /** basic CRUD endpoints */
-  @Post()
-  @Roles(UserRole.ADMIN)
-  create(
-    @Req() req: PassportRequest,
-    @Query("examId") examId: number
-  ): Promise<AnswerSheet> {
-    return this.answerSheetService.create(req.user!, examId);
-  }
-
   @Get()
   @Roles(UserRole.ADMIN)
   findAll(

@@ -101,7 +101,8 @@ export class ExamInvitationService {
   async findAll(
     key?: string,
     value?: unknown,
-    relations?: string[]
+    relations?: string[],
+    map?: boolean
   ): Promise<ExamInvitation[]> {
     if (key && !value) throw new UnauthorizedException("Value not provided.");
 
@@ -110,7 +111,8 @@ export class ExamInvitationService {
       "examInvitation",
       key,
       value,
-      relations
+      relations,
+      map
     )) as ExamInvitation[];
   }
 
@@ -132,7 +134,9 @@ export class ExamInvitationService {
       this.examInvitationRepository,
       "examInvitation",
       key,
-      value
+      value,
+      relations,
+      map
     )) as ExamInvitation;
 
     // check if invitation exists
@@ -149,14 +153,7 @@ export class ExamInvitationService {
         "You are not authorized to update this invitation."
       );
 
-    return (await findOne(
-      this.examInvitationRepository,
-      "examInvitation",
-      key,
-      value,
-      relations,
-      map
-    )) as ExamInvitation;
+    return invitation;
   }
 
   async update(

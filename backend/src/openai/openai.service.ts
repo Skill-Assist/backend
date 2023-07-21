@@ -1,5 +1,5 @@
 /** nestjs */
-import { Injectable } from "@nestjs/common";
+import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 /** external dependencies */
@@ -48,30 +48,36 @@ export class OpenaiService {
     answerContent: string,
     model: string | undefined = "gpt-3.5-turbo"
   ): Promise<ChatCompletionResponse> {
-    let finalResponse: ChatCompletionResponse = {};
+    try {
+      let finalResponse: ChatCompletionResponse = {};
 
-    for (const [key, value] of Object.entries(questionGradingRubric)) {
-      const criteria: Criteria = Object.entries(value);
-      const chatHistory: ChatCompletionRequestMessage[] = this.setChatHistory(
-        questionStatement,
-        key,
-        criteria
-      ).concat({
-        role: "user",
-        content: answerContent,
-      });
+      for (const [key, value] of Object.entries(questionGradingRubric)) {
+        const criteria: Criteria = Object.entries(value);
+        const chatHistory: ChatCompletionRequestMessage[] = this.setChatHistory(
+          questionStatement,
+          key,
+          criteria
+        ).concat({
+          role: "user",
+          content: answerContent,
+        });
 
-      const response = (await this.openAiApi.createChatCompletion({
-        model,
-        messages: chatHistory,
-        temperature: 0,
-        n: 1,
-      })) as AxiosResponse<CreateChatCompletionResponse>;
+        const response = (await this.openAiApi.createChatCompletion({
+          model,
+          messages: chatHistory,
+          temperature: 0,
+          n: 1,
+        })) as AxiosResponse<CreateChatCompletionResponse>;
 
-      finalResponse[key] = response.data;
+        finalResponse[key] = response.data;
+      }
+
+      return finalResponse;
+    } catch (error) {
+      throw new ServiceUnavailableException(
+        "OpenAI API is currently unavailable. Please try again later."
+      );
     }
-
-    return finalResponse;
   }
 
   setPersona(role: string = "gerente de RH"): string {

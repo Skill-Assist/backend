@@ -27,19 +27,19 @@ export class AutocloseInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map(async (data) => {
-        let updatedData: AnswerSheet[] = [];
+        let response: AnswerSheet[] = [];
 
         for (const input of await data) {
           if ((await input).length) {
             for (const i of await input) {
-              updatedData.push(await this.autoclose(i, userId));
+              response.push(await this.autoclose(i, userId));
             }
           } else {
-            updatedData.push(await this.autoclose(data, userId));
+            response.push(await this.autoclose(data, userId));
           }
         }
 
-        return updatedData.length === 1 ? updatedData[0] : updatedData;
+        return response.length === 1 ? response[0] : response;
       })
     );
   }

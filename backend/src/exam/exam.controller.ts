@@ -123,4 +123,13 @@ export class ExamController {
   ): Promise<string> {
     return this.examService.sendInvitations(req.user!.id, id, inviteDto);
   }
+
+  @Get("fetchCandidates")
+  @Roles(UserRole.RECRUITER)
+  fetchCandidates(
+    @Req() req: PassportRequest,
+    @Query("id") id: number
+  ): Promise<any> {
+    return this.examService.fetchCandidates(req.user!.id, id);
+  }
 }

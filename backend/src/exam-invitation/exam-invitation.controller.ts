@@ -38,12 +38,14 @@ export class ExamInvitationController {
   findAll(
     @Query("key") key: string,
     @Query("value") value: unknown,
-    @Query("relations") relations: string
+    @Query("relations") relations: string,
+    @Query("map") map: boolean
   ): Promise<ExamInvitation[]> {
     return this.examInvitationService.findAll(
       key,
       value,
-      relations ? relations.split(",") : undefined
+      relations ? relations.split(",") : undefined,
+      map
     );
   }
 

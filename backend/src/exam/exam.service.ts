@@ -299,4 +299,64 @@ export class ExamService {
     // return updated exam
     return <Exam>await this.findOne(user.id, "id", exam.id);
   }
+
+  async fetchCandidates(userId: number, examId: number): Promise<any> {
+    // get ExamInvitationService from moduleRef
+    this.examInvitationService =
+      this.examInvitationService ??
+      this.moduleRef.get(ExamInvitationService, {
+        strict: false,
+      });
+
+    // try to get exam by id, check if exam exists and is owned by user
+    const exam = await this.findOne(userId, "id", examId);
+
+    // get exam invitations
+    const examInvitations = await this.examInvitationService.findAll(
+      "exam",
+      exam.id,
+      ["answerSheet"],
+      true
+    );
+
+    let response = [];
+    let status: string | undefined;
+    for (const invitation of examInvitations) {
+      const expiration =
+        invitation.createdAt.getTime() +
+        invitation.expirationInHours * 60 * 60 * 1000;
+
+      const isExpired = !invitation.accepted && expiration - Date.now() < 0;
+
+      switch (invitation.accepted) {
+        case true && !!(await invitation.answerSheet)?.endDate:
+          status = "finished";
+          break;
+        case true && !!(await invitation.answerSheet)?.startDate:
+          status = "started";
+          break;
+        case true:
+          status = "accepted";
+          break;
+        case false:
+          status = "rejected";
+          break;
+        case isExpired:
+          status = "expired";
+          break;
+        case null:
+          status = "pending";
+          break;
+      }
+
+      response.push({
+        id: invitation.id,
+        email: invitation.email,
+        status,
+        answerSheet: (await invitation.answerSheet)?.id,
+        aiScore: (await invitation.answerSheet)?.aiScore,
+      });
+    }
+    return response;
+  }
 }
