@@ -5,7 +5,10 @@ import { Injectable } from "@nestjs/common";
 import { DataSource, QueryRunner } from "typeorm";
 
 /** utils */
-import { QueryRunnerInterface, QueryRunnerEntity } from "../utils/types.utils";
+import {
+  QueryRunnerInterface,
+  QueryRunnerEntity,
+} from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 /**

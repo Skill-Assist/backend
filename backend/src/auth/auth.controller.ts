@@ -28,7 +28,7 @@ import {
   PassportJwt,
   SessionRequest,
   PassportRequest,
-} from "../utils/types.utils";
+} from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("auth")

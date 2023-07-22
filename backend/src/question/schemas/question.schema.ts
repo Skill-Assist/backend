@@ -1,4 +1,4 @@
-import { GradingRubric } from "../../utils/types.utils";
+import { GradingRubric } from "../../utils/api-types.utils";
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 ////////////////////////////////////////////////////////////////////////////////
 

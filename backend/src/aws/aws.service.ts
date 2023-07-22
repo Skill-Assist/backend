@@ -8,7 +8,7 @@ import { Readable } from "stream";
 import * as unzipper from "unzipper";
 
 /** utils */
-import { Documentary, DocumentaryContent } from "../utils/types.utils";
+import { Documentary, DocumentaryContent } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 /**

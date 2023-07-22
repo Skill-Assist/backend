@@ -15,7 +15,7 @@ import { Question } from "./schemas/question.schema";
 import { CreateQuestionDto } from "./dto/create-question.dto";
 
 /** utils */
-import { PassportRequest } from "../utils/types.utils";
+import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("question")

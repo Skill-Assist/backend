@@ -24,7 +24,7 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 import { Roles } from "../auth/decorators/roles.decorator";
 
 /** utils */
-import { PassportRequest } from "../utils/types.utils";
+import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("user")

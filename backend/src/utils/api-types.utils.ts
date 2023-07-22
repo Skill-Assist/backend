@@ -17,7 +17,6 @@ import { CreateExamInvitationDto } from "../exam-invitation/dto/create-exam-invi
 
 /** external dependencies */
 import { HydratedDocument } from "mongoose";
-import { CreateChatCompletionResponse } from "openai";
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -132,14 +131,6 @@ export type Criteria = [
   string,
   number | string | { min: number; max: number }
 ][];
-
-/**
- * @description ChatCompletionResponse is used to define the shape of the data returned
- * from the OpenAI API.
- **/
-export type ChatCompletionResponse = {
-  [key: string]: CreateChatCompletionResponse;
-};
 
 /**
  * @description QuestionDocument is used to define the shape of the data returned

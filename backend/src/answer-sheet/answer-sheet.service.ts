@@ -319,7 +319,6 @@ export class AnswerSheetService {
       // iterate over each answer in SAS
       for (const answer of await sas.answers) {
         // generate eval for answer
-
         const evaluatedAnswer = await this.answerService.generateEval(
           userId,
           answer.id

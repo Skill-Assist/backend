@@ -29,7 +29,7 @@ import { UpdateAnswerDto } from "./dto/update-answer.dto";
 import { SubmitAnswersDto } from "./dto/submit-answers.dto";
 
 /** utils */
-import { GradingRubric } from "../utils/types.utils";
+import { GradingRubric } from "../utils/api-types.utils";
 import { create, findOne, findAll, update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -271,9 +271,7 @@ export class AnswerService {
 
     // fetch grading rubric, statement and type from question
     const { gradingRubric, statement, type } =
-      (await this.questionService.findOne(
-        new ObjectId(answer.questionRef)
-      )) as Question;
+      (await this.questionService.findOne(new ObjectId(answer.questionRef)))!;
 
     // if question is of type multipleChoice, evaluate it objectively
     if (type === "multipleChoice") {
@@ -290,14 +288,14 @@ export class AnswerService {
 
     // if question is of type text, programming or challenge, evaluate using AI
     if (type !== "multipleChoice") {
-      let maxScore: number = 0;
-      let aiScore: number = 0;
-      let aiFeedback: string = "";
+      // let maxScore: number = 0;
+      // let aiScore: number = 0;
+      // let aiFeedback: string = "";
 
-      for (const rubric of Object.values(gradingRubric))
-        maxScore = maxScore + +Object.entries(rubric)[0][1];
+      // for (const rubric of Object.values(gradingRubric))
+      // maxScore += +Object.entries(rubric)[0][1];
 
-      const generatedEval = await this.openaiService.createChatCompletion(
+      const generatedEval = await this.openaiService.gradingResponse(
         statement,
         gradingRubric as GradingRubric,
         type === "challenge"
@@ -313,27 +311,28 @@ export class AnswerService {
         type === "challenge" ? "gpt-3.5-turbo-16k" : "gpt-3.5-turbo"
       );
 
-      for (const key in generatedEval) {
-        const content = generatedEval[key].choices[0].message?.content;
+      return generatedEval;
+      // for (const key in generatedEval) {
+      //   const content = generatedEval[key].choices[0].message?.content;
 
-        const scoreRegex: RegExp = /Nota: (\d+)/;
-        const scoreMatch: RegExpMatchArray | null = content!.match(scoreRegex);
-        if (scoreMatch) aiScore += parseInt(scoreMatch[1]);
+      //   const scoreRegex: RegExp = /Nota: (\d+)/;
+      //   const scoreMatch: RegExpMatchArray | null = content!.match(scoreRegex);
+      //   if (scoreMatch) aiScore += parseInt(scoreMatch[1]);
 
-        const feedbackRegex: RegExp = /Feedback: (.+)/;
-        const feedbackMatch: RegExpMatchArray | null =
-          content!.match(feedbackRegex);
-        if (feedbackMatch) aiFeedback += `${key}: ${feedbackMatch[1]}\n\n`;
-      }
+      //   const feedbackRegex: RegExp = /Feedback: (.+)/;
+      //   const feedbackMatch: RegExpMatchArray | null =
+      //     content!.match(feedbackRegex);
+      //   if (feedbackMatch) aiFeedback += `${key}: ${feedbackMatch[1]}\n\n`;
+      // }
 
-      // update answer with aiScore
-      await this.answerRepository.update(
-        { id: answerId },
-        { aiScore: aiScore / maxScore }
-      );
+      // // update answer with aiScore
+      // await this.answerRepository.update(
+      //   { id: answerId },
+      //   { aiScore: aiScore / maxScore }
+      // );
 
-      // update answer with aiFeedback
-      await this.answerRepository.update({ id: answerId }, { aiFeedback });
+      // // update answer with aiFeedback
+      // await this.answerRepository.update({ id: answerId }, { aiFeedback });
     }
 
     // return updated answer

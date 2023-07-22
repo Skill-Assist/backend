@@ -28,7 +28,7 @@ import { UpdateExamDto } from "./dto/update-exam.dto";
 import { Roles } from "../auth/decorators/roles.decorator";
 
 /** utils */
-import { PassportRequest } from "../utils/types.utils";
+import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("exam")

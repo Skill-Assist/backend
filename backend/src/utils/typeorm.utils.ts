@@ -17,7 +17,7 @@ import { ExamInvitation } from "../exam-invitation/entities/exam-invitation.enti
 import { SectionToAnswerSheet } from "../section-to-answer-sheet/entities/section-to-answer-sheet.entity";
 
 /** utils */
-import { HandlerEntity, HandlerDto } from "../utils/types.utils";
+import { HandlerEntity, HandlerDto } from "./api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 /**

@@ -24,7 +24,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
 
 /** utils */
-import { PassportRequest } from "../utils/types.utils";
+import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("section-to-answer-sheet")

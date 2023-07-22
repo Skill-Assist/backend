@@ -24,7 +24,7 @@ import { AutocloseInterceptor } from "./interceptors/autoclose.interceptor";
 import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
 
 /** utils */
-import { PassportRequest } from "../utils/types.utils";
+import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 ApiTags("answer-sheet");

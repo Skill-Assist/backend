@@ -27,7 +27,7 @@ import { UpdateSectionDto } from "./dto/update-section.dto";
 import { Roles } from "../auth/decorators/roles.decorator";
 
 /** utils */
-import { PassportRequest } from "../utils/types.utils";
+import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("section")
