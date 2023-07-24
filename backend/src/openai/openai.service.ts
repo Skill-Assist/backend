@@ -1,6 +1,6 @@
 /** nestjs */
-import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 
 /** external dependencies */
 import {
@@ -65,7 +65,6 @@ export class OpenaiService {
           answerContent
         );
 
-        console.log(chatHistory);
         const response = await this.generateGradingResponse(chatHistory);
 
         finalResponse[key] = response;

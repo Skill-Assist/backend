@@ -320,32 +320,28 @@ export class ExamService {
     let response = [];
     let status: string | undefined;
     for (const invitation of examInvitations) {
-      const expiration =
-        invitation.createdAt.getTime() +
-        invitation.expirationInHours * 60 * 60 * 1000;
-
-      const isExpired = !invitation.accepted && expiration - Date.now() < 0;
-
       switch (invitation.accepted) {
-        case true && !!(await invitation.answerSheet)?.endDate:
-          status = "finished";
-          break;
-        case true && !!(await invitation.answerSheet)?.startDate:
-          status = "started";
-          break;
         case true:
           status = "accepted";
           break;
         case false:
           status = "rejected";
           break;
-        case isExpired:
-          status = "expired";
-          break;
         case null:
           status = "pending";
-          break;
       }
+
+      const isExpired =
+        invitation.createdAt.getTime() +
+          invitation.expirationInHours * 60 * 60 * 1000 <
+        Date.now();
+      if (status === "pending" && isExpired) status = "expired";
+
+      if (status === "accepted" && !!(await invitation.answerSheet)?.endDate)
+        status = "finished";
+
+      if (status === "accepted" && !!(await invitation.answerSheet)?.startDate)
+        status = "started";
 
       response.push({
         id: invitation.id,

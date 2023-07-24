@@ -288,12 +288,12 @@ export class AnswerService {
 
     // if question is of type text, programming or challenge, evaluate using AI
     if (type !== "multipleChoice") {
-      // let maxScore: number = 0;
-      // let aiScore: number = 0;
-      // let aiFeedback: string = "";
+      let maxScore: number = 0;
+      let aiScore: number = 0;
+      let aiFeedback: string = "";
 
-      // for (const rubric of Object.values(gradingRubric))
-      // maxScore += +Object.entries(rubric)[0][1];
+      for (const rubric of Object.values(gradingRubric))
+        maxScore += +Object.entries(rubric)[0][1];
 
       const generatedEval = await this.openaiService.gradingResponse(
         statement,
@@ -311,28 +311,23 @@ export class AnswerService {
         type === "challenge" ? "gpt-3.5-turbo-16k" : "gpt-3.5-turbo"
       );
 
-      return generatedEval;
-      // for (const key in generatedEval) {
-      //   const content = generatedEval[key].choices[0].message?.content;
+      for (const key in generatedEval) {
+        if (!generatedEval[key].success)
+          throw new BadRequestException(generatedEval[key].message);
 
-      //   const scoreRegex: RegExp = /Nota: (\d+)/;
-      //   const scoreMatch: RegExpMatchArray | null = content!.match(scoreRegex);
-      //   if (scoreMatch) aiScore += parseInt(scoreMatch[1]);
-
-      //   const feedbackRegex: RegExp = /Feedback: (.+)/;
-      //   const feedbackMatch: RegExpMatchArray | null =
-      //     content!.match(feedbackRegex);
-      //   if (feedbackMatch) aiFeedback += `${key}: ${feedbackMatch[1]}\n\n`;
-      // }
+        const content = generatedEval[key].data.data;
+        aiScore += content.grade;
+        aiFeedback += `${key}: ${content.feedback}\n\n`;
+      }
 
       // // update answer with aiScore
-      // await this.answerRepository.update(
-      //   { id: answerId },
-      //   { aiScore: aiScore / maxScore }
-      // );
+      await this.answerRepository.update(
+        { id: answerId },
+        { aiScore: aiScore / maxScore }
+      );
 
       // // update answer with aiFeedback
-      // await this.answerRepository.update({ id: answerId }, { aiFeedback });
+      await this.answerRepository.update({ id: answerId }, { aiFeedback });
     }
 
     // return updated answer
