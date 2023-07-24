@@ -343,9 +343,14 @@ export class ExamService {
       if (status === "accepted" && !!(await invitation.answerSheet)?.startDate)
         status = "started";
 
+      const { name, nickname, logo } = await invitation.user;
+
       response.push({
         id: invitation.id,
         email: invitation.email,
+        name,
+        nickname,
+        logo,
         status,
         answerSheet: (await invitation.answerSheet)?.id,
         aiScore: (await invitation.answerSheet)?.aiScore,

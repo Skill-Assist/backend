@@ -18,10 +18,12 @@ import { SectionToAnswerSheetService } from "../section-to-answer-sheet/section-
 /** external dependencies */
 import { ObjectId } from "mongodb";
 import { Repository } from "typeorm";
+import { getData } from "typechat";
 
 /** entities & schemas */
 import { Answer } from "./entities/answer.entity";
 import { Question } from "../question/schemas/question.schema";
+import { AnswerSchema } from "../openai/schemas/answer.schema";
 
 /** dtos */
 import { CreateAnswerDto } from "./dto/create-answer.dto";
@@ -312,12 +314,15 @@ export class AnswerService {
       );
 
       for (const key in generatedEval) {
-        if (!generatedEval[key].success)
-          throw new BadRequestException(generatedEval[key].message);
+        const { data }: AnswerSchema = getData(generatedEval[key]);
 
-        const content = generatedEval[key].data.data;
-        aiScore += content.grade;
-        aiFeedback += `${key}: ${content.feedback}\n\n`;
+        if (data.type === "unprocessable") {
+          aiFeedback += `${key}: ${data.reason}\n\n`;
+          continue;
+        }
+
+        aiScore += data.grade;
+        aiFeedback += `${key}: ${data.feedback}\n\n`;
       }
 
       // // update answer with aiScore
