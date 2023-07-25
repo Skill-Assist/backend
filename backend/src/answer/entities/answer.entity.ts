@@ -10,7 +10,7 @@ export class Answer extends SQLBaseEntity {
   @Column({ update: false })
   questionRef: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: "longtext" })
   content: string;
 
   @Column({ type: "decimal", precision: 5, scale: 2, default: 0 })
