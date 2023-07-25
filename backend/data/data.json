@@ -105,22 +105,7 @@
       "description": "Avalia a capacidade de desenvolver em uma linguagem específica",
       "weight": 0.5,
       "durationInHours": 1,
-      "questions": [
-        {
-          "type": "programming",
-          "statement": "Desenvolva uma função que receba um array de números e retorne a soma de todos os números pares",
-          "gradingRubric": {
-            "A resposta deve ser uma função que receba um array de números e retorne a soma de todos os números pares. A função deve ser escrita em JavaScript.": 10
-          }
-        },
-        {
-          "type": "programming",
-          "statement": "Desenvolva uma função que recebe dois objetos e retorna um objeto com as propriedades dos dois objetos combinadas",
-          "gradingRubric": {
-            "A resposta deve ser uma função que recebe dois objetos e retorna um objeto com as propriedades dos dois objetos combinadas. A função deve ser escrita em JavaScript.": 10
-          }
-        }
-      ]
+      "questions": []
     },
     {
       "name": "Desenvolvimento Web",

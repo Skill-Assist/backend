@@ -54,7 +54,6 @@ export class SectionToAnswerSheetController {
 
   @UseInterceptors(ExpirationFlagInterceptor)
   @Get("findOne")
-  @Roles(UserRole.CANDIDATE)
   findOne(
     @Req() req: PassportRequest,
     @Query("key") key: string,

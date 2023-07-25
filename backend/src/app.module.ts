@@ -7,9 +7,11 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 
 /** modules */
+import { AwsModule } from "./aws/aws.module";
 import { AuthModule } from "./auth/auth.module";
 import { ExamModule } from "./exam/exam.module";
 import { UserModule } from "./user/user.module";
+import { HealthModule } from "./health/health.module";
 import { AnswerModule } from "./answer/answer.module";
 import { OpenaiModule } from "./openai/openai.module";
 import { SectionModule } from "./section/section.module";
@@ -18,15 +20,15 @@ import { AnswerSheetModule } from "./answer-sheet/answer-sheet.module";
 import { QueryRunnerModule } from "./query-runner/query-runner.module";
 import { ExamInvitationModule } from "./exam-invitation/exam-invitation.module";
 import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to-answer-sheet.module";
-import { HealthModule } from "./health/health.module";
-import { AwsModule } from './aws/aws.module';
 ////////////////////////////////////////////////////////////////////////////////
 
 @Module({
   imports: [
+    AwsModule,
     UserModule,
     AuthModule,
     ExamModule,
+    HealthModule,
     OpenaiModule,
     AnswerModule,
     SectionModule,
@@ -96,8 +98,6 @@ import { AwsModule } from './aws/aws.module';
         };
       },
     }),
-    HealthModule,
-    AwsModule,
   ],
   providers: [
     {
