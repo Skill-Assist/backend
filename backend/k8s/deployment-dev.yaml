@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend-api
+  template:
+    metadata:
+      labels:
+        app: backend-api
+    spec:
+      containers:
+        - name: backend-api
+          image: <REGISTRY>/<REPOSITORY>:<TAG>
+          env:
+            - name: ENV_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-api-env
+                  key: env_name

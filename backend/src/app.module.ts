@@ -42,7 +42,7 @@ import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to
     ConfigModule.forRoot({
       cache: true,
       isGlobal: true,
-      ignoreEnvFile: process.env.NODE_ENV === "prod" ? true : false,
+      // ignoreEnvFile: process.env.NODE_ENV === "prod" ? true : false,
     }),
     /** see https://docs.nestjs.com/security/rate-limiting */
     ThrottlerModule.forRoot({
@@ -66,7 +66,7 @@ import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to
 
         return {
           type: "mysql",
-          host: script.includes("prod") ? host : "localhost",
+          host: script.includes("prod") ? host : "mysql",
           port: 3306,
           username: script.includes("prod") ? user : "root",
           password: script.includes("prod") ? pass : "password",

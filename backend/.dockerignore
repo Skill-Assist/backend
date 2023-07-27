@@ -10,6 +10,9 @@ Dockerfile
 .git
 .gitignore
 
+# VS Code
+.vscode/
+
 # Environment variables
 .env
 .env.example
@@ -18,6 +21,5 @@ Dockerfile
 db.sqlite
 
 # utils folders
-proctoring/
 data/
 test/
