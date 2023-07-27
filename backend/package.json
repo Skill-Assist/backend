@@ -6,16 +6,16 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "set NODE_ENV=prod && nest build",
-    "start": "set NODE_ENV=prod && nest start",
-    "start:dev": "set NODE_ENV=dev && nest start --watch",
-    "start:debug": "set NODE_ENV=debug && nest start --debug --watch",
-    "start:prod": "set NODE_ENV=prod && node dist/main",
-    "test": "set NODE_ENV=test && jest --maxWorkers=1 --verbose",
-    "test:watch": "set NODE_ENV=test && jest --watch --maxWorkers=1 --verbose",
-    "test:cov": "set NODE_ENV=test && jest --coverage",
-    "test:debug": "set NODE_ENV=test && node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "set NODE_ENV=test && jest --config ./test/jest-e2e.json --maxWorkers=1 --verbose"
+    "build": "export NODE_ENV=prod && nest build",
+    "start": "export NODE_ENV=prod && nest start",
+    "start:dev": "export NODE_ENV=dev && nest start --watch",
+    "start:debug": "export NODE_ENV=debug && nest start --debug --watch",
+    "start:prod": "export NODE_ENV=prod && node dist/main",
+    "test": "export NODE_ENV=test && jest --maxWorkers=1 --verbose",
+    "test:watch": "export NODE_ENV=test && jest --watch --maxWorkers=1 --verbose",
+    "test:cov": "export NODE_ENV=test && jest --coverage",
+    "test:debug": "export NODE_ENV=test && node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "export NODE_ENV=test && jest --config ./test/jest-e2e.json --maxWorkers=1 --verbose"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.363.0",

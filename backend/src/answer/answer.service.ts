@@ -23,7 +23,7 @@ import { getData } from "typechat";
 /** entities & schemas */
 import { Answer } from "./entities/answer.entity";
 import { Question } from "../question/schemas/question.schema";
-import { AnswerSchema } from "../openai/schemas/answer.schema";
+import { AnswerSchema } from "../openai/schema/answer.schema";
 
 /** dtos */
 import { CreateAnswerDto } from "./dto/create-answer.dto";

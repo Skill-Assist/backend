@@ -14,7 +14,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 /** schemas */
-import { AnswerSchema } from "./schemas/answer.schema";
+import { AnswerSchema } from "./schema/answer.schema";
 
 /** utils */
 import { Criteria, GradingRubric } from "../utils/api-types.utils";

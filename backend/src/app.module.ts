@@ -66,7 +66,7 @@ import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to
 
         return {
           type: "mysql",
-          host: script.includes("prod") ? host : "mysql",
+          host: script.includes("prod") ? host : "localhost",
           port: 3306,
           username: script.includes("prod") ? user : "root",
           password: script.includes("prod") ? pass : "password",

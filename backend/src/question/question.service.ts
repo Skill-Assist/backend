@@ -11,14 +11,20 @@ import { InjectModel } from "@nestjs/mongoose";
 /** providers */
 import { UserService } from "../user/user.service";
 import { SectionService } from "../section/section.service";
+import { NaturalLanguageService } from "../openai/natural-language.service";
 
 /** external dependencies */
+import * as fs from "fs";
+import * as path from "path";
 import { Model } from "mongoose";
 import { ObjectId } from "mongodb";
 
-/** schemas & dtos */
+/** schemas */
 import { Question } from "./schemas/question.schema";
+
+/** dtos */
 import { CreateQuestionDto } from "./dto/create-question.dto";
+import { GenerateQuestionDto } from "./dto/generate-question.dto";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -29,7 +35,8 @@ export class QuestionService {
     @InjectModel(Question.name)
     private readonly questionModel: Model<Question>,
     private readonly moduleRef: ModuleRef,
-    private readonly sectionService: SectionService
+    private readonly sectionService: SectionService,
+    private readonly naturalLanguageService: NaturalLanguageService
   ) {}
 
   /** basic CRUD methods */
@@ -149,5 +156,35 @@ export class QuestionService {
       { sections: [...question.sections, sectionId] },
       { new: true }
     ))!;
+  }
+
+  async generate(generateQuestionDto: GenerateQuestionDto): Promise<any> {
+    const langModel =
+      this.naturalLanguageService.createLanguageModel("gpt-3.5-turbo");
+
+    const schema = fs.readFileSync(
+      path.join(
+        __dirname,
+        `../../src/openai/schema/${generateQuestionDto.type}-question.schema.ts`
+      ),
+      "utf8"
+    );
+
+    let typeName: string;
+    switch (generateQuestionDto.type) {
+      case "multiple-choice":
+        typeName = "MultipleChoiceQuestionSchema";
+        break;
+      case "text":
+        typeName = "TextQuestionSchema";
+    }
+
+    const translator = this.naturalLanguageService.createJsonTranslator(
+      langModel,
+      schema,
+      typeName!
+    );
+
+    return await translator.translate(generateQuestionDto);
   }
 }

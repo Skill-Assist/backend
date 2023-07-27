@@ -16,6 +16,7 @@ import { CreateQuestionDto } from "./dto/create-question.dto";
 
 /** utils */
 import { PassportRequest } from "../utils/api-types.utils";
+import { GenerateQuestionDto } from "./dto/generate-question.dto";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("question")
@@ -53,5 +54,10 @@ export class QuestionController {
   @Get("fetchOwn")
   fetchOwn(@Req() req: PassportRequest): Promise<Question[]> {
     return this.questionService.fetchOwn(req.user!.id);
+  }
+
+  @Post("generate")
+  generate(@Body() generateQuestionDto: GenerateQuestionDto): Promise<any> {
+    return this.questionService.generate(generateQuestionDto);
   }
 }
