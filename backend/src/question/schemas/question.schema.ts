@@ -1,4 +1,8 @@
-import { GradingRubric } from "../../utils/api-types.utils";
+import {
+  GradingCriteria,
+  MultipleChoiceOption,
+  MultipleChoiceGradingCriteria,
+} from "../../utils/api-types.utils";
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -11,10 +15,10 @@ export class Question {
   statement: string;
 
   @Prop({ type: Object, nullable: true })
-  options: Record<string, string>;
+  options: MultipleChoiceOption[];
 
   @Prop({ type: Object, required: true })
-  gradingRubric: GradingRubric;
+  gradingRubric: GradingCriteria[] | MultipleChoiceGradingCriteria;
 
   @Prop({ default: 2.5 })
   difficulty: number;

@@ -29,8 +29,8 @@ export interface PassportJwt {
 }
 
 /**
- * @description PassporRequest is used to define the shape of the request object after
- * the passport middleware has been applied.
+ * @description PassporRequest is used to define the shape of the request
+ * object after the passport middleware has been applied.
  */
 export interface PassportRequest extends Request {
   user?: User;
@@ -123,14 +123,53 @@ export type HandlerDto =
   | CreateAnswerDto;
 
 /**
- * @description Criteria is used to define the shape of the data returned
- * from the OpenAI API.
- * @see https://beta.openai.com/docs/api-reference/completions/create
+ * @description MultipleChoiceOption is used to define the shape of a given
+ * option for a multiple choice question.
+ */
+export interface MultipleChoiceOption {
+  identifier: string;
+  description: string;
+}
+
+/**
+ * @description MultipleChoiceGradingCriteria is used to define the shape of the
+ * criteria used to grade the multiple choice question.
+ */
+export interface MultipleChoiceGradingCriteria {
+  answer: {
+    option: string;
+  };
+}
+
+/**
+ * @description GradingCriteria is used to define the shape of the criteria used
+ * to grade the question, excluding the multiple choice question.
  **/
-export type Criteria = [
-  string,
-  number | string | { min: number; max: number }
-][];
+export interface GradingCriteria {
+  title: string;
+  total_points: number;
+  maxValueCriteria: {
+    description: string;
+    value: {
+      min: number;
+      max: number;
+    };
+  };
+  avgValueCriteria: {
+    description: string;
+    value: {
+      min: number;
+      max: number;
+    };
+  };
+  minValueCriteria: {
+    description: string;
+    value: {
+      min: number;
+      max: number;
+    };
+  };
+}
 
 /**
  * @description QuestionDocument is used to define the shape of the data returned
@@ -138,19 +177,3 @@ export type Criteria = [
  * @see https://mongoosejs.com/docs/guide.html#options
  **/
 export type QuestionDocument = HydratedDocument<Question>;
-
-/**
- * @description GradingRubric is used to define the shape of the grading rubric used to grade
- * the question.
- **/
-export interface GradingRubric {
-  [key: string]: {
-    [key: string]:
-      | number
-      | string
-      | {
-          min: number;
-          max: number;
-        };
-  };
-}
