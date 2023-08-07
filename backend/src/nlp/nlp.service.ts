@@ -1,64 +1,73 @@
 /** nestjs */
 import { ConfigService } from "@nestjs/config";
-import { Injectable } from "@nestjs/common";
+import { Injectable, BadRequestException } from "@nestjs/common";
 
 /** external dependencies */
 import * as axios from "axios";
 import * as ts from "typescript";
-import { GenerateQuestionDto } from "../question/dto/generate-question.dto";
+import { GradingCriteria } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-type Success<T> = {
+type TSuccess<T> = {
   success: true;
   data: T;
 };
 
-type Error = {
+type TError = {
   success: false;
   message: string;
 };
 
-type Result<T> = Success<T> | Error;
+type TResult<T> = TSuccess<T> | TError;
 
-function success<T>(data: T): Success<T> {
+function success<T>(data: T): TSuccess<T> {
   return { success: true, data };
 }
 
-function error(message: string): Error {
+function error(message: string): TError {
   return { success: false, message };
 }
 
-// function getData<T>(result: Result<T>) {
-//   if (result.success) {
-//     return result.data;
-//   }
-//   throw new BadRequestException(result.message);
-// }
+export function getData<T>(result: TResult<T>) {
+  if (result.success) {
+    return result.data;
+  }
+  throw new BadRequestException(result.message);
+}
 
 // =============================================================================
 
-interface LanguageModel {
+interface ILanguageModel {
   retryMaxAttempts?: number;
   retryPauseMs?: number;
-  models(): Promise<Result<any>>;
-  complete(prompt: string): Promise<Result<string>>;
+  complete(prompt: string): Promise<TResult<string>>;
 }
 
-interface JsonValidator<T extends object> {
+interface IJsonValidator<T extends object> {
   schema: string;
   typeName: string;
   stripNulls: boolean;
-  createModuleTextFromJson(jsonObject: object): Result<string>;
-  validate(jsonText: string): Result<T>;
+  createModuleTextFromJson(jsonObject: object): TResult<string>;
+  validate(jsonText: string): TResult<T>;
 }
 
-interface JsonTranslator<T extends object> {
-  model: LanguageModel;
-  validator: JsonValidator<T>;
+interface IJsonTranslator<T extends object> {
+  model: ILanguageModel;
+  validator: IJsonValidator<T>;
   attemptRepair: boolean;
   stripNulls: boolean;
-  createRequestPrompt(request: string): string;
-  translate(generateQuestionDto: GenerateQuestionDto): Promise<Result<T>>;
+  createRequestPrompt(
+    request: string,
+    mode: "create" | "eval",
+    statement?: string,
+    criteria?: GradingCriteria
+  ): string;
+  translate(
+    request: string,
+    mode: "create" | "eval",
+    statement?: string,
+    criteria?: GradingCriteria
+  ): Promise<TResult<T>>;
 }
 
 // =============================================================================
@@ -121,7 +130,7 @@ interface RegExp { test(s: string): boolean }`;
 export class NaturalLanguageService {
   constructor(private readonly configService: ConfigService) {}
 
-  createLanguageModel(openAiModel: string): LanguageModel {
+  createLanguageModel(openAiModel: string): ILanguageModel {
     const client = axios.default.create({
       headers: {
         Authorization: `Bearer ${this.configService.get<string>(
@@ -130,20 +139,10 @@ export class NaturalLanguageService {
       },
     });
 
-    const model: LanguageModel = { complete, models };
+    const model: ILanguageModel = { complete };
     return model;
 
-    async function models(): Promise<Result<any>> {
-      const result = await client.get("https://api.openai.com/v1/models", {
-        validateStatus: () => true,
-      });
-      if (result.status === 200) {
-        return success(result.data);
-      }
-      return error(`Rest API error: ${result.status}: ${result.statusText}`);
-    }
-
-    async function complete(prompt: string): Promise<Result<string>> {
+    async function complete(prompt: string): Promise<TResult<string>> {
       let retryCount = 0;
       const retryMaxAttempts = model.retryMaxAttempts ?? 3;
       const retryPauseMs = model.retryPauseMs ?? 1000;
@@ -184,7 +183,7 @@ export class NaturalLanguageService {
   createJsonValidator<T extends object = object>(
     schema: string,
     typeName: string
-  ): JsonValidator<T> {
+  ): IJsonValidator<T> {
     const options = {
       ...ts.getDefaultCompilerOptions(),
       strict: true,
@@ -195,7 +194,7 @@ export class NaturalLanguageService {
 
     const rootProgram = createProgramFromModuleText("");
 
-    const validator: JsonValidator<T> = {
+    const validator: IJsonValidator<T> = {
       schema,
       typeName,
       stripNulls: false,
@@ -204,7 +203,7 @@ export class NaturalLanguageService {
     };
     return validator;
 
-    function createModuleTextFromJson(jsonObject: object): Success<string> {
+    function createModuleTextFromJson(jsonObject: object): TSuccess<string> {
       return success(
         `import { ${typeName} } from "./schema";\nconst json: ${typeName} = ${JSON.stringify(
           jsonObject,
@@ -214,7 +213,7 @@ export class NaturalLanguageService {
       );
     }
 
-    function validate(jsonText: string): Result<T> {
+    function validate(jsonText: string): TResult<T> {
       let jsonObject;
       try {
         jsonObject = JSON.parse(jsonText) as object;
@@ -247,7 +246,6 @@ export class NaturalLanguageService {
               : d.messageText.messageText
           )
           .join("\n");
-        console.log("diagnostics: ", diagnostics);
         return error(diagnostics);
       }
 
@@ -294,13 +292,13 @@ export class NaturalLanguageService {
   }
 
   createJsonTranslator<T extends object>(
-    model: LanguageModel,
+    model: ILanguageModel,
     schema: string,
     typeName: string
-  ): JsonTranslator<T> {
+  ): IJsonTranslator<T> {
     const validator = this.createJsonValidator<T>(schema, typeName);
 
-    const translator: JsonTranslator<T> = {
+    const translator: IJsonTranslator<T> = {
       model,
       validator,
       attemptRepair: true,
@@ -310,21 +308,62 @@ export class NaturalLanguageService {
     };
     return translator;
 
-    function createRequestPrompt(request: string): string {
-      return (
-        `Você é um serviço que elabora questões para testes de recrutamento e seleção. As questões contém enunciados (ou statements). As questões devem ser traduzidas para objeto JSON de acordo com a seguinte definição em Typescript:\n` +
-        `\`\`\`\n${validator.schema}\n\`\`\`\n` +
-        `A seguir está o pedido (prompt) fornecido pelo usuário:\n` +
-        `"""\n${request}\n"""\n` +
-        `A partir desse pedido, elabore a questão e retorne no formato JSON conforme a definição em TypeScript fornecida.\n`
-      );
+    function createRequestPrompt(
+      request: string,
+      mode: "create" | "eval",
+      statement?: string,
+      rubric?: GradingCriteria
+    ): string {
+      let prompt: string = "";
+
+      if (mode === "create")
+        prompt +=
+          `Você é um serviço que elabora questões para testes de recrutamento e seleção. As questões contém enunciados (ou statements). As questões devem ser traduzidas para objeto JSON de acordo com a seguinte definição em Typescript:\n` +
+          `\`\`\`\n${validator.schema}\n\`\`\`\n` +
+          `A seguir está o pedido (prompt) fornecido pelo usuário:\n` +
+          `"""\n${request}\n"""\n` +
+          `A partir desse pedido, elabore a questão e retorne no formato JSON conforme a definição em TypeScript fornecida.\n`;
+
+      if (mode === "eval")
+        prompt +=
+          `Você é um gerente de RH respeitado e experiente em uma companhia de grande porte e no momento você está corrigindo a resposta de um candidato para uma questão aplicada no contexto de um teste de recrutamento. Você é conhecido por seu profissionalismo, atenção aos detalhes e alto padrão de qualidade de suas correções e avaliações. Você dá valor à clareza, coerência e pensamento lógico. A correção deve ser traduzida para objeto JSON de acordo com a seguinte definição em Typescript:\n` +
+          `\`\`\`\n${validator.schema}\n\`\`\`\n` +
+          `A seguir está a questão a ser corrigida no momento: ${statement}. Considerando a resposta, você irá elaborar a correção com base em sua ${
+            rubric!.criteria.title
+          }. Se a resposta possui ${
+            rubric!.criteria.maxValueCriteria.description
+          }, você deveria atribuir uma nota entre ${
+            rubric!.criteria.maxValueCriteria.value.min
+          } e ${
+            rubric!.criteria.maxValueCriteria.value.max
+          }. Por outro lado, se a resposta possui ${
+            rubric!.criteria.avgValueCriteria.description
+          }, você deveria atribuir uma nota entre ${
+            rubric!.criteria.avgValueCriteria.value.min
+          } e ${
+            rubric!.criteria.avgValueCriteria.value.max
+          }. Por fim, se você entender que a resposta possui ${
+            rubric!.criteria.minValueCriteria.description
+          }, você deveria atribuir uma nota entre ${
+            rubric!.criteria.minValueCriteria.value.min
+          } e ${
+            rubric!.criteria.minValueCriteria.value.max
+          }. Você deve sempre considerar o nível de detalhamento da resposta e nunca deve retornar a correção sem uma nota específica, ainda que seja 0. Além disso, notas fracionadas são admissíveis, por exemplo, ao invés de 8.0 pode ser atribuído 8.4, ao invés de 7.0 pode ser atribuído 7.2, e assim por diante. Finalmente, você deve retornar um feedback textual explicando a nota atribuída à seguinte resposta: ${request}. A partir desse pedido, elabore a correção e retorne no formato JSON conforme a definição em TypeScript fornecida.`;
+
+      return prompt;
     }
 
     async function translate(
-      generateQuestionDto: GenerateQuestionDto
+      request: string,
+      mode: "create" | "eval",
+      statement: string,
+      rubric: GradingCriteria
     ): Promise<any> {
       let prompt = translator.createRequestPrompt(
-        generateQuestionDto.statement
+        request,
+        mode,
+        statement,
+        rubric
       );
 
       let attemptRepair = translator.attemptRepair;
@@ -347,7 +386,6 @@ export class NaturalLanguageService {
           return validation;
         }
         if (!attemptRepair) {
-          console.log(validation);
           return error(
             `JSON validation failed: ${validation.message}\n${jsonText}`
           );

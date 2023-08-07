@@ -11,7 +11,7 @@ import { InjectModel } from "@nestjs/mongoose";
 /** providers */
 import { UserService } from "../user/user.service";
 import { SectionService } from "../section/section.service";
-import { NaturalLanguageService } from "../openai/natural-language.service";
+import { NaturalLanguageService } from "../nlp/nlp.service";
 
 /** external dependencies */
 import * as fs from "fs";
@@ -165,7 +165,7 @@ export class QuestionService {
     const schema = fs.readFileSync(
       path.join(
         __dirname,
-        `../../src/openai/schema/${generateQuestionDto.type}-question.schema.ts`
+        `../../src/nlp/schema/${generateQuestionDto.type}-question.schema.ts`
       ),
       "utf8"
     );
@@ -177,6 +177,13 @@ export class QuestionService {
         break;
       case "text":
         typeName = "TextQuestionSchema";
+        break;
+      case "programming":
+        typeName = "ProgrammingQuestionSchema";
+        break;
+      case "challenge":
+        typeName = "ChallengeQuestionSchema";
+        break;
     }
 
     const translator = this.naturalLanguageService.createJsonTranslator(
@@ -185,6 +192,6 @@ export class QuestionService {
       typeName!
     );
 
-    return await translator.translate(generateQuestionDto);
+    return await translator.translate(generateQuestionDto.prompt, "create");
   }
 }

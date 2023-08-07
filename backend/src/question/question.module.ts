@@ -3,7 +3,7 @@ import { Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
 
 /** modules */
-import { OpenaiModule } from "../openai/openai.module";
+import { NaturalLanguageModule } from "../nlp/nlp.module";
 import { SectionModule } from "../section/section.module";
 
 /** controllers */
@@ -18,8 +18,8 @@ import { Question, QuestionSchema } from "./schemas/question.schema";
 
 @Module({
   imports: [
-    OpenaiModule,
     SectionModule,
+    NaturalLanguageModule,
     MongooseModule.forFeature([
       { name: Question.name, schema: QuestionSchema },
     ]),

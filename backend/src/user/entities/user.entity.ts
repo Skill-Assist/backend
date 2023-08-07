@@ -48,7 +48,7 @@ export class User extends SQLBaseEntity {
   @Column({ nullable: true })
   nationalId: string;
 
-  @Column({ default: "#000000" })
+  @Column({ default: "#285943" })
   color: string;
 
   @Column({ default: "https://i.imgur.com/6VBx3io.png" })

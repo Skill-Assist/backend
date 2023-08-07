@@ -4,7 +4,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 
 /** modules */
 import { AwsModule } from "../aws/aws.module";
-import { OpenaiModule } from "../openai/openai.module";
+import { NaturalLanguageModule } from "../nlp/nlp.module";
 import { QuestionModule } from "../question/question.module";
 import { SectionToAnswerSheetModule } from "../section-to-answer-sheet/section-to-answer-sheet.module";
 
@@ -22,8 +22,8 @@ import { Answer } from "./entities/answer.entity";
 @Module({
   imports: [
     AwsModule,
-    OpenaiModule,
     QuestionModule,
+    NaturalLanguageModule,
     SectionToAnswerSheetModule,
     TypeOrmModule.forFeature([Answer]),
   ],

@@ -10,20 +10,21 @@ import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
 import { AwsService } from "../aws/aws.service";
-import { OpenaiService } from "../openai/openai.service";
+import { NaturalLanguageService } from "../nlp/nlp.service";
 import { QuestionService } from "../question/question.service";
 import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { SectionToAnswerSheetService } from "../section-to-answer-sheet/section-to-answer-sheet.service";
 
 /** external dependencies */
+import * as fs from "fs";
+import * as path from "path";
 import { ObjectId } from "mongodb";
-import { Repository } from "typeorm";
 import { getData } from "typechat";
+import { Repository } from "typeorm";
 
 /** entities & schemas */
 import { Answer } from "./entities/answer.entity";
 import { Question } from "../question/schemas/question.schema";
-import { AnswerSchema } from "../openai/schema/answer.schema";
 
 /** dtos */
 import { CreateAnswerDto } from "./dto/create-answer.dto";
@@ -31,7 +32,7 @@ import { UpdateAnswerDto } from "./dto/update-answer.dto";
 import { SubmitAnswersDto } from "./dto/submit-answers.dto";
 
 /** utils */
-import { GradingRubric } from "../utils/api-types.utils";
+import { MultipleChoiceGradingCriteria } from "../utils/api-types.utils";
 import { create, findOne, findAll, update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -44,9 +45,9 @@ export class AnswerService {
     private readonly answerRepository: Repository<Answer>,
     private readonly moduleRef: ModuleRef,
     private readonly awsService: AwsService,
-    private readonly openaiService: OpenaiService,
     private readonly queryRunner: QueryRunnerService,
-    private readonly questionService: QuestionService
+    private readonly questionService: QuestionService,
+    private readonly naturalLanguageService: NaturalLanguageService
   ) {}
 
   /** basic CRUD methods */
@@ -242,23 +243,25 @@ export class AnswerService {
       file
     );
 
-    // write keyboard proctoring data to s3 bucket
-    await this.awsService.uploadFileToS3(
-      `proctoring/${answer.questionRef}/${answerId}/keyboard.txt`,
-      {
-        buffer: Buffer.from(JSON.stringify(submitAnswersDto.keyboard)),
-        mimetype: "text/plain",
-      } as Express.Multer.File
-    );
+    if (file) {
+      // write keyboard proctoring data to s3 bucket
+      await this.awsService.uploadFileToS3(
+        `proctoring/${answer.questionRef}/${answerId}/keyboard.txt`,
+        {
+          buffer: Buffer.from(JSON.stringify(submitAnswersDto.keyboard)),
+          mimetype: "text/plain",
+        } as Express.Multer.File
+      );
 
-    // write mouse data to s3 bucket
-    await this.awsService.uploadFileToS3(
-      `proctoring/${answer.questionRef}/${answerId}/mouse.txt`,
-      {
-        buffer: Buffer.from(JSON.stringify(submitAnswersDto.mouse)),
-        mimetype: "text/plain",
-      } as Express.Multer.File
-    );
+      // write mouse data to s3 bucket
+      await this.awsService.uploadFileToS3(
+        `proctoring/${answer.questionRef}/${answerId}/mouse.txt`,
+        {
+          buffer: Buffer.from(JSON.stringify(submitAnswersDto.mouse)),
+          mimetype: "text/plain",
+        } as Express.Multer.File
+      );
+    }
 
     // update sectionToAnswerSheet with end date
     const sasId = (await answer.sectionToAnswerSheet).id;
@@ -276,17 +279,19 @@ export class AnswerService {
       (await this.questionService.findOne(new ObjectId(answer.questionRef)))!;
 
     // if question is of type multipleChoice, evaluate it objectively
-    if (type === "multipleChoice") {
+    if (type === "multipleChoice")
       await this.answerRepository.update(
         { id: answerId },
         {
           aiScore:
-            answer.content === new String(gradingRubric.answer.option).trim()
+            answer.content ===
+            new String(
+              (gradingRubric as MultipleChoiceGradingCriteria).answer.option
+            ).trim()
               ? 1
               : 0,
         }
       );
-    }
 
     // if question is of type text, programming or challenge, evaluate using AI
     if (type !== "multipleChoice") {
@@ -294,12 +299,7 @@ export class AnswerService {
       let aiScore: number = 0;
       let aiFeedback: string = "";
 
-      for (const rubric of Object.values(gradingRubric))
-        maxScore += +Object.entries(rubric)[0][1];
-
-      const generatedEval = await this.openaiService.gradingResponse(
-        statement,
-        gradingRubric as GradingRubric,
+      const content =
         type === "challenge"
           ? JSON.stringify(
               (
@@ -309,29 +309,47 @@ export class AnswerService {
                 )
               ).documentaryContent
             )
-          : answer.content,
-        type === "challenge" ? "gpt-3.5-turbo-16k" : "gpt-3.5-turbo"
+          : answer.content;
+
+      const model =
+        type === "challenge" ? "gpt-3.5-turbo-16k" : "gpt-3.5-turbo";
+
+      const langModel = this.naturalLanguageService.createLanguageModel(model);
+
+      const schema = fs.readFileSync(
+        path.join(__dirname, "../../src/nlp/schema/answer.schema.ts"),
+        "utf-8"
       );
 
-      for (const key in generatedEval) {
-        const { data }: AnswerSchema = getData(generatedEval[key]);
+      const translator = this.naturalLanguageService.createJsonTranslator(
+        langModel,
+        schema,
+        "AnswerSchema"
+      );
+
+      for (const rubric of Object.values(gradingRubric)) {
+        maxScore += rubric.criteria.total_points;
+
+        const { data }: any = getData(
+          await translator.translate(content, "eval", statement, rubric)
+        );
 
         if (data.type === "unprocessable") {
-          aiFeedback += `${key}: ${data.reason}\n\n`;
+          aiFeedback += `${rubric.criteria.title}: ${data.reason}\n\n`;
           continue;
         }
 
         aiScore += data.grade;
-        aiFeedback += `${key}: ${data.feedback}\n\n`;
+        aiFeedback += `${rubric.criteria.title}: ${data.feedback}\n\n`;
       }
 
-      // // update answer with aiScore
+      // update answer with aiScore
       await this.answerRepository.update(
         { id: answerId },
         { aiScore: aiScore / maxScore }
       );
 
-      // // update answer with aiFeedback
+      // update answer with aiFeedback
       await this.answerRepository.update({ id: answerId }, { aiFeedback });
     }
 

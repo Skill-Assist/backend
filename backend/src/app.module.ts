@@ -13,7 +13,7 @@ import { ExamModule } from "./exam/exam.module";
 import { UserModule } from "./user/user.module";
 import { HealthModule } from "./health/health.module";
 import { AnswerModule } from "./answer/answer.module";
-import { OpenaiModule } from "./openai/openai.module";
+import { NaturalLanguageModule } from "./nlp/nlp.module";
 import { SectionModule } from "./section/section.module";
 import { QuestionModule } from "./question/question.module";
 import { AnswerSheetModule } from "./answer-sheet/answer-sheet.module";
@@ -29,13 +29,13 @@ import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to
     AuthModule,
     ExamModule,
     HealthModule,
-    OpenaiModule,
     AnswerModule,
     SectionModule,
     QuestionModule,
     AnswerSheetModule,
     QueryRunnerModule,
     ExamInvitationModule,
+    NaturalLanguageModule,
     SectionToAnswerSheetModule,
     /** runtime environment variables (e.g. OS shell exports) take precedence */
     // TODO : schema validation (see https://docs.nestjs.com/techniques/configuration#schema-validation)

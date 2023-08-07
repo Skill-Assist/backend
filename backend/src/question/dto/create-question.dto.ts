@@ -47,7 +47,7 @@ class IsValidGradingCriteria implements ValidatorConstraintInterface {
       return typeof value.answer.option === "string";
     }
 
-    const isValidOption = (criteria: any): criteria is GradingCriteria => {
+    const isValidOption = (condition: any): condition is GradingCriteria => {
       const isMinMaxValueValid = (
         value: any
       ): value is { min: number; max: number } => {
@@ -72,15 +72,15 @@ class IsValidGradingCriteria implements ValidatorConstraintInterface {
       };
 
       return (
-        typeof criteria === "object" &&
-        typeof criteria.title === "string" &&
-        typeof criteria.total_points === "number" &&
-        typeof criteria.maxValueCriteria === "object" &&
-        isValueCriteriaValid(criteria.maxValueCriteria) &&
-        typeof criteria.avgValueCriteria === "object" &&
-        isValueCriteriaValid(criteria.avgValueCriteria) &&
-        typeof criteria.minValueCriteria === "object" &&
-        isValueCriteriaValid(criteria.minValueCriteria)
+        typeof condition === "object" &&
+        typeof condition.criteria.title === "string" &&
+        typeof condition.criteria.total_points === "number" &&
+        typeof condition.criteria.maxValueCriteria === "object" &&
+        isValueCriteriaValid(condition.criteria.maxValueCriteria) &&
+        typeof condition.criteria.avgValueCriteria === "object" &&
+        isValueCriteriaValid(condition.criteria.avgValueCriteria) &&
+        typeof condition.criteria.minValueCriteria === "object" &&
+        isValueCriteriaValid(condition.criteria.minValueCriteria)
       );
     };
 

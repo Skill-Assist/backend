@@ -6,8 +6,8 @@ import { DataSource, QueryRunner } from "typeorm";
 
 /** utils */
 import {
-  QueryRunnerInterface,
   QueryRunnerEntity,
+  QueryRunnerInterface,
 } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 

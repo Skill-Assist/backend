@@ -1,144 +1,18 @@
-{
-  "exams": [
-    {
-      "owner": "Ultrapar Participacoes SA",
-      "title": "Desenvolvedor",
-      "subtitle": "Front-end",
-      "level": "Pleno",
-      "durationInHours": 120,
-      "submissionInHours": 360,
-      "dateToArchive": "2023-08-15T10:00:00Z"
-    },
-    {
-      "owner": "Ambev SA",
-      "title": "Designer",
-      "subtitle": "UI/UX",
-      "level": "Sênior",
-      "durationInHours": 120,
-      "submissionInHours": 360,
-      "dateToArchive": "2023-08-15T10:00:00Z"
-    },
-    {
-      "owner": "Inteli - Instituto de Tecnologia e Liderança",
-      "title": "Candidato",
-      "subtitle": "Engenharia de Software",
-      "durationInHours": 120,
-      "submissionInHours": 360,
-      "dateToArchive": "2023-08-15T10:00:00Z"
-    }
-  ],
-  "sections": [
-    {
-      "name": "Lógica de Programação",
-      "description": "Avalia a capacidade de resolver problemas de forma lógica",
-      "weight": 0.5,
-      "durationInHours": 1,
-      "questions": [
-        {
-          "type": "multipleChoice",
-          "statement": "Qual dos seguintes operadores lógicos retorna verdadeiro apenas quando ambos os operandos sãverdadeiros?",
-          "options": [
-            {
-              "identifier": "a",
-              "description": "AND (&&)"
-            },
-            {
-              "identifier": "b",
-              "description": "OR (||)"
-            },
-            {
-              "identifier": "c",
-              "description": "NOT (!)"
-            },
-            {
-              "identifier": "d",
-              "description": "XOR (^)"
-            }
-          ],
-          "gradingRubric": { "answer": { "option": "a " } }
-        },
-        {
-          "type": "text",
-          "statement": "Descreva as vantagens e desvantagens do Typescript para o desenvolvimento de APIs?",
-          "gradingRubric": [
-            {
-              "title": "Acurácia",
-              "total_points": 40,
-              "maxValueCriteria": {
-                "description": "descrição precisa e abrangente das vantagens e desvantagens do TypeScript para o desenvolvimento de APIs",
-                "value": {
-                  "min": 31,
-                  "max": 40
-                }
-              },
-              "avgValueCriteria": {
-                "description": "menciona algumas vantagens e desvantagens, mas pode deixar de mencionar pontos importantes",
-                "value": {
-                  "min": 21,
-                  "max": 30
-                }
-              },
-              "minValueCriteria": {
-                "description": "não menciona ou descreve incorretamente as vantagens e desvantagens",
-                "value": {
-                  "min": 0,
-                  "max": 20
-                }
-              }
-            },
-            {
-              "title": "Explicação",
-              "total_points": 40,
-              "maxValueCriteria": {
-                "description": "fornece uma explicação clara e detalhada de por que o TypeScript é vantajoso ou desvantajoso para o desenvolvimento de APIs",
-                "value": {
-                  "min": 31,
-                  "max": 40
-                }
-              },
-              "avgValueCriteria": {
-                "description": "oferece alguma explicação, mas falta clareza ou profundidade",
-                "value": {
-                  "min": 21,
-                  "max": 30
-                }
-              },
-              "minValueCriteria": {
-                "description": "fornece uma explicação insuficiente ou irrelevante",
-                "value": {
-                  "min": 0,
-                  "max": 20
-                }
-              }
-            },
-            {
-              "title": "Argumentos de suporte",
-              "total_points": 20,
-              "maxValueCriteria": {
-                "description": "apresenta argumentos fortes e válidos, apoiados por exemplos ou evidências, que mostram as vantagens ou desvantagens do TypeScript para o desenvolvimento de APIs",
-                "value": {
-                  "min": 16,
-                  "max": 20
-                }
-              },
-              "avgValueCriteria": {
-                "description": "fornece alguns argumentos, mas eles são fracos ou carecem de suporte adequado",
-                "value": {
-                  "min": 11,
-                  "max": 15
-                }
-              },
-              "minValueCriteria": {
-                "description": "não fornece argumentos ou evidências substanciais",
-                "value": {
-                  "min": 0,
-                  "max": 10
-                }
-              }
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
+[
+  {
+    "type": "challenge",
+    "prompt": "Crie uma questão do tipo desafio cujo enunciado solicite ao candidato a elaboração de um projeto em NodeJS que realize cálculos matemáticos complexos. O enunciado deve contextualizar a importância do candidado ter habilidade com NodeJS para desenvolver de forma adequada projetos para a vaga de Desenvolvedor Backend. Os critérios de correção desejados são: clean code e funcionalidade. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
+  },
+  {
+    "type": "programming",
+    "prompt": "Crie uma questão do tipo programação cujo enunciado solicite ao candidato a elaboração de uma função em C++ que realize o cálculo da hipotenusa dados os dois catetos. O enunciado da questão deve contextualizar a importância do candidado ter habilidade com programação e matemática, bem como a origem da trigonometria. Os critérios de correção desejados são: clean code, funcionalidade e sintaxe. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
+  },
+  {
+    "type": "text",
+    "prompt": "Crie uma questão do tipo texto cujo enunciado solicite ao candidato a elaboração de uma redação sobre startups de RH e sua importância, principalmente no segmento de seleção de candidatos para carreiras STEM, ou seja, nos campos de ciências, tecnologia, exatas e matemática. O enunciado da questão deve contextualizar a importância do candidado ter habilidade com programação e matemática. Os critérios de correção desejados são: coerência, coesão, vocabulário e sintaxe. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
+  },
+  {
+    "type": "multiple-choice",
+    "prompt": "Crie uma questão do tipo múltipla escolha com 5 alternativas que avalie o conhecimento do candidato a respeito de operadores lógicos em Python. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
+  }
+]
