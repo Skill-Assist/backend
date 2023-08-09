@@ -2,7 +2,7 @@ import { Column, Entity, ManyToOne, OneToOne } from "typeorm";
 
 import { Exam } from "../../exam/entities/exam.entity";
 import { User } from "../../user/entities/user.entity";
-import { SQLBaseEntity } from "../../utils/base.entity";
+import { SQLBaseEntity } from "../../utils/base-entity.utils";
 import { AnswerSheet } from "../../answer-sheet/entities/answer-sheet.entity";
 ////////////////////////////////////////////////////////////////////////////////
 

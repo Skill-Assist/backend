@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
 
 import { Exam } from "../../exam/entities/exam.entity";
-import { SQLBaseEntity } from "../../utils/base.entity";
+import { SQLBaseEntity } from "../../utils/base-entity.utils";
 import { SectionToAnswerSheet } from "../../section-to-answer-sheet/entities/section-to-answer-sheet.entity";
 ////////////////////////////////////////////////////////////////////////////////
 

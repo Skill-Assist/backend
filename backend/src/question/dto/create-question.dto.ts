@@ -100,8 +100,8 @@ export class CreateQuestionDto {
   type: string;
 
   @IsString()
-  @Length(10, 500, {
-    message: "Statement must be between 10 and 500 characters long.",
+  @Length(10, 5000, {
+    message: "Statement must be between 10 and 5000 characters long.",
   })
   statement: string;
 

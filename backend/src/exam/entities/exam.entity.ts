@@ -8,7 +8,7 @@ import {
 } from "typeorm";
 
 import { User } from "../../user/entities/user.entity";
-import { SQLBaseEntity } from "../../utils/base.entity";
+import { SQLBaseEntity } from "../../utils/base-entity.utils";
 import { Section } from "../../section/entities/section.entity";
 import { AnswerSheet } from "../../answer-sheet/entities/answer-sheet.entity";
 import { ExamInvitation } from "../../exam-invitation/entities/exam-invitation.entity";

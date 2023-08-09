@@ -8,11 +8,15 @@
     "prompt": "Crie uma questão do tipo programação cujo enunciado solicite ao candidato a elaboração de uma função em C++ que realize o cálculo da hipotenusa dados os dois catetos. O enunciado da questão deve contextualizar a importância do candidado ter habilidade com programação e matemática, bem como a origem da trigonometria. Os critérios de correção desejados são: clean code, funcionalidade e sintaxe. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
   },
   {
+    "type": "programming",
+    "prompt": "Crie uma questão do tipo programação cujo enunciado solicite ao candidato a elaboração de uma função em Python utilize list comprehension para realizar a manipulação de dados de um grafo. O enunciado da questão deve contextualizar a importância do candidado ter habilidade com Python e suas especificidades, como as list comprehensions, bem como a origem dessa linguagem de programação. O enunciado deve ainda esclarecer o que são grafos e para que são usados. Os critérios de correção desejados são: clean code, funcionalidade e sintaxe. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
+  },
+  {
     "type": "text",
     "prompt": "Crie uma questão do tipo texto cujo enunciado solicite ao candidato a elaboração de uma redação sobre startups de RH e sua importância, principalmente no segmento de seleção de candidatos para carreiras STEM, ou seja, nos campos de ciências, tecnologia, exatas e matemática. O enunciado da questão deve contextualizar a importância do candidado ter habilidade com programação e matemática. Os critérios de correção desejados são: coerência, coesão, vocabulário e sintaxe. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
   },
   {
     "type": "multiple-choice",
-    "prompt": "Crie uma questão do tipo múltipla escolha com 5 alternativas que avalie o conhecimento do candidato a respeito de operadores lógicos em Python. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
+    "prompt": "Crie uma questão do tipo múltipla escolha com 5 alternativas que avalie o conhecimento do candidato a respeito de operadores lógicos em Python. Para cada opção Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido."
   }
 ]

@@ -1,130 +1,29 @@
 /** nestjs */
 import { ConfigService } from "@nestjs/config";
-import { Injectable, BadRequestException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 /** external dependencies */
 import * as axios from "axios";
 import * as ts from "typescript";
 import { GradingCriteria } from "../utils/api-types.utils";
+
+/** utils */
+import {
+  sleep,
+  error,
+  success,
+  libText,
+  TResult,
+  TSuccess,
+  stripNulls,
+  ILanguageModel,
+  IJsonValidator,
+  IJsonTranslator,
+  isTransientHttpError,
+} from "../utils/nlp-types.utils";
+import { systemSetup, TCreateQuestion } from "../utils/nlp-prompts.utils";
+
 ////////////////////////////////////////////////////////////////////////////////
-
-type TSuccess<T> = {
-  success: true;
-  data: T;
-};
-
-type TError = {
-  success: false;
-  message: string;
-};
-
-type TResult<T> = TSuccess<T> | TError;
-
-function success<T>(data: T): TSuccess<T> {
-  return { success: true, data };
-}
-
-function error(message: string): TError {
-  return { success: false, message };
-}
-
-export function getData<T>(result: TResult<T>) {
-  if (result.success) {
-    return result.data;
-  }
-  throw new BadRequestException(result.message);
-}
-
-// =============================================================================
-
-interface ILanguageModel {
-  retryMaxAttempts?: number;
-  retryPauseMs?: number;
-  complete(prompt: string): Promise<TResult<string>>;
-}
-
-interface IJsonValidator<T extends object> {
-  schema: string;
-  typeName: string;
-  stripNulls: boolean;
-  createModuleTextFromJson(jsonObject: object): TResult<string>;
-  validate(jsonText: string): TResult<T>;
-}
-
-interface IJsonTranslator<T extends object> {
-  model: ILanguageModel;
-  validator: IJsonValidator<T>;
-  attemptRepair: boolean;
-  stripNulls: boolean;
-  createRequestPrompt(
-    request: string,
-    mode: "create" | "eval",
-    statement?: string,
-    criteria?: GradingCriteria
-  ): string;
-  translate(
-    request: string,
-    mode: "create" | "eval",
-    statement?: string,
-    criteria?: GradingCriteria
-  ): Promise<TResult<T>>;
-}
-
-// =============================================================================
-
-function isTransientHttpError(code: number): boolean {
-  switch (code) {
-    case 429: // TooManyRequests
-    case 500: // InternalServerError
-    case 502: // BadGateway
-    case 503: // ServiceUnavailable
-    case 504: // GatewayTimeout
-      return true;
-  }
-  return false;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function stripNulls(obj: any) {
-  let keysToDelete: string[] | undefined;
-  for (const k in obj) {
-    const value = obj[k];
-    if (value === null) {
-      (keysToDelete ??= []).push(k);
-    } else {
-      if (Array.isArray(value)) {
-        if (value.some((x) => x === null)) {
-          obj[k] = value.filter((x) => x !== null);
-        }
-      }
-      if (typeof value === "object") {
-        stripNulls(value);
-      }
-    }
-  }
-  if (keysToDelete) {
-    for (const k of keysToDelete) {
-      delete obj[k];
-    }
-  }
-}
-
-// =============================================================================
-
-const libText = `interface Array<T> { length: number, [n: number]: T }
-interface Object { toString(): string }
-interface Function { prototype: unknown }
-interface CallableFunction extends Function {}
-interface NewableFunction extends Function {}
-interface String { readonly length: number }
-interface Boolean { valueOf(): boolean }
-interface Number { valueOf(): number }
-interface RegExp { test(s: string): boolean }`;
-
-// =============================================================================
 
 @Injectable()
 export class NaturalLanguageService {
@@ -142,15 +41,36 @@ export class NaturalLanguageService {
     const model: ILanguageModel = { complete };
     return model;
 
-    async function complete(prompt: string): Promise<TResult<string>> {
+    async function complete(
+      prompt: string,
+      mode: "create" | "eval",
+      schema: string
+    ): Promise<TResult<string>> {
       let retryCount = 0;
       const retryMaxAttempts = model.retryMaxAttempts ?? 3;
       const retryPauseMs = model.retryPauseMs ?? 1000;
 
+      const systemSetupPrompt: TCreateQuestion = systemSetup(schema);
+
+      const hiddenPrompt: string =
+        mode === "create" ? systemSetupPrompt.hiddenPrompt : "";
+
+      const hiddenRequest: string =
+        mode === "create" ? systemSetupPrompt.hiddenRequest : "";
+
+      const hiddenResponse: string =
+        mode === "create" ? systemSetupPrompt.hiddenResponse : "";
+
       while (true) {
         const params = {
           model: openAiModel,
-          messages: [{ role: "user", content: prompt }],
+          messages: [
+            { role: "system", content: hiddenPrompt },
+            { role: "user", content: hiddenRequest },
+            { role: "assistant", content: hiddenResponse },
+            { role: "user", content: prompt },
+            { role: "system", content: "" },
+          ],
           temperature: 0,
           n: 1,
         };
@@ -318,15 +238,13 @@ export class NaturalLanguageService {
 
       if (mode === "create")
         prompt +=
-          `Você é um serviço que elabora questões para testes de recrutamento e seleção. As questões contém enunciados (ou statements). As questões devem ser traduzidas para objeto JSON de acordo com a seguinte definição em Typescript:\n` +
-          `\`\`\`\n${validator.schema}\n\`\`\`\n` +
           `A seguir está o pedido (prompt) fornecido pelo usuário:\n` +
           `"""\n${request}\n"""\n` +
           `A partir desse pedido, elabore a questão e retorne no formato JSON conforme a definição em TypeScript fornecida.\n`;
 
       if (mode === "eval")
         prompt +=
-          `Você é um gerente de RH respeitado e experiente em uma companhia de grande porte e no momento você está corrigindo a resposta de um candidato para uma questão aplicada no contexto de um teste de recrutamento. Você é conhecido por seu profissionalismo, atenção aos detalhes e alto padrão de qualidade de suas correções e avaliações. Você dá valor à clareza, coerência e pensamento lógico. A correção deve ser traduzida para objeto JSON de acordo com a seguinte definição em Typescript:\n` +
+          `Você é um gerente de RH respeitado e experiente em uma companhia de grande porte e no momento você está corrigindo a resposta de um candidato para uma questão aplicada no contexto de um teste de recrutamento. Você é conhecido por seu profissionalismo, atenção aos detalhes e alto padrão de qualidade de suas correções e avaliações. Você dá valor à clareza, coerência e pensamento lógico. Você sempre pensa passo-a-passo e mostra todo o seu trabalho na explicação, de forma completa e explícita. A correção deve ser traduzida para objeto JSON de acordo com a seguinte definição em Typescript:\n` +
           `\`\`\`\n${validator.schema}\n\`\`\`\n` +
           `A seguir está a questão a ser corrigida no momento: ${statement}. Considerando a resposta, você irá elaborar a correção com base em sua ${
             rubric!.criteria.title
@@ -369,7 +287,7 @@ export class NaturalLanguageService {
       let attemptRepair = translator.attemptRepair;
 
       while (true) {
-        const response = await model.complete(prompt);
+        const response = await model.complete(prompt, mode, validator.schema);
         if (!response.success) {
           return response;
         }

@@ -12,6 +12,8 @@ import { map } from "rxjs/operators";
 /** providers */
 import { AnswerSheetService } from "../answer-sheet.service";
 import { SectionToAnswerSheetService } from "../../section-to-answer-sheet/section-to-answer-sheet.service";
+
+/** entities */
 import { AnswerSheet } from "../entities/answer-sheet.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -23,31 +25,27 @@ export class AutocloseInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): any {
-    const userId = context.switchToHttp().getRequest().user.id;
+    const userId: number = context.switchToHttp().getRequest().user.id;
 
     return next.handle().pipe(
       map(async (data) => {
-        let response: AnswerSheet[] = [];
+        for (const [idx, answerSheet] of data.entries()) {
+          const updatedAnswerSheet: AnswerSheet = await this.autoclose(
+            answerSheet,
+            userId
+          );
 
-        for (const input of await data) {
-          if ((await input).length) {
-            for (const i of await input) {
-              response.push(await this.autoclose(i, userId));
-            }
-          } else {
-            response.push(await this.autoclose(data, userId));
-          }
+          data.splice(idx, 1, updatedAnswerSheet);
         }
 
-        return response.length === 1 ? response[0] : response;
+        return data;
       })
     );
   }
 
   async autoclose(as: AnswerSheet, userId: number): Promise<AnswerSheet> {
-    if (as.endDate || !as.deadline || new Date(as.deadline) > new Date()) {
+    if (as.endDate || !as.deadline || new Date(as.deadline) > new Date())
       return as;
-    }
 
     const answerSheet = await this.answerSheetService.findOne(
       userId,

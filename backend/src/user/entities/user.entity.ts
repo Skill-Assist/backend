@@ -11,7 +11,7 @@ import { Exclude } from "class-transformer";
 import { UnauthorizedException } from "@nestjs/common";
 
 import { Exam } from "../../exam/entities/exam.entity";
-import { SQLBaseEntity } from "../../utils/base.entity";
+import { SQLBaseEntity } from "../../utils/base-entity.utils";
 import { AnswerSheet } from "../../answer-sheet/entities/answer-sheet.entity";
 import { ExamInvitation } from "../../exam-invitation/entities/exam-invitation.entity";
 ////////////////////////////////////////////////////////////////////////////////
