@@ -1,12 +1,14 @@
 /** nestjs */
-import { InjectRepository } from "@nestjs/typeorm";
 import {
   Injectable,
   NotImplementedException,
   UnauthorizedException,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
+import { AwsService } from "../aws/aws.service";
 import { ExamService } from "../exam/exam.service";
 import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { AnswerSheetService } from "../answer-sheet/answer-sheet.service";
@@ -32,7 +34,9 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly repository: Repository<User>,
+    private readonly awsService: AwsService,
     private readonly examService: ExamService,
+    private readonly configService: ConfigService,
     private readonly queryRunner: QueryRunnerService,
     private readonly answerSheetService: AnswerSheetService,
     private readonly examInvitationService: ExamInvitationService
@@ -123,7 +127,11 @@ export class UserService {
     return <User>await _query.where("user.id = :id", { id }).getOne();
   }
 
-  async updateProfile(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+  async updateProfile(
+    id: number,
+    updateUserDto: UpdateUserDto,
+    file?: Express.Multer.File
+  ): Promise<User> {
     // check if user is trying to update password
     if (updateUserDto.password || updateUserDto.passwordConfirm)
       throw new NotImplementedException(
@@ -137,6 +145,14 @@ export class UserService {
     // check if user is trying to update roles
     if (updateUserDto.roles)
       throw new NotImplementedException("Roles update is not implemented yet");
+
+    // upload file to s3 bucket
+    if (file) {
+      const format = file.mimetype.split("/")[1];
+      const bucket = this.configService.get<string>("AWS_S3_BUCKET_NAME");
+      await this.awsService.uploadFileToS3(`logo/${id}.${format}`, file);
+      updateUserDto.logo = `https://${bucket}.s3.sa-east-1.amazonaws.com/logo/${id}.${format}`;
+    }
 
     // update user
     await update(

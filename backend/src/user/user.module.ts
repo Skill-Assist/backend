@@ -4,6 +4,7 @@ import { Module, Global } from "@nestjs/common";
 
 /** modules */
 import { ExamModule } from "../exam/exam.module";
+import { AwsModule } from "../aws/aws.module";
 import { AnswerSheetModule } from "../answer-sheet/answer-sheet.module";
 import { ExamInvitationModule } from "../exam-invitation/exam-invitation.module";
 
@@ -21,6 +22,7 @@ import { User } from "./entities/user.entity";
 @Global()
 @Module({
   imports: [
+    AwsModule,
     ExamModule,
     AnswerSheetModule,
     ExamInvitationModule,

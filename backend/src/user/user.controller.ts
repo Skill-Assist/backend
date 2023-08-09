@@ -8,8 +8,11 @@ import {
   Controller,
   UseInterceptors,
   ClassSerializerInterceptor,
+  UploadedFile,
+  UnprocessableEntityException,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+import { FileInterceptor } from "@nestjs/platform-express";
 
 /** providers */
 import { UserService } from "./user.service";
@@ -38,11 +41,21 @@ export class UserController {
   }
 
   @Patch("updateProfile")
+  @UseInterceptors(FileInterceptor("file"))
   updateProfile(
     @Req() req: PassportRequest,
-    @Body() updateUserDto: UpdateUserDto
+    @Body() updateUserDto: UpdateUserDto,
+    @UploadedFile() file?: Express.Multer.File
   ): Promise<User> {
-    return this.userService.updateProfile(req.user!.id, updateUserDto);
+    if (
+      file &&
+      (!file.mimetype.startsWith("image") || file.size > 10 * 1024 * 1024)
+    )
+      throw new UnprocessableEntityException(
+        "File must be an image and less than 10MB"
+      );
+
+    return this.userService.updateProfile(req.user!.id, updateUserDto, file);
   }
 
   @Get("acceptInvitation")
