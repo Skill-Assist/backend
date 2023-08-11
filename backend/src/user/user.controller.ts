@@ -6,9 +6,9 @@ import {
   Patch,
   Query,
   Controller,
+  UploadedFile,
   UseInterceptors,
   ClassSerializerInterceptor,
-  UploadedFile,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
@@ -28,7 +28,6 @@ import { Roles } from "../auth/decorators/roles.decorator";
 
 /** utils */
 import { PassportRequest } from "../utils/api-types.utils";
-import { ShowScoreInterceptor } from "./interceptors/show-score.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("user")
@@ -37,7 +36,6 @@ import { ShowScoreInterceptor } from "./interceptors/show-score.interceptor";
 export class UserController {
   constructor(private readonly userService: UserService) {}
   @Get("profile")
-  @UseInterceptors(ShowScoreInterceptor)
   profile(@Req() req: PassportRequest): Promise<User> {
     return this.userService.profile(req.user!.id);
   }

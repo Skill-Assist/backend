@@ -1,6 +1,6 @@
 /** nestjs */
 import { Module } from "@nestjs/common";
-import { APP_GUARD } from "@nestjs/core";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { MongooseModule } from "@nestjs/mongoose";
 import { ConfigModule, ConfigService } from "@nestjs/config";
@@ -20,6 +20,9 @@ import { AnswerSheetModule } from "./answer-sheet/answer-sheet.module";
 import { QueryRunnerModule } from "./query-runner/query-runner.module";
 import { ExamInvitationModule } from "./exam-invitation/exam-invitation.module";
 import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to-answer-sheet.module";
+
+/** interceptors */
+import { AppInterceptor } from "./app.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Module({
@@ -103,6 +106,10 @@ import { SectionToAnswerSheetModule } from "./section-to-answer-sheet/section-to
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AppInterceptor,
     },
   ],
 })

@@ -34,7 +34,6 @@ import { Express } from "express";
 
 /** utils */
 import { PassportRequest } from "../utils/api-types.utils";
-import { ShowScoreInterceptor } from "./interceptors/showScore.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("answer")
@@ -61,7 +60,6 @@ export class AnswerController {
   }
 
   @Get("findOne")
-  @UseInterceptors(ShowScoreInterceptor)
   findOne(
     @Req() req: PassportRequest,
     @Query("key") key: string,
