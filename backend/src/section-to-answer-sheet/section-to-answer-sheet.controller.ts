@@ -21,6 +21,7 @@ import { SectionToAnswerSheet } from "./entities/section-to-answer-sheet.entity"
 import { Roles } from "../auth/decorators/roles.decorator";
 
 /** interceptors */
+import { ShowScoreInterceptor } from "./interceptors/show-score.interceptor";
 import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interceptor";
 
 /** utils */
@@ -52,7 +53,7 @@ export class SectionToAnswerSheetController {
     );
   }
 
-  @UseInterceptors(ExpirationFlagInterceptor)
+  @UseInterceptors(ShowScoreInterceptor, ExpirationFlagInterceptor)
   @Get("findOne")
   findOne(
     @Req() req: PassportRequest,

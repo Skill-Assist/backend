@@ -25,6 +25,7 @@ import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interc
 
 /** utils */
 import { PassportRequest } from "../utils/api-types.utils";
+import { ShowScoreInterceptor } from "./interceptors/show-score.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 ApiTags("answer-sheet");
@@ -50,8 +51,12 @@ export class AnswerSheetController {
     );
   }
 
-  @UseInterceptors(AutocloseInterceptor, ExpirationFlagInterceptor)
   @Get("findOne")
+  @UseInterceptors(
+    ShowScoreInterceptor,
+    AutocloseInterceptor,
+    ExpirationFlagInterceptor
+  )
   findOne(
     @Req() req: PassportRequest,
     @Query("key") key: string,
@@ -87,8 +92,12 @@ export class AnswerSheetController {
     return this.answerSheetService.submit(req.user!.id, id);
   }
 
-  @UseInterceptors(AutocloseInterceptor, ExpirationFlagInterceptor)
   @Get("fetchOwn")
+  @UseInterceptors(
+    ShowScoreInterceptor,
+    AutocloseInterceptor,
+    ExpirationFlagInterceptor
+  )
   fetchOwn(
     @Req() req: PassportRequest,
     @Query("relations") relations: string,
@@ -101,8 +110,12 @@ export class AnswerSheetController {
     );
   }
 
-  @UseInterceptors(AutocloseInterceptor, ExpirationFlagInterceptor)
   @Get("fetchSections")
+  @UseInterceptors(
+    AutocloseInterceptor,
+    ExpirationFlagInterceptor,
+    ShowScoreInterceptor
+  )
   fetchSections(
     @Req() req: PassportRequest,
     @Query("id") id: number

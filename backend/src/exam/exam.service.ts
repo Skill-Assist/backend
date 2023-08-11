@@ -135,13 +135,9 @@ export class ExamService {
   }
 
   /** custom methods */
-  async fetchOwn(
-    userId: number,
-    relations?: string[],
-    map?: boolean
-  ): Promise<Exam[]> {
+  async fetchOwn(userId: number): Promise<Exam[]> {
     // get exams created by user
-    const exams = await this.findAll("createdBy", userId, relations, map);
+    const exams = await this.findAll("createdBy", userId);
 
     // get exams user is enrolled in
     const enrolledExams = await this.examRepository

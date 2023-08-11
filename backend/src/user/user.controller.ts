@@ -28,6 +28,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 
 /** utils */
 import { PassportRequest } from "../utils/api-types.utils";
+import { ShowScoreInterceptor } from "./interceptors/show-score.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("user")
@@ -36,6 +37,7 @@ import { PassportRequest } from "../utils/api-types.utils";
 export class UserController {
   constructor(private readonly userService: UserService) {}
   @Get("profile")
+  @UseInterceptors(ShowScoreInterceptor)
   profile(@Req() req: PassportRequest): Promise<User> {
     return this.userService.profile(req.user!.id);
   }

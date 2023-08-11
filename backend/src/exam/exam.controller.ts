@@ -29,6 +29,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 
 /** utils */
 import { PassportRequest } from "../utils/api-types.utils";
+import { ShowScoreInterceptor } from "./interceptors/show-score.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("exam")
@@ -48,6 +49,7 @@ export class ExamController {
   }
 
   @Get("findOne")
+  @UseInterceptors(ShowScoreInterceptor)
   findOne(
     @Req() req: PassportRequest,
     @Query("key") key: string,
@@ -76,16 +78,8 @@ export class ExamController {
 
   /** custom endpoints */
   @Get("fetchOwn")
-  fetchOwn(
-    @Req() req: PassportRequest,
-    @Query("relations") relations: string,
-    @Query("map") map: boolean
-  ): Promise<Exam[]> {
-    return this.examService.fetchOwn(
-      req.user!.id,
-      relations ? relations.split(",") : undefined,
-      map
-    );
+  fetchOwn(@Req() req: PassportRequest): Promise<Exam[]> {
+    return this.examService.fetchOwn(req.user!.id);
   }
 
   @Get("switchStatus")

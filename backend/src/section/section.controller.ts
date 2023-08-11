@@ -28,6 +28,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 
 /** utils */
 import { PassportRequest } from "../utils/api-types.utils";
+import { ShowScoreInterceptor } from "./interceptors/show-score.interceptor";
 ////////////////////////////////////////////////////////////////////////////////
 
 @ApiTags("section")
@@ -48,6 +49,7 @@ export class SectionController {
   }
 
   @Get("findOne")
+  @UseInterceptors(ShowScoreInterceptor)
   findOne(
     @Req() req: PassportRequest,
     @Query("key") key: string,
