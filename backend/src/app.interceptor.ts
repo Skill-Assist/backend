@@ -29,7 +29,7 @@ export class AppInterceptor implements NestInterceptor {
     // extract controller and method from url
     const url = context.switchToHttp().getRequest().originalUrl;
     let [controller, method] = url.split("/api/v1/").pop().split("/");
-    if (method && method.includes("?")) method = method.split("?")[0];
+    if (method?.includes("?")) method = method.split("?")[0];
 
     // get user from request
     const user = context.switchToHttp().getRequest().user ?? undefined;
