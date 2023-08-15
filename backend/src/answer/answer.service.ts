@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
+import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
@@ -45,6 +46,7 @@ export class AnswerService {
     private readonly answerRepository: Repository<Answer>,
     private readonly moduleRef: ModuleRef,
     private readonly awsService: AwsService,
+    private readonly configService: ConfigService,
     private readonly queryRunner: QueryRunnerService,
     private readonly questionService: QuestionService,
     private readonly naturalLanguageService: NaturalLanguageService
@@ -194,20 +196,29 @@ export class AnswerService {
     file?: Express.Multer.File
   ): Promise<Answer> {
     // check if answer exists and user is authorized to update it
-    const answer = await this.findOne(userId, "id", answerId, [
-      "sectionToAnswerSheet",
-    ]);
+    const answer = await this.findOne(userId, "id", answerId);
 
     // check if sectionToAnswerSheet is already closed
     if ((await answer.sectionToAnswerSheet).endDate)
       throw new BadRequestException("Section is already closed.");
 
-    // upload file to s3 bucket
-    if (file)
-      await this.awsService.uploadFileToS3(
-        `answers/${answer.questionRef}/${answerId}.zip`,
-        file
+    // upload file local storage or s3 bucket
+    if (file) {
+      const nodeEnv = this.configService.get<string>("NODE_ENV");
+      const filePath = path.join(
+        __dirname,
+        `../../answers/${answer.questionRef}/${answerId}.zip`
       );
+
+      if (nodeEnv === "dev") {
+        const dirPath = path.dirname(filePath);
+        await fs.promises.mkdir(dirPath, { recursive: true });
+        await fs.promises.writeFile(filePath, file.buffer);
+      } else if (nodeEnv === "prod") {
+        const s3Key = `answers/${answer.questionRef}/${answerId}.zip`;
+        await this.awsService.uploadFileToS3(s3Key, file);
+      }
+    }
 
     // update answer
     await update(
@@ -243,24 +254,47 @@ export class AnswerService {
       file
     );
 
-    if (file) {
-      // write keyboard proctoring data to s3 bucket
-      await this.awsService.uploadFileToS3(
-        `proctoring/${answer.questionRef}/${answerId}/keyboard.txt`,
-        {
-          buffer: Buffer.from(JSON.stringify(submitAnswersDto.keyboard)),
-          mimetype: "text/plain",
-        } as Express.Multer.File
+    // proctoring variables for keyboard and mouse
+    const nodeEnv = this.configService.get<string>("NODE_ENV");
+    const answerSheetId = (await answer.sectionToAnswerSheet).id;
+    const s3Key = `proctoring/${userId}/${answerSheetId}`;
+    const filePath = path.join(
+      __dirname,
+      `../../proctoring/${userId}/${answerSheetId}`
+    );
+
+    // write keyboard data to local storage or s3 bucket
+    if (submitAnswersDto.keyboard) {
+      const keyboardBuffer = Buffer.from(
+        JSON.stringify(submitAnswersDto.keyboard)
       );
 
-      // write mouse data to s3 bucket
-      await this.awsService.uploadFileToS3(
-        `proctoring/${answer.questionRef}/${answerId}/mouse.txt`,
-        {
-          buffer: Buffer.from(JSON.stringify(submitAnswersDto.mouse)),
+      if (nodeEnv === "dev") {
+        const dirPath = path.dirname(filePath);
+        await fs.promises.mkdir(dirPath, { recursive: true });
+        fs.promises.writeFile(`${filePath}/keyboard.txt`, keyboardBuffer);
+      } else if (nodeEnv === "prod") {
+        await this.awsService.uploadFileToS3(`${s3Key}/keyboard.txt`, {
+          buffer: keyboardBuffer,
           mimetype: "text/plain",
-        } as Express.Multer.File
-      );
+        } as Express.Multer.File);
+      }
+    }
+
+    // write mouse data to local storage or s3 bucket
+    if (submitAnswersDto.mouse) {
+      const mouseBuffer = Buffer.from(JSON.stringify(submitAnswersDto.mouse));
+
+      if (nodeEnv === "dev") {
+        const dirPath = path.dirname(filePath);
+        await fs.promises.mkdir(dirPath, { recursive: true });
+        fs.promises.writeFile(`${filePath}/mouse.txt`, mouseBuffer);
+      } else if (nodeEnv === "prod") {
+        await this.awsService.uploadFileToS3(`${s3Key}/mouse.txt`, {
+          buffer: mouseBuffer,
+          mimetype: "text/plain",
+        } as Express.Multer.File);
+      }
     }
 
     // update sectionToAnswerSheet with end date
@@ -299,17 +333,16 @@ export class AnswerService {
       let aiScore: number = 0;
       let aiFeedback: string = "";
 
-      const content =
-        type === "challenge"
-          ? JSON.stringify(
-              (
-                await this.awsService.fetchUnzippedDocumentary(
-                  answer.questionRef,
-                  answerId
-                )
-              ).documentaryContent
-            )
-          : answer.content;
+      let content = answer.content;
+      if (type === "challenge") {
+        const answerSheetId = (await answer.sectionToAnswerSheet).id;
+        const zip = await this.awsService.fetchUnzippedDocumentary(
+          answer.questionRef,
+          answerSheetId
+        );
+        const documentaryContent = zip.documentaryContent;
+        content = JSON.stringify(documentaryContent);
+      }
 
       const model =
         type === "challenge" ? "gpt-3.5-turbo-16k" : "gpt-3.5-turbo";

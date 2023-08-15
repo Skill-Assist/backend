@@ -133,7 +133,7 @@ export class AnswerController {
     return this.answerService.submitAndCloseSection(
       req.user!.id,
       id,
-      submitAnswersDto,
+      submitAnswersDto as SubmitAnswersDto,
       file
     );
   }

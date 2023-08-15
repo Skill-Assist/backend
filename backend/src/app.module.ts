@@ -1,8 +1,8 @@
 /** nestjs */
 import { Module } from "@nestjs/common";
-import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { MongooseModule } from "@nestjs/mongoose";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 
@@ -73,7 +73,7 @@ import { AppInterceptor } from "./app.interceptor";
           port: 3306,
           username: script.includes("prod") ? user : "root",
           password: script.includes("prod") ? pass : "password",
-          database: script.includes("prod") ? "prod_db" : "dev_db",
+          database: "db",
           autoLoadEntities: true,
           cache: { duration: 30000 },
           synchronize: script.includes("prod") ? false : true,
@@ -95,10 +95,11 @@ import { AppInterceptor } from "./app.interceptor";
           process.exit(1);
         }
 
-        const db = script.includes("prod") ? "prod_db" : "dev_db";
-        return {
-          uri: `mongodb+srv://${user}:${pass}@${host}/${db}?retryWrites=true&w=majority`,
-        };
+        const uri = script.includes("prod")
+          ? `mongodb+srv://${user}:${pass}@${host}/database?retryWrites=true&w=majority`
+          : `mongodb://username:password@mongodb:27017/database?authSource=admin`;
+
+        return { uri };
       },
     }),
   ],

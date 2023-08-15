@@ -3,17 +3,20 @@ import { ConfigService } from "@nestjs/config";
 import { Injectable, UnprocessableEntityException } from "@nestjs/common";
 
 /** external dependencies */
+import * as path from "path";
 import * as AWS from "aws-sdk";
 import { Readable } from "stream";
+import { promises as fs } from "fs";
 import * as unzipper from "unzipper";
 
 /** utils */
 import { Documentary, DocumentaryContent } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-/**
+/** =======================================================================
  * @description AwsService is implemented as a helper service to enable
  * dependency injection of the AWS SDK into other services.
+ * ========================================================================
  */
 @Injectable()
 export class AwsService {
@@ -60,27 +63,36 @@ export class AwsService {
 
   async fetchUnzippedDocumentary(
     questionId: string,
-    answerId: number
+    answerSheetId: number
   ): Promise<Documentary> {
-    return await this.fetchZipFromS3(this.bucket, {
+    return await this.fetchZip(this.bucket, {
       Bucket: this.configService.get<string>("AWS_S3_BUCKET_NAME")!,
-      Key: `answers/${questionId}/${answerId}.zip`,
+      Key: `answers/${questionId}/${answerSheetId}.zip`,
     });
   }
 
-  async fetchZipFromS3(
+  async fetchZip(
     bucket: AWS.S3,
     getObjectParams: AWS.S3.GetObjectRequest
   ): Promise<Documentary> {
+    const nodeEnv = this.configService.get<string>("NODE_ENV");
+
     try {
-      // get the file from S3
-      const response = await bucket.getObject(getObjectParams).promise();
-      if (!response.Body)
-        throw new UnprocessableEntityException("No file found in S3 bucket");
+      // get the file from local storage or S3
+      let response: string | undefined;
+      const filePath = path.join(__dirname, `../../${getObjectParams.Key}`);
+      if (nodeEnv === "dev") {
+        response = await fs.readFile(filePath, "utf8");
+      } else if (nodeEnv === "prod") {
+        const obj = await bucket.getObject(getObjectParams).promise();
+        response = obj.Body?.toString("utf8");
+      }
+
+      if (!response) throw new UnprocessableEntityException("No file found.");
 
       // create a readable stream from the file
       const fileStream = new Readable();
-      fileStream.push(response.Body);
+      fileStream.push(response);
       fileStream.push(null);
 
       // unzip the file

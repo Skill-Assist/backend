@@ -15,6 +15,8 @@ import { AnswerSheetService } from "../answer-sheet/answer-sheet.service";
 import { ExamInvitationService } from "../exam-invitation/exam-invitation.service";
 
 /** external dependencies */
+import * as path from "path";
+import { promises as fs } from "fs";
 import { Repository } from "typeorm";
 
 /** entities */
@@ -149,9 +151,21 @@ export class UserService {
     // upload file to s3 bucket
     if (file) {
       const format = file.mimetype.split("/")[1];
-      const bucket = this.configService.get<string>("AWS_S3_BUCKET_NAME");
-      await this.awsService.uploadFileToS3(`logo/${id}.${format}`, file);
-      updateUserDto.logo = `https://${bucket}.s3.sa-east-1.amazonaws.com/logo/${id}.${format}`;
+      const nodeEnv = this.configService.get<string>("NODE_ENV");
+
+      if (nodeEnv === "dev") {
+        const filePath = path.join(__dirname, `../../logo/${id}.${format}`);
+        await fs.appendFile(filePath, file.buffer);
+        // TODO : upload file to some URL
+      } else if (nodeEnv === "prod") {
+        const bucket = this.configService.get<string>("AWS_S3_BUCKET_NAME");
+        const s3Key = `logo/${id}.${format}`;
+
+        await this.awsService.uploadFileToS3(s3Key, file);
+
+        const logoUrl = `https://${bucket}.s3.sa-east-1.amazonaws.com/logo/${id}.${format}`;
+        updateUserDto.logo = logoUrl;
+      }
     }
 
     // update user
