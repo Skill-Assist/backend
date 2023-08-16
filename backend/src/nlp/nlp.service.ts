@@ -62,15 +62,22 @@ export class NaturalLanguageService {
         mode === "create" ? systemSetupPrompt.hiddenResponse : "";
 
       while (true) {
+        const messages =
+          mode === "create"
+            ? [
+                [
+                  { role: "system", content: hiddenPrompt },
+                  { role: "user", content: hiddenRequest },
+                  { role: "assistant", content: hiddenResponse },
+                  { role: "user", content: prompt },
+                  { role: "system", content: "" },
+                ],
+              ]
+            : [{ role: "user", content: prompt }];
+
         const params = {
           model: openAiModel,
-          messages: [
-            { role: "system", content: hiddenPrompt },
-            { role: "user", content: hiddenRequest },
-            { role: "assistant", content: hiddenResponse },
-            { role: "user", content: prompt },
-            { role: "system", content: "" },
-          ],
+          messages,
           temperature: 0,
           n: 1,
         };
@@ -246,7 +253,9 @@ export class NaturalLanguageService {
         prompt +=
           `Você é um gerente de RH respeitado e experiente em uma companhia de grande porte e no momento você está corrigindo a resposta de um candidato para uma questão aplicada no contexto de um teste de recrutamento. Você é conhecido por seu profissionalismo, atenção aos detalhes e alto padrão de qualidade de suas correções e avaliações. Você dá valor à clareza, coerência e pensamento lógico. Você sempre pensa passo-a-passo e mostra todo o seu trabalho na explicação, de forma completa e explícita. A correção deve ser traduzida para objeto JSON de acordo com a seguinte definição em Typescript:\n` +
           `\`\`\`\n${validator.schema}\n\`\`\`\n` +
-          `A seguir está a questão a ser corrigida no momento: ${statement}. Considerando a resposta, você irá elaborar a correção com base em sua ${
+          `A seguir está a questão a ser corrigida no momento:\n` +
+          `\`\`\`\n${statement}\n\`\`\`\n` +
+          `Considerando a resposta, você irá elaborar a correção com base em sua ${
             rubric!.criteria.title
           }. Se a resposta possui ${
             rubric!.criteria.maxValueCriteria.description
@@ -266,7 +275,10 @@ export class NaturalLanguageService {
             rubric!.criteria.minValueCriteria.value.min
           } e ${
             rubric!.criteria.minValueCriteria.value.max
-          }. Você deve sempre considerar o nível de detalhamento da resposta e nunca deve retornar a correção sem uma nota específica, ainda que seja 0. Além disso, notas fracionadas são admissíveis, por exemplo, ao invés de 8.0 pode ser atribuído 8.4, ao invés de 7.0 pode ser atribuído 7.2, e assim por diante. Finalmente, você deve retornar um feedback textual explicando a nota atribuída à seguinte resposta: ${request}. A partir desse pedido, elabore a correção e retorne no formato JSON conforme a definição em TypeScript fornecida.`;
+          }. Você deve sempre considerar o nível de detalhamento da resposta e nunca deve retornar a correção sem uma nota específica, ainda que seja 0. Além disso, notas fracionadas são admissíveis, por exemplo, ao invés de 8.0 pode ser atribuído 8.4, ao invés de 7.0 pode ser atribuído 7.2, e assim por diante. Finalmente, você deve retornar um feedback textual explicando a nota atribuída à seguinte resposta:\n` +
+          `\`\`\`\n${request}\n\`\`\`\n` +
+          `A partir desse pedido, elabore a correção e retorne no formato JSON conforme a definição em TypeScript fornecida:\n` +
+          `\`\`\`\n${validator.schema}\n\`\`\`\n`;
 
       return prompt;
     }
@@ -283,6 +295,7 @@ export class NaturalLanguageService {
         statement,
         rubric
       );
+      console.log("prompt", prompt);
 
       let attemptRepair = translator.attemptRepair;
 

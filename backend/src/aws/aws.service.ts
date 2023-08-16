@@ -8,6 +8,7 @@ import * as AWS from "aws-sdk";
 import { Readable } from "stream";
 import { promises as fs } from "fs";
 import * as unzipper from "unzipper";
+import { Body } from "aws-sdk/clients/s3";
 
 /** utils */
 import { Documentary, DocumentaryContent } from "../utils/api-types.utils";
@@ -79,13 +80,13 @@ export class AwsService {
 
     try {
       // get the file from local storage or S3
-      let response: string | undefined;
+      let response: Body | undefined;
       const filePath = path.join(__dirname, `../../${getObjectParams.Key}`);
       if (nodeEnv === "dev") {
-        response = await fs.readFile(filePath, "utf8");
+        response = await fs.readFile(filePath);
       } else if (nodeEnv === "prod") {
         const obj = await bucket.getObject(getObjectParams).promise();
-        response = obj.Body?.toString("utf8");
+        response = obj.Body;
       }
 
       if (!response) throw new UnprocessableEntityException("No file found.");

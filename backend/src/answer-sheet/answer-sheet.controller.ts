@@ -115,7 +115,7 @@ export class AnswerSheetController {
   generateEval(
     @Req() req: PassportRequest,
     @Query("id") id: number
-  ): Promise<AnswerSheet> {
+  ): Promise<any> {
     return this.answerSheetService.generateEval(req.user!.id, id);
   }
 }

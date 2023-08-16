@@ -258,7 +258,7 @@ export class AnswerService {
     const nodeEnv = this.configService.get<string>("NODE_ENV");
     const answerSheetId = (await answer.sectionToAnswerSheet).id;
     const s3Key = `proctoring/${userId}/${answerSheetId}`;
-    const filePath = path.join(
+    const dirPath = path.join(
       __dirname,
       `../../proctoring/${userId}/${answerSheetId}`
     );
@@ -270,9 +270,8 @@ export class AnswerService {
       );
 
       if (nodeEnv === "dev") {
-        const dirPath = path.dirname(filePath);
         await fs.promises.mkdir(dirPath, { recursive: true });
-        fs.promises.writeFile(`${filePath}/keyboard.txt`, keyboardBuffer);
+        await fs.promises.writeFile(`${dirPath}/keyboard.txt`, keyboardBuffer);
       } else if (nodeEnv === "prod") {
         await this.awsService.uploadFileToS3(`${s3Key}/keyboard.txt`, {
           buffer: keyboardBuffer,
@@ -286,9 +285,7 @@ export class AnswerService {
       const mouseBuffer = Buffer.from(JSON.stringify(submitAnswersDto.mouse));
 
       if (nodeEnv === "dev") {
-        const dirPath = path.dirname(filePath);
-        await fs.promises.mkdir(dirPath, { recursive: true });
-        fs.promises.writeFile(`${filePath}/mouse.txt`, mouseBuffer);
+        await fs.promises.writeFile(`${dirPath}/mouse.txt`, mouseBuffer);
       } else if (nodeEnv === "prod") {
         await this.awsService.uploadFileToS3(`${s3Key}/mouse.txt`, {
           buffer: mouseBuffer,
@@ -304,7 +301,7 @@ export class AnswerService {
     return answer;
   }
 
-  async generateEval(userId: number, answerId: number): Promise<Answer> {
+  async generateEval(userId: number, answerId: number): Promise<any> {
     // check if answer exists and user is authorized to access it
     const answer = await this.findOne(userId, "id", answerId);
 
