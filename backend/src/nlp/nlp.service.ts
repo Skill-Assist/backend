@@ -65,13 +65,11 @@ export class NaturalLanguageService {
         const messages =
           mode === "create"
             ? [
-                [
-                  { role: "system", content: hiddenPrompt },
-                  { role: "user", content: hiddenRequest },
-                  { role: "assistant", content: hiddenResponse },
-                  { role: "user", content: prompt },
-                  { role: "system", content: "" },
-                ],
+                { role: "system", content: hiddenPrompt },
+                { role: "user", content: hiddenRequest },
+                { role: "assistant", content: hiddenResponse },
+                { role: "user", content: prompt },
+                { role: "system", content: "" },
               ]
             : [{ role: "user", content: prompt }];
 
@@ -295,7 +293,6 @@ export class NaturalLanguageService {
         statement,
         rubric
       );
-      console.log("prompt", prompt);
 
       let attemptRepair = translator.attemptRepair;
 

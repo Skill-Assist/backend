@@ -296,7 +296,6 @@ export class AnswerSheetService {
 
     // initialize answerSheet score at 0
     let answerSheetScore: number = 0;
-    console.log(answerSheetScore);
 
     // get answerSheet
     const answerSheet = await this.findOne(userId, "id", answerSheetID);
