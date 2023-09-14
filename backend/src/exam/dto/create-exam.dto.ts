@@ -15,8 +15,8 @@ export class CreateExamDto {
   @IsString({
     message: "Title must be a string.",
   })
-  @Length(3, 20, {
-    message: "Title must be between 3 and 20 characters long.",
+  @Length(3, 50, {
+    message: "Title must be between 3 and 50 characters long.",
   })
   title: string;
 
@@ -24,8 +24,8 @@ export class CreateExamDto {
   @IsString({
     message: "Title must be a string.",
   })
-  @Length(3, 20, {
-    message: "Title must be between 3 and 20 characters long.",
+  @Length(3, 100, {
+    message: "Title must be between 3 and 100 characters long.",
   })
   subtitle?: string;
 

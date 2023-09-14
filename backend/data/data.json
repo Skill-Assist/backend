@@ -1,11 +1,11 @@
 [
   {
     "type": "challenge",
-    "prompt": "Crie uma questão do tipo desafio cujo enunciado solicite ao candidato a elaboração de um projeto em NodeJS que realize cálculos matemáticos complexos. O enunciado deve contextualizar a importância do candidado ter habilidade com NodeJS para desenvolver de forma adequada projetos para a vaga de Desenvolvedor Backend. Os critérios de correção desejados são: clean code e funcionalidade. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
+    "prompt": "Crie uma questão do tipo desafio cujo enunciado solicite ao candidato a elaboração de um projeto em NodeJS que possua um backend e um frontend. A aplicação deve ser conteinerizada e deve possuir endpoints para criação e edição de objetivos. O enunciado deve contextualizar a importância do candidato ter habilidade com NodeJS para desenvolver aplicativos web. Os critérios de correção desejados são: clean code e funcionalidade. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido."
   },
   {
     "type": "programming",
-    "prompt": "Crie uma questão do tipo programação cujo enunciado solicite ao candidato a elaboração de uma função em C++ que realize o cálculo da hipotenusa dados os dois catetos. O enunciado da questão deve contextualizar a importância do candidado ter habilidade com programação e matemática, bem como a origem da trigonometria. Os critérios de correção desejados são: clean code, funcionalidade e sintaxe. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
+    "prompt": "Crie uma questão do tipo programação cujo enunciado solicite ao candidato a elaboração de uma função em C++ que realize o cálculo da hipotenusa dados os dois catetos. O enunciado da questão deve contextualizar a importância do candidato ter habilidade com programação e matemática, bem como a origem da trigonometria. Os critérios de correção desejados são: clean code, funcionalidade e sintaxe. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
   },
   {
     "type": "programming",

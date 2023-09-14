@@ -332,10 +332,9 @@ export class AnswerService {
 
       let content = answer.content;
       if (type === "challenge") {
-        const answerSheetId = (await answer.sectionToAnswerSheet).id;
         const zip = await this.awsService.fetchUnzippedDocumentary(
           answer.questionRef,
-          answerSheetId
+          answerId
         );
         const documentaryContent = zip.documentaryContent;
         content = JSON.stringify(documentaryContent);
