@@ -11,7 +11,6 @@ import {
   ClassSerializerInterceptor,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 
 /** providers */
@@ -30,11 +29,11 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-@ApiTags("user")
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller("user")
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
   @Get("profile")
   profile(@Req() req: PassportRequest): Promise<User> {
     return this.userService.profile(req.user!.id);

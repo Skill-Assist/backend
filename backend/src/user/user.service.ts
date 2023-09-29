@@ -156,15 +156,15 @@ export class UserService {
       if (nodeEnv === "dev") {
         const filePath = path.join(__dirname, `../../logo/${id}.${format}`);
         await fs.appendFile(filePath, file.buffer);
-        // TODO : upload file to some URL
+
+        updateUserDto.logo = `https://wallpapers.com/images/featured-full/cool-profile-picture-87h46gcobjl5e4xu.jpg`;
       } else if (nodeEnv === "prod") {
         const bucket = this.configService.get<string>("AWS_S3_BUCKET_NAME");
         const s3Key = `logo/${id}.${format}`;
 
         await this.awsService.uploadFileToS3(s3Key, file);
 
-        const logoUrl = `https://${bucket}.s3.sa-east-1.amazonaws.com/logo/${id}.${format}`;
-        updateUserDto.logo = logoUrl;
+        updateUserDto.logo = `https://${bucket}.s3.sa-east-1.amazonaws.com/logo/${id}.${format}`;
       }
     }
 

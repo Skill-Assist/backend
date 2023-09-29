@@ -5,25 +5,26 @@ import {
   IsEmail,
   Matches,
   IsString,
+  IsNumber,
   IsHexColor,
   IsOptional,
-  IsMobilePhone,
 } from "class-validator";
 import { Transform } from "class-transformer";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateUserDto {
+  @IsOptional()
   @Transform((name) => name.value.trim())
   @IsString()
-  @Length(3, 50, {
-    message: "Name must be between 3 and 50 characters long",
+  @Length(1, 50, {
+    message: "Name cannot be longer than 50 characters",
   })
-  name: string;
+  name?: string;
 
   @IsOptional()
   @IsString()
-  @Length(2, 12, {
-    message: "Nickname must be between 3 and 12 characters long",
+  @Length(1, 12, {
+    message: "Nickname cannot be longer than 12 characters",
   })
   nickname?: string;
 
@@ -44,7 +45,11 @@ export class CreateUserDto {
   passwordConfirm: string;
 
   @IsOptional()
-  @IsMobilePhone("pt-BR")
+  @IsNumber({
+    allowNaN: false,
+    allowInfinity: false,
+    maxDecimalPlaces: 0,
+  })
   mobilePhone?: string;
 
   @IsOptional()

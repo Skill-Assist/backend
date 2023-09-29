@@ -26,13 +26,9 @@ node_modules/
 .env
 **/.env
 
-# DB Local files
-.dynamodb/
-**/db.sqlite
-
 # system files
 .DS_Store
 **/.DS_Store
 
-# kubernetes files
+# production kubernetes files
 **/k8s/*-prod.yaml

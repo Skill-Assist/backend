@@ -3,8 +3,8 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { Module, Global } from "@nestjs/common";
 
 /** modules */
-import { ExamModule } from "../exam/exam.module";
 import { AwsModule } from "../aws/aws.module";
+import { ExamModule } from "../exam/exam.module";
 import { AnswerSheetModule } from "../answer-sheet/answer-sheet.module";
 import { ExamInvitationModule } from "../exam-invitation/exam-invitation.module";
 

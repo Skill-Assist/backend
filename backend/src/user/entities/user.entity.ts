@@ -11,9 +11,10 @@ import { Exclude } from "class-transformer";
 import { UnauthorizedException } from "@nestjs/common";
 
 import { Exam } from "../../exam/entities/exam.entity";
-import { SQLBaseEntity } from "../../utils/base-entity.utils";
 import { AnswerSheet } from "../../answer-sheet/entities/answer-sheet.entity";
 import { ExamInvitation } from "../../exam-invitation/entities/exam-invitation.entity";
+
+import { SQLBaseEntity } from "../../utils/base-entity.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 export enum UserRole {
@@ -24,7 +25,7 @@ export enum UserRole {
 
 @Entity()
 export class User extends SQLBaseEntity {
-  @Column()
+  @Column({ nullable: true })
   name: string;
 
   @Column({ nullable: true })
@@ -77,7 +78,7 @@ export class User extends SQLBaseEntity {
   @BeforeInsert()
   async insertionHook() {
     // set nickname
-    if (!this.nickname) this.nickname = this.name.split(" ")[0];
+    if (this.name && !this.nickname) this.nickname = this.name.split(" ")[0];
 
     // check password match and encrypt password
     await passwordMatch.call(this);

@@ -17,9 +17,6 @@ Dockerfile
 .env
 .env.example
 
-# Database
-db.sqlite
-
 # utils folders
 data/
 test/
