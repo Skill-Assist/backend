@@ -9,8 +9,8 @@ export class GenerateQuestionDto {
   type: string;
 
   @IsString()
-  @Length(20, 1000, {
-    message: "Prompt must be between 20 and 1000 characters long.",
+  @Length(1, 5000, {
+    message: "Prompt cannot be longer than 5000 characters",
   })
   prompt: string;
 }

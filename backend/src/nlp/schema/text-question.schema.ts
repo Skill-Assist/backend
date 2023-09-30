@@ -10,13 +10,17 @@
  * - total_points: contem o valor total de pontos que a questão vale, por examplo, 100
  * - maxValueCriteria: contém a descrição ("description") dos requisitos para atribuição
  * da pontuação máxima ("value") que pode variar entre o valor mínimo ("min") e o valor
- * máximo ("max")
+ * máximo ("max"). Contudo, deve-se notar que o valor mínimo ("min") do maxValueCriteria deve ser maior
+ * que o valor máximo ("max") do avgValueCriteria
  * - avgValueCriteria: contém a descrição ("description") dos requisitos para atribuição
  * da pontuação média ("value") que pode variar entre o valor mínimo ("min") e o valor
- * máximo ("max")
+ * máximo ("max"). Da mesma forma, notar que o valor mínimo ("min") do avgValueCriteria deve ser maior
+ * que o valor máximo ("max") do minValueCriteria e o valor máximo ("max") do avgValueCriteria deve ser
+ * menor que o valor mínimo ("min") do maxValueCriteria
  * - minValueCriteria: contém a descrição ("description") dos requisitos para atribuição
  * da pontuação mínima ("value") que pode variar entre o valor mínimo ("min") e o valor
- * máximo ("max")
+ * máximo ("max"). Por fim, notar que o valor máximo ("max") do minValueCriteria deve ser menor
+ * que o valor mínimo ("min") do avgValueCriteria
  * @property {string[]} tags - array de tags que identificam a questão
  */
 export interface TextQuestionSchema {

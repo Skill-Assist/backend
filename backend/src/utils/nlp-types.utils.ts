@@ -130,7 +130,8 @@ export function stripNulls(obj: any) {
  * ============================================================================
  */
 
-export const libText = `interface Array<T> { length: number, [n: number]: T }
+export const libText = `
+interface Array<T> { length: number, [n: number]: T }
 interface Object { toString(): string }
 interface Function { prototype: unknown }
 interface CallableFunction extends Function {}

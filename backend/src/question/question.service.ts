@@ -25,6 +25,9 @@ import { Question } from "./schemas/question.schema";
 /** dtos */
 import { CreateQuestionDto } from "./dto/create-question.dto";
 import { GenerateQuestionDto } from "./dto/generate-question.dto";
+
+/** utils */
+import { TResult } from "../utils/nlp-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -158,9 +161,10 @@ export class QuestionService {
     ))!;
   }
 
-  async generate(generateQuestionDto: GenerateQuestionDto): Promise<any> {
-    const langModel =
-      this.naturalLanguageService.createLanguageModel("gpt-3.5-turbo");
+  async generate(
+    generateQuestionDto: GenerateQuestionDto
+  ): Promise<TResult<object>> {
+    const langModel = this.naturalLanguageService.createLanguageModel("gpt-4");
 
     const schema = fs.readFileSync(
       path.join(

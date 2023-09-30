@@ -79,6 +79,7 @@ export class NaturalLanguageService {
           temperature: 0,
           n: 1,
         };
+        console.log("params", params);
 
         const result = await client.post(
           "https://api.openai.com/v1/chat/completions",
@@ -95,17 +96,17 @@ export class NaturalLanguageService {
           retryCount >= retryMaxAttempts
         ) {
           return error(
-            `Rest API error: ${result.status}: ${result.statusText}`
+            `Rest API error: ${result.status}: ${result.statusText}. Attemps: ${retryCount}`
           );
         }
 
-        await sleep(retryPauseMs);
+        await sleep(retryCount + 1 * retryPauseMs);
         retryCount++;
       }
     }
   }
 
-  createJsonValidator<T extends object = object>(
+  createJsonValidator<T extends object>(
     schema: string,
     typeName: string
   ): IJsonValidator<T> {
@@ -243,7 +244,7 @@ export class NaturalLanguageService {
 
       if (mode === "create")
         prompt +=
-          `A seguir está o pedido (prompt) fornecido pelo usuário:\n` +
+          `A seguir está o pedido fornecido pelo usuário para geração de uma nova questão:\n` +
           `"""\n${request}\n"""\n` +
           `A partir desse pedido, elabore a questão e retorne no formato JSON conforme a definição em TypeScript fornecida.\n`;
 
@@ -284,8 +285,8 @@ export class NaturalLanguageService {
     async function translate(
       request: string,
       mode: "create" | "eval",
-      statement: string,
-      rubric: GradingCriteria
+      statement?: string,
+      rubric?: GradingCriteria
     ): Promise<any> {
       let prompt = translator.createRequestPrompt(
         request,

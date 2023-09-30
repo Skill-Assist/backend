@@ -4,12 +4,32 @@
     "prompt": "Crie uma questão do tipo desafio cujo enunciado solicite ao candidato a elaboração de um projeto em NodeJS que possua um backend e um frontend. A aplicação deve ser conteinerizada e deve possuir endpoints para criação e edição de objetivos. O enunciado deve contextualizar a importância do candidato ter habilidade com NodeJS para desenvolver aplicativos web. Os critérios de correção desejados são: clean code e funcionalidade. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido."
   },
   {
+    "type": "challenge",
+    "prompt": "Crie um desafio que peça aos candidatos para criar um projeto de microserviço usando Ruby on Rails em uma arquitetura distribuída. O projeto deve conter um backend e um frontend, e a aplicação deve ser conteinerizada. Os candidatos devem implementar endpoints para criar e editar objetivos. No enunciado, destaque a importância dos microserviços e da escalabilidade em arquiteturas modernas. Avalie as soluções com base em critérios como código limpo e funcionalidade. Crie tags relacionadas a microserviços e Ruby on Rails para a questão."
+  },
+  {
+    "type": "challenge",
+    "prompt": "Elabore um desafio que exija dos candidatos a criação de um projeto de aplicação segura em Java. O projeto deve incluir um backend seguro e uma interface de usuário básica. Certifique-se de que a aplicação seja conteinerizada e inclua endpoints seguros para criação e edição de objetivos. No enunciado, enfatize a importância das práticas seguras de desenvolvimento Java em aplicativos web. Avalie as soluções com base em critérios como segurança do código e funcionalidade. Crie tags relacionadas a segurança e Java para a questão."
+  },
+  {
     "type": "programming",
     "prompt": "Crie uma questão do tipo programação cujo enunciado solicite ao candidato a elaboração de uma função em C++ que realize o cálculo da hipotenusa dados os dois catetos. O enunciado da questão deve contextualizar a importância do candidato ter habilidade com programação e matemática, bem como a origem da trigonometria. Os critérios de correção desejados são: clean code, funcionalidade e sintaxe. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
   },
   {
     "type": "programming",
+    "prompt": "Crie uma questão que envolva programação em Python e ciência de dados. Peça aos candidatos para carregar um conjunto de dados CSV, realizar uma análise exploratória básica e gerar um gráfico relevante. Explique a importância da análise de dados no contexto atual e avalie a resposta com base na precisão da análise, visualização de dados e código bem estruturado. Crie tags apropriadas para a questão relacionadas a ciência de dados e Python."
+  },
+  {
+    "type": "programming",
     "prompt": "Crie uma questão do tipo programação cujo enunciado solicite ao candidato a elaboração de uma função em Python utilize list comprehension para realizar a manipulação de dados de um grafo. O enunciado da questão deve contextualizar a importância do candidado ter habilidade com Python e suas especificidades, como as list comprehensions, bem como a origem dessa linguagem de programação. O enunciado deve ainda esclarecer o que são grafos e para que são usados. Os critérios de correção desejados são: clean code, funcionalidade e sintaxe. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido"
+  },
+  {
+    "type": "programming",
+    "prompt": "Elabore uma pergunta de programação em Java que desafie os candidatos a implementar uma estrutura de dados complexa, como uma árvore binária de pesquisa. Explique por que as estruturas de dados são essenciais na programação e avalie a resposta com base na eficiência da implementação, uso adequado da estrutura e código limpo. Crie tags relevantes relacionadas a estruturas de dados e Java."
+  },
+  {
+    "type": "programming",
+    "prompt": "Crie uma questão que aborde o desenvolvimento web com JavaScript. Peça aos candidatos para criar uma página web simples que tenha interatividade, como um formulário de contato ou uma galeria de imagens. Destaque a importância do JavaScript no desenvolvimento web moderno e avalie a resposta com base na funcionalidade, design responsivo e código organizado. Crie tags relacionadas a desenvolvimento web e JavaScript para a questão."
   },
   {
     "type": "text",
@@ -17,6 +37,6 @@
   },
   {
     "type": "multiple-choice",
-    "prompt": "Crie uma questão do tipo múltipla escolha com 5 alternativas que avalie o conhecimento do candidato a respeito de operadores lógicos em Python. Para cada opção Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido."
+    "prompt": "Crie uma questão do tipo múltipla escolha com 5 alternativas que avalie o conhecimento do candidato a respeito de operadores lógicos em Python. Para cada opção também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido."
   }
 ]
