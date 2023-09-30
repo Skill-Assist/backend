@@ -8,7 +8,6 @@ import {
   UseInterceptors,
   ClassSerializerInterceptor,
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
 
 /** providers */
 import { SectionToAnswerSheetService } from "./section-to-answer-sheet.service";
@@ -27,7 +26,6 @@ import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interc
 import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-@ApiTags("section-to-answer-sheet")
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller("section-to-answer-sheet")
 export class SectionToAnswerSheetController {

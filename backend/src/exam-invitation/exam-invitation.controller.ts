@@ -7,7 +7,6 @@ import {
   UseInterceptors,
   ClassSerializerInterceptor,
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
 
 /** providers */
 import { ExamInvitationService } from "./exam-invitation.service";
@@ -26,7 +25,6 @@ import { ExpirationFlagInterceptor } from "./interceptors/expiration-flag.interc
 import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-@ApiTags("examInvitation")
 @UseInterceptors(ClassSerializerInterceptor, ExpirationFlagInterceptor)
 @Controller("examInvitation")
 export class ExamInvitationController {

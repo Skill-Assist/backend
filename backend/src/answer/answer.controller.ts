@@ -11,7 +11,6 @@ import {
   ClassSerializerInterceptor,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 
 /** providers */
@@ -36,7 +35,6 @@ import { Express } from "express";
 import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-@ApiTags("answer")
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller("answer")
 export class AnswerController {

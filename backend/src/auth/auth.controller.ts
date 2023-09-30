@@ -10,7 +10,6 @@ import {
   HttpStatus,
   UnauthorizedException,
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
 import { AuthGuard } from "@nestjs/passport";
 
 /** providers */
@@ -31,7 +30,6 @@ import {
 } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-@ApiTags("auth")
 @Controller("auth")
 export class AuthController {
   constructor(
@@ -53,23 +51,23 @@ export class AuthController {
     if (!req.user)
       throw new UnauthorizedException("User not found. Please try again.");
 
-    if (!req.session.user) {
-      req.session.user = {
-        [req.user.id]: {
-          visits: 1,
-        },
-      };
-    } else if (!req.session.user[req.user.id]) {
-      req.session.user[req.user.id] = {
-        visits: 1,
-      };
-    } else {
-      req.session.user[req.user.id].visits++;
-    }
-
-    console.log("req.session: ", req.session);
-
     return await this.authService.login(req.user);
+
+    // if (!req.session.user) {
+    //   req.session.user = {
+    //     [req.user.id]: {
+    //       visits: 1,
+    //     },
+    //   };
+    // } else if (!req.session.user[req.user.id]) {
+    //   req.session.user[req.user.id] = {
+    //     visits: 1,
+    //   };
+    // } else {
+    //   req.session.user[req.user.id].visits++;
+    // }
+
+    // console.log("req.session: ", req.session);
   }
 
   @Get("signout")

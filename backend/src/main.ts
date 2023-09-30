@@ -1,10 +1,4 @@
 /** nestjs */
-import {
-  SwaggerModule,
-  OpenAPIObject,
-  DocumentBuilder,
-  SwaggerDocumentOptions,
-} from "@nestjs/swagger";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory, Reflector } from "@nestjs/core";
 import { ValidationPipe, INestApplication } from "@nestjs/common";
@@ -17,9 +11,6 @@ import helmet from "helmet";
 import * as compression from "compression";
 import * as session from "express-session";
 import * as cookieParser from "cookie-parser";
-
-/** dtos */
-import { SigninDto } from "./auth/dto/signin.dto";
 
 /** guards */
 import { AuthorizationGuard } from "./auth/guards/authorization.guard";
@@ -73,26 +64,6 @@ import { AuthorizationGuard } from "./auth/guards/authorization.guard";
 
   /** authorization guard */
   app.useGlobalGuards(new AuthorizationGuard(new Reflector()));
-
-  /** swagger */
-  const config = new DocumentBuilder()
-    .setTitle("Skill Assist API")
-    .setDescription("The Skill Assist API description")
-    .setVersion("1.0")
-    .addTag("Endpoints")
-    .build();
-
-  const swaggerOptions: SwaggerDocumentOptions = {
-    extraModels: [SigninDto],
-  };
-
-  const document: OpenAPIObject = SwaggerModule.createDocument(
-    app,
-    config,
-    swaggerOptions
-  );
-
-  SwaggerModule.setup("swagger", app, document);
 
   /** start server listener */
   await app.listen(configService.get("PORT")!);

@@ -10,7 +10,6 @@ import {
   UseInterceptors,
   ClassSerializerInterceptor,
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
 
 /** providers */
 import { SectionService } from "./section.service";
@@ -30,7 +29,6 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-@ApiTags("section")
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller("section")
 export class SectionController {

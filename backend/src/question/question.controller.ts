@@ -1,5 +1,4 @@
 /** nestjs */
-import { ApiTags } from "@nestjs/swagger";
 import { Controller, Req, Get, Post, Body, Query } from "@nestjs/common";
 
 /** providers */
@@ -19,7 +18,6 @@ import { PassportRequest } from "../utils/api-types.utils";
 import { GenerateQuestionDto } from "./dto/generate-question.dto";
 ////////////////////////////////////////////////////////////////////////////////
 
-@ApiTags("question")
 @Controller("question")
 export class QuestionController {
   constructor(private readonly questionService: QuestionService) {}

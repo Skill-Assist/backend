@@ -13,28 +13,28 @@ import { isValid } from "date-fns";
 
 export class CreateExamDto {
   @IsString({
-    message: "Title must be a string.",
+    message: "Title must be a string",
   })
-  @Length(3, 50, {
-    message: "Title must be between 3 and 50 characters long.",
+  @Length(1, 50, {
+    message: "Title cannot be longer than 50 characters",
   })
   title: string;
 
   @IsOptional()
   @IsString({
-    message: "Title must be a string.",
+    message: "Subtitle must be a string",
   })
-  @Length(3, 100, {
-    message: "Title must be between 3 and 100 characters long.",
+  @Length(1, 100, {
+    message: "Subtitle cannot be longer than 100 characters",
   })
   subtitle?: string;
 
   @IsOptional()
   @IsString({
-    message: "Title must be a string.",
+    message: "Level must be a string",
   })
-  @Length(3, 20, {
-    message: "Title must be between 3 and 20 characters long.",
+  @Length(1, 20, {
+    message: "Level cannot be longer than 20 characters",
   })
   level?: string;
 

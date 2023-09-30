@@ -10,7 +10,6 @@ import {
   UseInterceptors,
   ClassSerializerInterceptor,
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
 
 /** providers */
 import { ExamService } from "./exam.service";
@@ -31,7 +30,6 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { PassportRequest } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
-@ApiTags("exam")
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller("exam")
 export class ExamController {
