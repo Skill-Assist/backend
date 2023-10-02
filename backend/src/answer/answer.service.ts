@@ -301,13 +301,17 @@ export class AnswerService {
     return answer;
   }
 
-  async generateEval(userId: number, answerId: number): Promise<any> {
+  async generateEval(userId: number, answerId: number): Promise<Answer> {
     // check if answer exists and user is authorized to access it
     const answer = await this.findOne(userId, "id", answerId);
 
     // fetch grading rubric, statement and type from question
-    const { gradingRubric, statement, type } =
-      (await this.questionService.findOne(new ObjectId(answer.questionRef)))!;
+    const question = await this.questionService.findOne(
+      new ObjectId(answer.questionRef)
+    );
+    if (!question) throw new NotFoundException("Question not found.");
+
+    const { gradingRubric, statement, type } = question;
 
     // if question is of type multipleChoice, evaluate it objectively
     if (type === "multipleChoice")
@@ -324,7 +328,7 @@ export class AnswerService {
         }
       );
 
-    // if question is of type text, programming or challenge, evaluate using AI
+    // if question is not of type multipleChoice, evaluate using AI
     if (type !== "multipleChoice") {
       let maxScore: number = 0;
       let aiScore: number = 0;
@@ -340,8 +344,7 @@ export class AnswerService {
         content = JSON.stringify(documentaryContent);
       }
 
-      const model =
-        type === "challenge" ? "gpt-3.5-turbo-16k" : "gpt-3.5-turbo";
+      const model = type === "challenge" ? "gpt-4-32k" : "gpt-4";
 
       const langModel = this.naturalLanguageService.createLanguageModel(model);
 

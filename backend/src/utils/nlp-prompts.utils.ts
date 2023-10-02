@@ -1,109 +1,28 @@
-export type TCreateQuestion = {
+export type TPromptSetup = {
   hiddenPrompt: string;
   hiddenRequest: string;
   hiddenResponse: string;
 };
 
-export function systemSetup(schema: string): TCreateQuestion {
-  const hiddenPrompt: string = `Você é um serviço que elabora questões para testes de recrutamento e seleção. Ao elaborar um nova questão, você deve retornar um objeto JSON de acordo com a seguinte definição em Typescript:\n\`\`\`\n${schema}\n\`\`\`\n`;
+export function systemSetup(
+  schema: string,
+  mode: "create" | "eval"
+): TPromptSetup {
+  const hiddenPrompt: string = `Você é um serviço que ${
+    mode === "create" ? "elabora" : "avalia"
+  } questões para testes de recrutamento e seleção. Ao ${
+    mode === "create" ? "elaborar" : "avaliar"
+  } um nova questão, você deve retornar um objeto JSON de acordo com a seguinte definição em Typescript:\n\`\`\`\n${schema}\n\`\`\`\n`;
 
-  const hiddenRequest: string = `A seguir está o pedido fornecido pelo usuário para a criação de uma nova questão:\nCrie uma questão do tipo programação cujo enunciado solicite ao candidato a elaboração de uma função em C++ que realize o cálculo da hipotenusa dados os dois catetos. O enunciado da questão deve contextualizar a importância do candidado ter habilidade com programação e matemática, bem como a origem da trigonometria. Os critérios de correção desejados são: clean code, funcionalidade e sintaxe. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido.\nA partir desse pedido, elabore a questão e retorne no formato JSON conforme a definição em TypeScript fornecida.\n`;
+  const hiddenRequest: string =
+    mode === "create"
+      ? `A seguir está o pedido fornecido pelo usuário para a criação de uma nova questão:\nCrie uma questão do tipo programação a ser aplicada para um desenvolvedor pleno de NodeJS em um processo de recrutamento cujo enunciado solicite ao candidato a elaboração de uma aplicação web em NodeJS que utilize banco de dados não relacional e realize uma operação CRUD completa. Os critérios de correção desejados são: clean code, funcionalidade e sintaxe. Também quero que sejam geradas tags apropriadas para a questão, considerando o tema envolvido.\nA partir desse pedido, elabore a questão e retorne no formato JSON conforme a definição em TypeScript fornecida.\n`
+      : `A seguir está a questão a ser corrigida no momento:\nImagine que você está desenvolvendo uma aplicação web em Node.js que precisa se conectar a um banco de dados MongoDB para realizar operações de CRUD (Create, Read, Update, Delete) em uma coleção chamada "Usuários". Você já configurou o servidor Node.js e instalou as dependências necessárias. Agora, você precisa implementar as rotas e controladores para realizar essas operações no banco de dados MongoDB.\nPor favor, escreva o código Node.js necessário para implementar as seguintes funcionalidades:\nCriar um novo usuário: Crie uma rota POST que permita adicionar um novo usuário ao banco de dados. Os dados do usuário (nome, email, senha, etc.) serão enviados no corpo da solicitação em formato JSON. Certifique-se de validar os dados de entrada e criptografar a senha antes de armazená-la no banco de dados.\nRecuperar todos os usuários: Crie uma rota GET que recupere todos os usuários da coleção "Usuários" no banco de dados MongoDB e os retorne como uma resposta em formato JSON.\nRecuperar um usuário por ID: Crie uma rota GET que permita recuperar um usuário específico com base em seu ID. O ID será fornecido como um parâmetro de rota na URL e você deve retornar os dados do usuário encontrado ou uma mensagem de erro adequada caso o usuário não exista.\nAtualizar um usuário: Crie uma rota PUT que permita atualizar os dados de um usuário existente com base em seu ID. Os dados atualizados serão enviados no corpo da solicitação em formato JSON. Lembre-se de validar os dados de entrada antes de atualizar o usuário no banco de dados.\nExcluir um usuário: Crie uma rota DELETE que permita excluir um usuário com base em seu ID. Certifique-se de manipular erros adequadamente, por exemplo, se o usuário não existir.\nVocê pode usar qualquer biblioteca ou middleware do Node.js que considerar apropriado para esta tarefa. Considerando a resposta, a avaliação será elaborada com base em clean code. Se a resposta possui os nomes de variáveis, funções e rotas são descritivos e autoexplicativos, os nomes de variáveis e funções refletem claramente sua finalidade, o código está organizado em módulos lógicos, seguindo o princípio de separação de responsabilidades, não há lógica de negócios excessivamente complexa em um único arquivo, os comentários são usados para explicar partes complexas do código ou tomadas de decisão não triviais, eles não são usados em excesso, pois o código em si é autoexplicativo, o código lida com erros de maneira apropriada, fornecendo mensagens de erro úteis para os clientes e registrando informações detalhadas de erro para fins de depuração, há um foco claro na segurança, como a criptografia adequada de senhas e a validação de dados de entrada para evitar ataques de injeção, deve ser atribuída uma nota entre 21 e 30. Por outro lado, se a resposta possui o código segue um estilo de indentação consistente e é legível, no entanto, pode haver algumas variações no estilo em alguns lugares, o código trata exceções de maneira adequada, mas pode haver áreas onde o tratamento de erros poderia ser mais robusto, embora o código seja autoexplicativo em grande parte, pode haver áreas onde a documentação poderia ser mais detalhada para ajudar os desenvolvedores a entender as partes complexas, o código não inclui testes automatizados para verificar a funcionalidade das rotas e controladores, deve ser atribuída uma nota entre 11 e 20. Por fim, se você entender que a resposta possui Variáveis, funções e rotas têm nomes não descritivos ou abreviados que tornam difícil entender a finalidade, o código está agrupado em um único arquivo ou não segue nenhuma estrutura lógica clara, a separação de responsabilidades é negligenciada, o código não lida com erros adequadamente e não fornece informações úteis em caso de falhas, a segurança não é considerada, e não há medidas para proteger os dados ou a aplicação de ataques comuns, o código carece de comentários, tornando-o difícil de entender, especialmente em partes complexas, o código não segue um estilo de codificação consistente, tornando-o difícil de ler, não há documentação ou explicação para partes críticas do código, o código não inclui testes automatizados para garantir sua funcionalidade, deve ser atribuída uma nota entre 0 e 10. Um feedback textual deve ser retornado explicando a nota atribuída à seguinte resposta:\nconst express = require('express');\nconst bodyParser = require('body-parser');\nconst mongoose = require('mongoose');\nconst bcrypt = require('bcrypt');\n\nconst app = express();\nconst PORT = 3000;\n\n// Conectar-se ao banco de dados MongoDB\nmongoose.connect('mongodb://localhost:27017/meuBancoDeDados', {\nuseNewUrlParser: true,\nuseUnifiedTopology: true,\n});\n\n// Definir o esquema do modelo de usuário\nconst userSchema = new mongoose.Schema({\nnome: String,\nemail: String,\nsenha: String,\n});\n\n// Criar o modelo de usuário com base no esquema\nconst User = mongoose.model('Usuario', userSchema);\n\n// Middleware para analisar o corpo das solicitações em JSON\napp.use(bodyParser.json());\n\n// Rota para criar um novo usuário\napp.post('/usuarios', async (req, res) => {\ntry {\nconst { nome, email, senha } = req.body;\n\n// Validar os dados de entrada\nif (!nome || !email || !senha) {\nreturn res.status(400).json({ mensagem: 'Todos os campos são obrigatórios.' });\n}\n\n// Criptografar a senha antes de armazená-la no banco de dados\nconst senhaHash = await bcrypt.hash(senha, 10);\n\n// Criar um novo usuário no banco de dados\nconst novoUsuario = new User({\nnome,\nemail,\nsenha: senhaHash,\n});\n\nawait novoUsuario.save();\nres.status(201).json(novoUsuario);\n} catch (error) {\nconsole.error(error);\nres.status(500).json({ mensagem: 'Erro interno do servidor.' });\n}\n});\n\n// Rota para recuperar todos os usuários\napp.get('/usuarios', async (req, res) => {\ntry {\nconst usuarios = await User.find();\nres.status(200).json(usuarios);\n} catch (error) {\nconsole.error(error);\nres.status(500).json({ mensagem: 'Erro interno do servidor.' });\n}\n});\n\n// Rota para recuperar um usuário por ID\napp.get('/usuarios/:id', async (req, res) => {\ntry {\nconst usuario = await User.findById(req.params.id);\nif (!usuario) {\nreturn res.status(404).json({ mensagem: 'Usuário não encontrado.'\n});\n}\nres.status(200).json(usuario);\n} catch (error) {\nconsole.error(error);\nres.status(500).json({ mensagem: 'Erro interno do servidor.' });\n}\n});\n\n// Rota para atualizar um usuário por ID\napp.put('/usuarios/:id', async (req, res) => {\ntry {\nconst { nome, email } = req.body;\n\n// Validar os dados de entrada\nif (!nome || !email) {\nreturn res.status(400).json({ mensagem: 'Nome e email são obrigatórios.' });\n}\n\nconst usuarioAtualizado = await User.findByIdAndUpdate(req.params.id, {\nnome,\nemail,\n}, { new: true });\n\nif (!usuarioAtualizado) {\nreturn res.status(404).json({ mensagem: 'Usuário não encontrado.' });\n}\nres.status(200).json(usuarioAtualizado);\n} catch (error) {\nconsole.error(error);\nres.status(500).json({ mensagem: 'Erro interno do servidor.' });\n}\n});\n\n// Rota para excluir um usuário por ID\napp.delete('/usuarios/:id', async (req, res) => {\ntry {\nconst usuarioExcluido = await User.findByIdAndDelete(req.params.id);\nif (!usuarioExcluido) {\nreturn res.status(404).json({ mensagem: 'Usuário não encontrado.' });\n}\nres.status(204).send();\n} catch (error) {\nconsole.error(error);\nres.status(500).json({ mensagem: 'Erro interno do servidor.' });\n}\n});\n\n// Iniciar o servidor\napp.listen(PORT, () => {\nconsole.log(\`Servidor Node.js em execução na porta \${PORT}\`);\n});\nA partir desse pedido, elabore a questão e retorne no formato JSON conforme a definição em TypeScript fornecida.\n`;
 
-  const hiddenResponse: string = `{
-    "type": "programming",
-    "statement": "Elabore uma função em C++ que calcule a hipotenusa de um triângulo retângulo dados os dois catetos. A hipotenusa é o lado oposto ao ângulo reto e pode ser calculada utilizando o teorema de Pitágoras. A trigonometria é um ramo da matemática que estuda as relações entre os ângulos e os lados dos triângulos. Ter habilidade com programação e matemática é fundamental para resolver problemas como este. Escreva a função 'calcularHipotenusa' que receba os valores dos catetos como parâmetros e retorne o valor da hipotenusa.",
-    "gradingRubric": [
-        {
-            "criteria": {
-                "title": "Clean Code",
-                "total_points": 30,
-                "maxValueCriteria": {
-                    "description": "O código está bem organizado, legível e segue as boas práticas de programação.",
-                    "value": {
-                        "min": 21,
-                        "max": 30
-                    }
-                },
-                "avgValueCriteria": {
-                    "description": "O código possui uma organização razoável, mas pode ser melhorado em termos de legibilidade e boas práticas de programação.",
-                    "value": {
-                        "min": 11,
-                        "max": 20
-                    }
-                },
-                "minValueCriteria": {
-                    "description": "O código está confuso, difícil de entender e não segue as boas práticas de programação.",
-                    "value": {
-                        "min": 0,
-                        "max": 10
-                    }
-                }
-            }
-        },
-        {
-            "criteria": {
-                "title": "Funcionalidade",
-                "total_points": 40,
-                "maxValueCriteria": {
-                    "description": "A função calcula corretamente a hipotenusa e retorna o valor esperado.",
-                    "value": {
-                        "min": 31,
-                        "max": 40
-                    }
-                },
-                "avgValueCriteria": {
-                    "description": "A função calcula corretamente a hipotenusa, mas pode haver pequenos erros ou casos em que não retorna o valor esperado.",
-                    "value": {
-                        "min": 16,
-                        "max": 30
-                    }
-                },
-                "minValueCriteria": {
-                    "description": "A função não calcula corretamente a hipotenusa ou não retorna o valor esperado.",
-                    "value": {
-                        "min": 0,
-                        "max": 15
-                    }
-                }
-            }
-        },
-        {
-            "criteria": {
-                "title": "Sintaxe",
-                "total_points": 30,
-                "maxValueCriteria": {
-                    "description": "O código está livre de erros de sintaxe e segue as regras da linguagem C++.",
-                    "value": {
-                      "min": 21,
-                      "max": 30
-                  }
-              },
-              "avgValueCriteria": {
-                  "description": "O código possui alguns erros de sintaxe, mas ainda é compreensível e segue a maioria das regras da linguagem C++.",
-                  "value": {
-                      "min": 11,
-                      "max": 20
-                  }
-              },
-              "minValueCriteria": {
-                  "description": "O código contém vários erros de sintaxe e não segue as regras da linguagem C++.",
-                  "value": {
-                      "min": 0,
-                      "max": 10
-                  }
-              }
-          }
-      }
-  ],
-  "tags": [
-      "programação",
-      "C++",
-      "matemática",
-      "trigonometria",
-      "hipotenusa"
-  ]
-}
-}`;
+  const hiddenResponse: string =
+    mode === "create"
+      ? `{\n"type": "programming",\n"statement": "Imagine que você está desenvolvendo uma aplicação web em Node.js que precisa se conectar a um banco de dados MongoDB para realizar operações de CRUD (Create, Read, Update, Delete) em uma coleção chamada "Usuários". Você já configurou o servidor Node.js e instalou as dependências necessárias. Agora, você precisa implementar as rotas e controladores para realizar essas operações no banco de dados MongoDB.\nPor favor, escreva o código Node.js necessário para implementar as seguintes funcionalidades:\nCriar um novo usuário: Crie uma rota POST que permita adicionar um novo usuário ao banco de dados. Os dados do usuário (nome, email, senha, etc.) serão enviados no corpo da solicitação em formato JSON. Certifique-se de validar os dados de entrada e criptografar a senha antes de armazená-la no banco de dados.\nRecuperar todos os usuários: Crie uma rota GET que recupere todos os usuários da coleção "Usuários" no banco de dados MongoDB e os retorne como uma resposta em formato JSON.\nRecuperar um usuário por ID: Crie uma rota GET que permita recuperar um usuário específico com base em seu ID. O ID será fornecido como um parâmetro de rota na URL e você deve retornar os dados do usuário encontrado ou uma mensagem de erro adequada caso o usuário não exista.\nAtualizar um usuário: Crie uma rota PUT que permita atualizar os dados de um usuário existente com base em seu ID. Os dados atualizados serão enviados no corpo da solicitação em formato JSON. Lembre-se de validar os dados de entrada antes de atualizar o usuário no banco de dados.\nExcluir um usuário: Crie uma rota DELETE que permita excluir um usuário com base em seu ID. Certifique-se de manipular erros adequadamente, por exemplo, se o usuário não existir.\nVocê pode usar qualquer biblioteca ou middleware do Node.js que considerar apropriado para esta tarefa.",\n"gradingRubric": [\n{\n"criteria": {\n"title": "Clean Code",\n"total_points": 30,\n"maxValueCriteria": {\n"description": "Os nomes de variáveis, funções e rotas são descritivos e autoexplicativos, os nomes de variáveis e funções refletem claramente sua finalidade, o código está organizado em módulos lógicos, seguindo o princípio de separação de responsabilidades, não há lógica de negócios excessivamente complexa em um único arquivo, os comentários são usados para explicar partes complexas do código ou tomadas de decisão não triviais, eles não são usados em excesso, pois o código em si é autoexplicativo, o código lida com erros de maneira apropriada, fornecendo mensagens de erro úteis para os clientes e registrando informações detalhadas de erro para fins de depuração, há um foco claro na segurança, como a criptografia adequada de senhas e a validação de dados de entrada para evitar ataques de injeção",\n"value": {\n"min": 21,\n"max": 30\n}\n},\n"avgValueCriteria": {\n"description": "O código segue um estilo de indentação consistente e é legível, no entanto, pode haver algumas variações no estilo em alguns lugares, o código trata exceções de maneira adequada, mas pode haver áreas onde o tratamento de erros poderia ser mais robusto, embora o código seja autoexplicativo em grande parte, pode haver áreas onde a documentação poderia ser mais detalhada para ajudar os desenvolvedores a entender as partes complexas, o código não inclui testes automatizados para verificar a funcionalidade das rotas e controladores",\n"value": {\n"min": 11,\n"max": 20\n}\n},\n"minValueCriteria": {\n"description": "Variáveis, funções e rotas têm nomes não descritivos ou abreviados que tornam difícil entender a finalidade, o código está agrupado em um único arquivo ou não segue nenhuma estrutura lógica clara, a separação de responsabilidades é negligenciada, o código não lida com erros adequadamente e não fornece informações úteis em caso de falhas, a segurança não é considerada, e não há medidas para proteger os dados ou a aplicação de ataques comuns, o código carece de comentários, tornando-o difícil de entender, especialmente em partes complexas, o código não segue um estilo de codificação consistente, tornando-o difícil de ler, não há documentação ou explicação para partes críticas do código, o código não inclui testes automatizados para garantir sua funcionalidade",\n"value": {\n"min": 0,\n"max": 10\n}\n}\n}\n},\n{\n"criteria": {\n"title": "Funcionalidade",\n"total_points": 40,\n"maxValueCriteria": {\n"description": "O código implementa todas as funcionalidades solicitadas na pergunta original, incluindo a capacidade de criar, ler, atualizar e excluir usuários, bem como a criptografia de senhas e a validação de entrada.\nAs operações de CRUD funcionam sem problemas, e os dados são manipulados corretamente no banco de dados MongoDB.\nO código lida com erros de forma adequada, fornecendo respostas apropriadas em caso de entradas inválidas, operações malsucedidas ou problemas de conexão com o banco de dados.\nAs senhas são devidamente criptografadas antes de serem armazenadas no banco de dados, protegendo a segurança das informações dos usuários.\nAs rotas seguem boas práticas de design de API RESTful, como usar os métodos HTTP apropriados (POST, GET, PUT, DELETE) e URLs bem estruturadas.",\n"value": {\n"min": 31,\n"max": 40\n}\n},\n"avgValueCriteria": {\n"description": "O código implementa as funcionalidades essenciais, mas pode faltar algum tratamento de erros detalhado ou recursos adicionais. O código valida as entradas básicas, mas pode não abordar todas as possíveis validações de dados.O código segue boas práticas de codificação, mas pode conter algumas áreas onde a refatoração seria benéfica.",\n"value": {\n"min": 16,\n"max": 30\n}\n},\n"minValueCriteria": {\n"description": "O código não implementa todas as funcionalidades solicitadas ou falha em realizar operações CRUD de forma eficaz. O código não lida adequadamente com erros, resultando em respostas inadequadas ou comportamento inesperado. A criptografia de senhas ou outras práticas de segurança essenciais são ignoradas, colocando em risco a segurança dos dados do usuário. O código não valida adequadamente os dados de entrada, deixando a aplicação vulnerável a ataques de injeção ou entradas inválidas. O código é mal organizado, com lógica de negócios complexa e misturada com o tratamento de rotas, dificultando a manutenção. O código não segue boas práticas de codificação, como a nomeação de variáveis e funções, a separação de responsabilidades e a organização modular. A ausência de testes automatizados torna difícil garantir que o código funcione conforme o esperado e que regressões sejam evitadas. O código pode ter problemas de desempenho, como consultas ineficientes ao banco de dados ou gargalos de processamento.",\n"value": {\n"min": 0,\n"max": 15\n}\n}\n}\n},\n{\n"criteria": {\n"title": "Sintaxe",\n"total_points": 30,\n"maxValueCriteria": {\n"description": "O código está livre de erros de sintaxe. Todas as variáveis, funções, métodos e operações são escritos de acordo com a sintaxe da linguagem Node.js. O código segue uma indentação consistente em todo o arquivo, tornando-o fácil de ler e entender.As aspas (simples ou duplas) e outros delimitadores são usados de forma consistente em todo o código. Quando necessário, os comentários são usados para explicar partes complexas do código ou fornecer informações adicionais. Os comentários são claros e concisos. O código é organizado de maneira lógica e fácil de seguir. Não há excesso de complexidade em uma única linha ou função.",\n"value": {\n"min": 21,\n"max": 30\n}\n},\n"avgValueCriteria": {\n"description": "O código contém pequenos erros de sintaxe que não afetam gravemente a funcionalidade, como erros de digitação. A indentação é geralmente consistente, mas pode haver algumas inconsistências menores. O código segue um estilo de codificação geralmente aceitável, mas pode haver variações ocasionais.",\n"value": {\n"min": 11,\n"max": 20\n}\n},\n"minValueCriteria": {\n"description": "O código contém erros graves de sintaxe que impedem a execução bem-sucedida ou causam falhas durante a execução. A indentação é inconsistente, dificultando a leitura e a compreensão do código. As aspas e outros delimitadores são usados de maneira inconsistente, o que pode causar problemas de interpretação do código. O código carece de comentários explicativos onde necessário, tornando-o difícil de entender ou manter. O código é desorganizado, complexo ou não segue as convenções de nomenclatura, tornando-o difícil de ler e entender.O código não segue boas práticas de estilo de codificação e falta consistência. A falta de clareza ou organização torna o código difícil de acompanhar, mesmo para programadores experientes. O código não aproveita os recursos disponíveis na linguagem Node.js, como usar métodos ou bibliotecas apropriados quando necessário.",\n"value": {\n"min": 0,\n"max": 10\n}\n}\n}\n}\n],\n"tags": [\n"programação",\n"C++",\n"matemática",\n"trigonometria",\n"hipotenusa"\n]\n}\n}`
+      : `{\ndata: {\ntype: "graded",\ngrade: 27.3,\nfeedback: "Nomes Descritivos (Nota: 3.8): A maioria dos nomes de variáveis e funções são descritivos e fáceis de entender. No entanto, em alguns lugares, nomes um pouco mais descritivos poderiam melhorar ainda mais a clareza. Módulos e Separação de Responsabilidades (Nota: 4.3): O código está organizado em módulos lógicos e segue o princípio de separação de responsabilidades. A estrutura geral é boa, mas pode haver alguma oportunidade para refinar ainda mais a organização.Comentários Significativos (Nota: 3.5): O código contém comentários adequados em partes mais complexas, o que é positivo. No entanto, em algumas áreas, comentários adicionais explicando a lógica por trás das operações seriam úteis. Manipulação de Erros (Nota: 3.6): O código lida com erros de forma adequada, fornecendo mensagens de erro úteis para os clientes e registrando informações detalhadas de erro para fins de depuração. Isso é essencial para uma aplicação robusta. Segurança (Nota: 3.7): A segurança é tratada adequadamente com a criptografia de senhas antes de armazená-las no banco de dados. Isso é uma prática importante. Indentação e Estilo de Código (Nota: 4.1): A indentação é consistente em todo o código, tornando-o fácil de ler. No entanto, pode haver algumas pequenas variações no estilo de codificação em alguns lugares. Testes (Nota: 4.3): O código não inclui testes automatizados para verificar a funcionalidade das rotas e controladores. A inclusão de testes é uma prática importante para garantir que o código funcione conforme o esperado e para facilitar futuras alterações.\n}\n}`;
 
   return { hiddenPrompt, hiddenRequest, hiddenResponse };
 }

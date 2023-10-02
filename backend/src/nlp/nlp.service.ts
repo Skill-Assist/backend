@@ -21,7 +21,7 @@ import {
   IJsonTranslator,
   isTransientHttpError,
 } from "../utils/nlp-types.utils";
-import { systemSetup, TCreateQuestion } from "../utils/nlp-prompts.utils";
+import { systemSetup, TPromptSetup } from "../utils/nlp-prompts.utils";
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -50,7 +50,7 @@ export class NaturalLanguageService {
       const retryMaxAttempts = model.retryMaxAttempts ?? 3;
       const retryPauseMs = model.retryPauseMs ?? 1000;
 
-      const systemSetupPrompt: TCreateQuestion = systemSetup(schema);
+      const systemSetupPrompt: TPromptSetup = systemSetup(schema, mode);
 
       const hiddenPrompt: string =
         mode === "create" ? systemSetupPrompt.hiddenPrompt : "";
@@ -79,7 +79,6 @@ export class NaturalLanguageService {
           temperature: 0,
           n: 1,
         };
-        console.log("params", params);
 
         const result = await client.post(
           "https://api.openai.com/v1/chat/completions",
@@ -246,35 +245,28 @@ export class NaturalLanguageService {
         prompt +=
           `A seguir está o pedido fornecido pelo usuário para geração de uma nova questão:\n` +
           `"""\n${request}\n"""\n` +
-          `A partir desse pedido, elabore a questão e retorne no formato JSON conforme a definição em TypeScript fornecida.\n`;
+          `A partir desse pedido, elabore a questão e retorne no formato JSON conforme a definição em TypeScript fornecida.\n` +
+          `\`\`\`\n${validator.schema}\n\`\`\`\n`;
 
       if (mode === "eval")
         prompt +=
-          `Você é um gerente de RH respeitado e experiente em uma companhia de grande porte e no momento você está corrigindo a resposta de um candidato para uma questão aplicada no contexto de um teste de recrutamento. Você é conhecido por seu profissionalismo, atenção aos detalhes e alto padrão de qualidade de suas correções e avaliações. Você dá valor à clareza, coerência e pensamento lógico. Você sempre pensa passo-a-passo e mostra todo o seu trabalho na explicação, de forma completa e explícita. A correção deve ser traduzida para objeto JSON de acordo com a seguinte definição em Typescript:\n` +
-          `\`\`\`\n${validator.schema}\n\`\`\`\n` +
           `A seguir está a questão a ser corrigida no momento:\n` +
           `\`\`\`\n${statement}\n\`\`\`\n` +
-          `Considerando a resposta, você irá elaborar a correção com base em sua ${
+          `Considerando a resposta, a avaliação será elaborada com base em ${
             rubric!.criteria.title
-          }. Se a resposta possui ${
-            rubric!.criteria.maxValueCriteria.description
-          }, você deveria atribuir uma nota entre ${
+          }. Se a resposta possui ${rubric!.criteria.maxValueCriteria.description.toLowerCase()}, deve ser atribuída uma nota entre ${
             rubric!.criteria.maxValueCriteria.value.min
           } e ${
             rubric!.criteria.maxValueCriteria.value.max
-          }. Por outro lado, se a resposta possui ${
-            rubric!.criteria.avgValueCriteria.description
-          }, você deveria atribuir uma nota entre ${
+          }. Por outro lado, se a resposta possui ${rubric!.criteria.avgValueCriteria.description.toLowerCase()}, deve ser atribuída uma nota entre ${
             rubric!.criteria.avgValueCriteria.value.min
           } e ${
             rubric!.criteria.avgValueCriteria.value.max
-          }. Por fim, se você entender que a resposta possui ${
-            rubric!.criteria.minValueCriteria.description
-          }, você deveria atribuir uma nota entre ${
+          }. Por fim, se você entender que a resposta possui ${rubric!.criteria.minValueCriteria.description.toLowerCase()}, deve ser atribuída uma nota entre ${
             rubric!.criteria.minValueCriteria.value.min
           } e ${
             rubric!.criteria.minValueCriteria.value.max
-          }. Você deve sempre considerar o nível de detalhamento da resposta e nunca deve retornar a correção sem uma nota específica, ainda que seja 0. Além disso, notas fracionadas são admissíveis, por exemplo, ao invés de 8.0 pode ser atribuído 8.4, ao invés de 7.0 pode ser atribuído 7.2, e assim por diante. Finalmente, você deve retornar um feedback textual explicando a nota atribuída à seguinte resposta:\n` +
+          }. Um feedback textual deve ser retornado explicando a nota atribuída à seguinte resposta:\n` +
           `\`\`\`\n${request}\n\`\`\`\n` +
           `A partir desse pedido, elabore a correção e retorne no formato JSON conforme a definição em TypeScript fornecida:\n` +
           `\`\`\`\n${validator.schema}\n\`\`\`\n`;

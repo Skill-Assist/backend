@@ -81,8 +81,8 @@ export class AwsService {
     try {
       // get the file from local storage or S3
       let response: Body | undefined;
-      const filePath = path.join(__dirname, `../../${getObjectParams.Key}`);
       if (nodeEnv === "dev") {
+        const filePath = path.join(__dirname, `../../${getObjectParams.Key}`);
         response = await fs.readFile(filePath);
       } else if (nodeEnv === "prod") {
         const obj = await bucket.getObject(getObjectParams).promise();
