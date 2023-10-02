@@ -24,8 +24,8 @@ export class CreateExamDto {
   @IsString({
     message: "Subtitle must be a string",
   })
-  @Length(1, 100, {
-    message: "Subtitle cannot be longer than 100 characters",
+  @Length(1, 50, {
+    message: "Subtitle cannot be longer than 50 characters",
   })
   subtitle?: string;
 
@@ -33,8 +33,8 @@ export class CreateExamDto {
   @IsString({
     message: "Level must be a string",
   })
-  @Length(1, 20, {
-    message: "Level cannot be longer than 20 characters",
+  @Length(1, 50, {
+    message: "Level cannot be longer than 50 characters",
   })
   level?: string;
 

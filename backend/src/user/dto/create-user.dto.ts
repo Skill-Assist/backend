@@ -5,9 +5,9 @@ import {
   IsEmail,
   Matches,
   IsString,
-  IsNumber,
   IsHexColor,
   IsOptional,
+  IsMobilePhone,
 } from "class-validator";
 import { Transform } from "class-transformer";
 //////////////////////////////////////////////////////////////////////////////////////
@@ -45,11 +45,7 @@ export class CreateUserDto {
   passwordConfirm: string;
 
   @IsOptional()
-  @IsNumber({
-    allowNaN: false,
-    allowInfinity: false,
-    maxDecimalPlaces: 0,
-  })
+  @IsMobilePhone("pt-BR")
   mobilePhone?: string;
 
   @IsOptional()

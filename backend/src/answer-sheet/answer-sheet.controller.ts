@@ -12,8 +12,8 @@ import {
 import { AnswerSheetService } from "./answer-sheet.service";
 
 /** entities */
-import { AnswerSheet } from "./entities/answer-sheet.entity";
 import { UserRole } from "../user/entities/user.entity";
+import { AnswerSheet } from "./entities/answer-sheet.entity";
 
 /** decorators */
 import { Roles } from "../auth/decorators/roles.decorator";
@@ -113,7 +113,7 @@ export class AnswerSheetController {
   generateEval(
     @Req() req: PassportRequest,
     @Query("id") id: number
-  ): Promise<any> {
+  ): Promise<AnswerSheet> {
     return this.answerSheetService.generateEval(req.user!.id, id);
   }
 }

@@ -10,8 +10,8 @@ import {
 import { User } from "../../user/entities/user.entity";
 import { Exam } from "../../exam/entities/exam.entity";
 import { SQLBaseEntity } from "../../utils/base-entity.utils";
-import { SectionToAnswerSheet } from "../../section-to-answer-sheet/entities/section-to-answer-sheet.entity";
 import { ExamInvitation } from "../../exam-invitation/entities/exam-invitation.entity";
+import { SectionToAnswerSheet } from "../../section-to-answer-sheet/entities/section-to-answer-sheet.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Entity()

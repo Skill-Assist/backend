@@ -37,7 +37,10 @@ export class AppInterceptor implements NestInterceptor {
     return next.handle().pipe(
       map(async (data) => {
         // if user is not a candidate, return data as is
-        if (controller !== "auth" && user.roles.includes("candidate")) {
+        if (
+          !controller.includes("auth", "health") &&
+          user?.roles.includes("candidate")
+        ) {
           // endpoint: /api/v1/user/profile
           // previous interceptors: none
           if (controller === "user" && method === "profile") {

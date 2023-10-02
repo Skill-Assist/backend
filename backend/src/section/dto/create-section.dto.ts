@@ -13,18 +13,18 @@ import { isValid } from "date-fns";
 
 export class CreateSectionDto {
   @IsString({
-    message: "Name must be a string.",
+    message: "Name must be a string",
   })
-  @Length(3, 15, {
-    message: "Name must be between 3 and 15 characters long.",
+  @Length(1, 100, {
+    message: "Name cannot be longer than 100 characters",
   })
   name: string;
 
   @IsString({
-    message: "Description must be a string.",
+    message: "Description must be a string",
   })
-  @Length(15, 100, {
-    message: "Description must be between 15 and 100 characters long.",
+  @Length(15, 500, {
+    message: "Description cannot be longer than 500 characters",
   })
   description: string;
 

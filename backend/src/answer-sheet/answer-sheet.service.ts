@@ -286,7 +286,10 @@ export class AnswerSheetService {
       .getOne()) as AnswerSheet;
   }
 
-  async generateEval(userId: number, answerSheetID: number): Promise<any> {
+  async generateEval(
+    userId: number,
+    answerSheetId: number
+  ): Promise<AnswerSheet> {
     // get answerService from moduleRef
     this.answerService =
       this.answerService ??
@@ -298,7 +301,7 @@ export class AnswerSheetService {
     let answerSheetScore: number = 0;
 
     // get answerSheet
-    const answerSheet = await this.findOne(userId, "id", answerSheetID);
+    const answerSheet = await this.findOne(userId, "id", answerSheetId);
 
     for (const sas of await answerSheet.sectionToAnswerSheets) {
       // initialize SAS score at 0
