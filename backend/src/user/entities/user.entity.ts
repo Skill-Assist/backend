@@ -25,6 +25,7 @@ export enum UserRole {
 
 @Entity()
 export class User extends SQLBaseEntity {
+  /** properties */
   @Column({ nullable: true })
   name: string;
 

@@ -23,7 +23,7 @@ import { SectionToAnswerSheet } from "./entities/section-to-answer-sheet.entity"
 import { UpdateSectionToAnswerSheetDto } from "./dto/update-section-to-answer-sheet.dto";
 
 /** utils */
-import { create, findOne, findAll, update } from "../utils/typeorm.utils";
+import { _create, _findOne, _findAll, _update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -89,13 +89,13 @@ export class SectionToAnswerSheetService {
       );
 
     // create section to answer sheet (SAS)
-    const sectionToAnswerSheet = (await create(
+    const sectionToAnswerSheet = (await _create(
       this.queryRunner,
       this.sectionToAnswerSheetRepository
     )) as SectionToAnswerSheet;
 
     // set relation between SAS and section and answer sheet
-    await update(
+    await _update(
       sectionToAnswerSheet.id,
       { section, answerSheet },
       this.sectionToAnswerSheetRepository,
@@ -132,7 +132,7 @@ export class SectionToAnswerSheetService {
   ): Promise<SectionToAnswerSheet[]> {
     if (key && !value) throw new NotFoundException("Value not provided.");
 
-    return (await findAll(
+    return (await _findAll(
       this.sectionToAnswerSheetRepository,
       "sectionToAnswerSheet",
       key,
@@ -149,7 +149,7 @@ export class SectionToAnswerSheetService {
     relations?: string[],
     map?: boolean
   ): Promise<SectionToAnswerSheet> {
-    const sas = (await findOne(
+    const sas = (await _findOne(
       this.sectionToAnswerSheetRepository,
       "sectionToAnswerSheet",
       key,
@@ -173,7 +173,7 @@ export class SectionToAnswerSheetService {
         "You are not authorized to access this section to answer sheet."
       );
 
-    return (await findOne(
+    return (await _findOne(
       this.sectionToAnswerSheetRepository,
       "sectionToAnswerSheet",
       key,
@@ -191,7 +191,7 @@ export class SectionToAnswerSheetService {
     // check if SAS exists and user authorized to update it
     await this.findOne(userId, "id", sasId);
 
-    await update(
+    await _update(
       sasId,
       updateSectionToAnswerSheetDto as Record<string, unknown>,
       this.sectionToAnswerSheetRepository,

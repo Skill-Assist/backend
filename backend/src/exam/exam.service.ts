@@ -15,6 +15,13 @@ import { ExamInvitationService } from "../exam-invitation/exam-invitation.servic
 
 /** external dependencies */
 import { Repository } from "typeorm";
+import { LLMChain } from "langchain/chains";
+import { Document } from "langchain/document";
+import { OpenAI } from "langchain/llms/openai";
+import { PromptTemplate } from "langchain/prompts";
+import { OpenAIEmbeddings } from "langchain/embeddings/openai";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { ScoreThresholdRetriever } from "langchain/retrievers/score_threshold";
 
 /** entities */
 import { Exam } from "./entities/exam.entity";
@@ -24,15 +31,27 @@ import { User } from "../user/entities/user.entity";
 import { InviteDto } from "./dto/invite.dto";
 import { CreateExamDto } from "./dto/create-exam.dto";
 import { UpdateExamDto } from "./dto/update-exam.dto";
+import { SuggestDescriptionDto } from "./dto/suggest-description.dto";
 
 /** utils */
-import { create, findOne, findAll, update } from "../utils/typeorm.utils";
+import {
+  _create,
+  _findOne,
+  _findAll,
+  _update,
+  _delete,
+} from "../utils/typeorm.utils";
+
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
 export class ExamService {
   private userService: UserService;
   private examInvitationService: ExamInvitationService;
+
+  // vector store for exam description suggestions
+  // in production, this should be a database
+  private vectorStore: MemoryVectorStore | undefined;
 
   constructor(
     @InjectRepository(Exam)
@@ -48,7 +67,7 @@ export class ExamService {
       this.userService ?? this.moduleRef.get(UserService, { strict: false });
 
     // create exam
-    const exam = await create(
+    const exam = await _create(
       this.queryRunner,
       this.examRepository,
       createExamDto
@@ -56,7 +75,7 @@ export class ExamService {
 
     // set relation between exam and user
     const user = <User>await this.userService.findOne("id", userId);
-    await update(exam.id, { createdBy: user }, this.examRepository, "exam");
+    await _update(exam.id, { createdBy: user }, this.examRepository, "exam");
 
     // return updated exam
     return <Exam>await this.findOne(userId, "id", exam.id);
@@ -70,7 +89,7 @@ export class ExamService {
   ): Promise<Exam[]> {
     if (key && !value) throw new NotFoundException("Value not provided.");
 
-    return (await findAll(
+    return (await _findAll(
       this.examRepository,
       "exam",
       key,
@@ -87,7 +106,7 @@ export class ExamService {
     relations?: string[],
     map?: boolean
   ): Promise<Exam> {
-    const exam = (await findOne(
+    const exam = (await _findOne(
       this.examRepository,
       "exam",
       key,
@@ -106,7 +125,7 @@ export class ExamService {
         "You are not authorized to access this exam."
       );
 
-    return (await findOne(
+    return (await _findOne(
       this.examRepository,
       "exam",
       key,
@@ -125,13 +144,28 @@ export class ExamService {
     await this.findOne(userId, "id", examId);
 
     // update exam
-    await update(
+    await _update(
       examId,
       updateExamDto as Record<string, unknown>,
       this.examRepository,
       "exam"
     );
+
     return <Exam>await this.findOne(userId, "id", examId);
+  }
+
+  async delete(userId: number, examId: number): Promise<void> {
+    // check if exam exists and is owned by user
+    const exam = await this.findOne(userId, "id", examId);
+
+    // check if exam status is draft
+    if (exam.status !== "draft")
+      throw new UnauthorizedException(
+        "Exam is not in draft status. Process was aborted."
+      );
+
+    // delete exam
+    await _delete(examId, this.examRepository, "exam");
   }
 
   /** custom methods */
@@ -353,5 +387,71 @@ export class ExamService {
       });
     }
     return response;
+  }
+
+  async suggestDescription(
+    suggestDescriptionDto: SuggestDescriptionDto
+  ): Promise<string> {
+    // instantiate vector store (in production, this should be a database)
+    if (!this.vectorStore)
+      this.vectorStore = await MemoryVectorStore.fromTexts(
+        [
+          "O teste de recrutamento para estágio em Engenharia de Software avalia habilidades técnicas, aprendizado e adaptação a novas tecnologias. Inclui questões teóricas e práticas sobre programação, desenvolvimento web e bancos de dados, além de avaliar habilidades de trabalho em equipe, resolução de problemas e comunicação. O objetivo é identificar candidatos com potencial de crescimento na empresa.",
+        ],
+        [{ jobTitle: "Engenheiro de software", jobLevel: "Estágio" }],
+        new OpenAIEmbeddings()
+      );
+
+    // instantiate new retriever and search for relevant documents
+    const retriever = ScoreThresholdRetriever.fromVectorStore(
+      this.vectorStore,
+      {
+        minSimilarityScore: 0.8,
+        maxK: 5,
+        kIncrement: 2,
+      }
+    );
+
+    const result = await retriever.getRelevantDocuments(
+      JSON.stringify(suggestDescriptionDto)
+    );
+
+    if (result.length) {
+      return result[0].pageContent;
+    }
+
+    // if no relevant documents were found, generate a new description and save it to the vector store before returning it
+    const llm = new OpenAI({
+      modelName: "gpt-4",
+      temperature: 0,
+    });
+
+    let prompt = PromptTemplate.fromTemplate(
+      "Elabore uma descrição resumida para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}?"
+    );
+
+    const chain = new LLMChain({ llm, prompt });
+
+    let res = await chain.call(suggestDescriptionDto);
+
+    while (res.text.length > 400) {
+      chain.prompt = PromptTemplate.fromTemplate(
+        "Resuma a seguinte descrição para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}? {description}"
+      );
+
+      res = await chain.call({
+        ...suggestDescriptionDto,
+        description: res.text,
+      });
+    }
+
+    this.vectorStore.addDocuments([
+      new Document({
+        pageContent: res.text,
+        metadata: suggestDescriptionDto,
+      }),
+    ]);
+
+    return res.text;
   }
 }

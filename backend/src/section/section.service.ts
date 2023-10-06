@@ -23,7 +23,7 @@ import { CreateSectionDto } from "./dto/create-section.dto";
 import { UpdateSectionDto } from "./dto/update-section.dto";
 
 /** utils */
-import { create, findOne, update } from "../utils/typeorm.utils";
+import { _create, _findOne, _update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -63,13 +63,13 @@ export class SectionService {
       );
 
     // create section
-    const section = await create(this.queryRunner, this.sectionRepository, {
+    const section = await _create(this.queryRunner, this.sectionRepository, {
       ...createSectionDto,
       questionId: [],
     });
 
     // set relation between section and exam
-    await update(section.id, { exam }, this.sectionRepository, "section");
+    await _update(section.id, { exam }, this.sectionRepository, "section");
 
     // return updated section
     return <Section>await this.findOne(userId, "id", section.id);
@@ -82,7 +82,7 @@ export class SectionService {
     relations?: string[],
     map?: boolean
   ): Promise<Section> {
-    const section = (await findOne(
+    const section = (await _findOne(
       this.sectionRepository,
       "section",
       key,
@@ -102,7 +102,7 @@ export class SectionService {
         "You are not authorized to access this section."
       );
 
-    return (await findOne(
+    return (await _findOne(
       this.sectionRepository,
       "section",
       key,
@@ -138,7 +138,7 @@ export class SectionService {
       );
 
     // update exam
-    await update(
+    await _update(
       sectionId,
       updateSectionDto as Record<string, unknown>,
       this.sectionRepository,
@@ -149,7 +149,7 @@ export class SectionService {
 
   /** custom methods */
   async addtoQuestion(id: number, payload: AddQuestionDto): Promise<void> {
-    await update(
+    await _update(
       id,
       payload as unknown as Record<string, Record<string, ObjectId | number>[]>,
       this.sectionRepository,

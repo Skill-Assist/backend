@@ -6,6 +6,7 @@ import {
   Body,
   Query,
   Patch,
+  Delete,
   Controller,
   UseInterceptors,
   ClassSerializerInterceptor,
@@ -22,6 +23,7 @@ import { UserRole } from "../user/entities/user.entity";
 import { InviteDto } from "./dto/invite.dto";
 import { CreateExamDto } from "./dto/create-exam.dto";
 import { UpdateExamDto } from "./dto/update-exam.dto";
+import { SuggestDescriptionDto } from "./dto/suggest-description.dto";
 
 /** decorators */
 import { Roles } from "../auth/decorators/roles.decorator";
@@ -72,6 +74,12 @@ export class ExamController {
     return this.examService.update(req.user!.id, id, updateExamDto);
   }
 
+  @Delete()
+  @Roles(UserRole.RECRUITER)
+  delete(@Req() req: PassportRequest, @Query("id") id: number): Promise<void> {
+    return this.examService.delete(req.user!.id, id);
+  }
+
   /** custom endpoints */
   @Get("fetchOwn")
   fetchOwn(@Req() req: PassportRequest): Promise<Exam[]> {
@@ -105,5 +113,13 @@ export class ExamController {
     @Query("id") id: number
   ): Promise<any> {
     return this.examService.fetchCandidates(req.user!.id, id);
+  }
+
+  @Post("suggestDescription")
+  @Roles(UserRole.RECRUITER)
+  suggestDescription(
+    @Body() suggestDescriptionDto: SuggestDescriptionDto
+  ): Promise<string> {
+    return this.examService.suggestDescription(suggestDescriptionDto);
   }
 }

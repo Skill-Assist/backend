@@ -34,7 +34,7 @@ import { SubmitAnswersDto } from "./dto/submit-answers.dto";
 
 /** utils */
 import { MultipleChoiceGradingCriteria } from "../utils/api-types.utils";
-import { create, findOne, findAll, update } from "../utils/typeorm.utils";
+import { _create, _findOne, _findAll, _update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -86,14 +86,14 @@ export class AnswerService {
       );
 
     // create answer
-    const answer = await create(
+    const answer = await _create(
       this.queryRunner,
       this.answerRepository,
       createAnswerDto
     );
 
     // set relation between answer and sectionToAnswerSheet
-    await update(
+    await _update(
       answer.id,
       { sectionToAnswerSheet },
       this.answerRepository,
@@ -112,7 +112,7 @@ export class AnswerService {
   ): Promise<Answer[]> {
     if (key && !value) throw new NotFoundException("Value not provided.");
 
-    return (await findAll(
+    return (await _findAll(
       this.answerRepository,
       "answer",
       key,
@@ -129,7 +129,7 @@ export class AnswerService {
     relations?: string[],
     map?: boolean
   ): Promise<Answer> {
-    const answer = (await findOne(
+    const answer = (await _findOne(
       this.answerRepository,
       "answer",
       key,
@@ -150,7 +150,7 @@ export class AnswerService {
         "You are not authorized to access this answer."
       );
 
-    return (await findOne(
+    return (await _findOne(
       this.answerRepository,
       "answer",
       key,
@@ -221,7 +221,7 @@ export class AnswerService {
     }
 
     // update answer
-    await update(
+    await _update(
       answerId,
       updateAnswerDto as unknown as Record<string, unknown>,
       this.answerRepository,

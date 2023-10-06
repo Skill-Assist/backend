@@ -24,7 +24,7 @@ import { AnswerSheet } from "./entities/answer-sheet.entity";
 import { UpdateAnswerSheetDto } from "./dto/update-answer-sheet.dto";
 
 /** utils */
-import { create, findAll, findOne, update } from "../utils/typeorm.utils";
+import { _create, _findAll, _findOne, _update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -68,13 +68,13 @@ export class AnswerSheetService {
     );
 
     // create answer sheet
-    const answerSheet = (await create(
+    const answerSheet = (await _create(
       this.queryRunner,
       this.answerSheetRepository
     )) as AnswerSheet;
 
     // set relation between answer sheet and user
-    await update(
+    await _update(
       answerSheet.id,
       { user },
       this.answerSheetRepository,
@@ -82,7 +82,7 @@ export class AnswerSheetService {
     );
 
     // set relation between answer sheet and exam
-    await update(
+    await _update(
       answerSheet.id,
       { exam },
       this.answerSheetRepository,
@@ -90,7 +90,7 @@ export class AnswerSheetService {
     );
 
     // set relation between answer sheet and invitation
-    await update(
+    await _update(
       answerSheet.id,
       { invitation },
       this.answerSheetRepository,
@@ -109,7 +109,7 @@ export class AnswerSheetService {
   ): Promise<AnswerSheet[]> {
     if (key && !value) throw new NotFoundException("Value not provided");
 
-    return (await findAll(
+    return (await _findAll(
       this.answerSheetRepository,
       "answerSheet",
       key,
@@ -126,7 +126,7 @@ export class AnswerSheetService {
     relations?: string[],
     map?: boolean
   ): Promise<AnswerSheet> {
-    const answerSheet = (await findOne(
+    const answerSheet = (await _findOne(
       this.answerSheetRepository,
       "answerSheet",
       key,
@@ -147,7 +147,7 @@ export class AnswerSheetService {
         "You are not authorized to access this answer sheet."
       );
 
-    return (await findOne(
+    return (await _findOne(
       this.answerSheetRepository,
       "answerSheet",
       key,
@@ -166,7 +166,7 @@ export class AnswerSheetService {
     await this.findOne(userId, "id", answerSheetId);
 
     // update answer sheet
-    await update(
+    await _update(
       answerSheetId,
       updateAnswerSheetDto as unknown as Record<string, unknown>,
       this.answerSheetRepository,

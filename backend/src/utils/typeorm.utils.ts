@@ -26,7 +26,7 @@ import { HandlerEntity, HandlerDto } from "./api-types.utils";
  * to avoid repeating the same code in different services.
  */
 
-export async function create(
+export async function _create(
   queryRunner: QueryRunnerService,
   repository: Repository<HandlerEntity>,
   createDto?: HandlerDto
@@ -50,7 +50,7 @@ export async function create(
   }
 }
 
-export async function findAll(
+export async function _findAll(
   repository: Repository<HandlerEntity>,
   entityName: string,
   key?: string,
@@ -81,7 +81,7 @@ export async function findAll(
   return await queryBuilder.getMany();
 }
 
-export async function findOne(
+export async function _findOne(
   repository: Repository<HandlerEntity>,
   entityName: string,
   key: string,
@@ -108,7 +108,7 @@ export async function findOne(
   return await queryBuilder.getOne();
 }
 
-export async function update(
+export async function _update(
   id: number,
   payload: Record<string, unknown>,
   repository: Repository<HandlerEntity>,
@@ -135,5 +135,34 @@ export async function update(
     .execute();
 
   // check if entity was updated
+  if (!data.affected) throw new NotFoundException(`${targetEntity} not found.`);
+}
+
+export async function _delete(
+  id: number,
+  repository: Repository<HandlerEntity>,
+  targetEntity: string
+): Promise<void> {
+  const entityMap = {
+    exam: Exam,
+    section: Section,
+    examInvitation: ExamInvitation,
+    answerSheet: AnswerSheet,
+    sectionToAnswerSheet: SectionToAnswerSheet,
+    answer: Answer,
+    default: User,
+  };
+
+  const Entity =
+    entityMap[targetEntity as keyof typeof entityMap] || entityMap.default;
+
+  const data = await repository
+    .createQueryBuilder()
+    .delete()
+    .from(Entity)
+    .where("id = :id", { id })
+    .execute();
+
+  // check if entity was deleted
   if (!data.affected) throw new NotFoundException(`${targetEntity} not found.`);
 }

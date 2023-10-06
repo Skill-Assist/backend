@@ -24,7 +24,7 @@ import { ExamInvitation } from "./entities/exam-invitation.entity";
 import { CreateExamInvitationDto } from "./dto/create-exam-invitation.dto";
 
 /** utils */
-import { create, findOne, findAll, update } from "../utils/typeorm.utils";
+import { _create, _findOne, _findAll, _update } from "../utils/typeorm.utils";
 //////////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -71,14 +71,14 @@ export class ExamInvitationService {
       );
 
     // create exam invitation
-    const invitation = await create(
+    const invitation = await _create(
       this.queryRunner,
       this.examInvitationRepository,
       createExamInvitationDto
     );
 
     // set relation between invitation and exam
-    await update(
+    await _update(
       invitation.id,
       { exam },
       this.examInvitationRepository,
@@ -87,7 +87,7 @@ export class ExamInvitationService {
 
     // set relation between invitation and invitee entity, if provided
     if (invitee)
-      await update(
+      await _update(
         invitation.id,
         { user: invitee },
         this.examInvitationRepository,
@@ -101,7 +101,7 @@ export class ExamInvitationService {
   async findAll(key?: string, value?: unknown): Promise<ExamInvitation[]> {
     if (key && !value) throw new UnauthorizedException("Value not provided.");
 
-    return (await findAll(
+    return (await _findAll(
       this.examInvitationRepository,
       "examInvitation",
       key,
@@ -123,7 +123,7 @@ export class ExamInvitationService {
         strict: false,
       });
 
-    const invitation = (await findOne(
+    const invitation = (await _findOne(
       this.examInvitationRepository,
       "examInvitation",
       key,
@@ -157,7 +157,7 @@ export class ExamInvitationService {
     // check if invitation exists, and if user owns invitation/exam or user email is invitee email
     await this.findOne(userId, "id", invitationId);
 
-    await update(
+    await _update(
       invitationId,
       payload,
       this.examInvitationRepository,
@@ -185,7 +185,7 @@ export class ExamInvitationService {
       throw new UnauthorizedException("Exam invitation has expired.");
 
     // change invitation status to accepted
-    await update(
+    await _update(
       invitation.id,
       { accepted: true },
       this.examInvitationRepository,
@@ -215,7 +215,7 @@ export class ExamInvitationService {
       throw new UnauthorizedException("Exam invitation has expired.");
 
     // change invitation status to rejected
-    await update(
+    await _update(
       invitation.id,
       { accepted: false },
       this.examInvitationRepository,
@@ -257,7 +257,7 @@ export class ExamInvitationService {
       );
 
     // change invitation createdAt to current time and accept status to null
-    await update(
+    await _update(
       invitation.id,
       { createdAt: new Date(), accepted: null },
       this.examInvitationRepository,

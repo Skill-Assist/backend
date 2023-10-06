@@ -16,15 +16,15 @@ import { ExamInvitation } from "../../exam-invitation/entities/exam-invitation.e
 
 @Entity()
 export class Exam extends SQLBaseEntity {
-  /** columns */
+  /** properties */
   @Column()
-  title: string;
+  jobTitle: string;
 
-  @Column({ nullable: true })
-  subtitle: string;
+  @Column()
+  jobLevel: string;
 
-  @Column({ nullable: true })
-  level: string;
+  @Column()
+  description: string;
 
   @Column()
   durationInHours: number;
@@ -32,13 +32,10 @@ export class Exam extends SQLBaseEntity {
   @Column()
   submissionInHours: number;
 
-  @Column({ nullable: true })
-  dateToArchive: Date;
-
-  @Column({ default: true })
+  @Column()
   showScore: boolean;
 
-  @Column({ default: false })
+  @Column()
   isPublic: boolean;
 
   @Column({ default: "draft" })

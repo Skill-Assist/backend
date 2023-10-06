@@ -28,7 +28,7 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 import { AddQuestionDto } from "./dto/add-question.dto";
 
 /** utils */
-import { create, findOne, update } from "../utils/typeorm.utils";
+import { _create, _findOne, _update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -58,7 +58,7 @@ export class UserService {
       );
 
     // create user
-    const user = <User>await create(this.queryRunner, this.repository, {
+    const user = <User>await _create(this.queryRunner, this.repository, {
       ...createUserDto,
       ownedQuestions: [],
     });
@@ -86,7 +86,7 @@ export class UserService {
     relations?: string[],
     map?: boolean
   ): Promise<User | null> {
-    return (await findOne(
+    return (await _findOne(
       this.repository,
       "user",
       key,
@@ -169,7 +169,7 @@ export class UserService {
     }
 
     // update user
-    await update(
+    await _update(
       id,
       updateUserDto as unknown as Record<string, unknown>,
       this.repository,
@@ -180,7 +180,7 @@ export class UserService {
   }
 
   async addQuestion(id: number, payload: AddQuestionDto): Promise<void> {
-    await update(
+    await _update(
       id,
       payload as unknown as Record<string, unknown>,
       this.repository,
