@@ -122,4 +122,13 @@ export class ExamController {
   ): Promise<string> {
     return this.examService.suggestDescription(suggestDescriptionDto);
   }
+
+  @Get("suggestSections")
+  @Roles(UserRole.RECRUITER)
+  suggestSections(
+    @Req() req: PassportRequest,
+    @Query("id") id: number
+  ): Promise<any> {
+    return this.examService.suggestSections(req.user!.id, id);
+  }
 }

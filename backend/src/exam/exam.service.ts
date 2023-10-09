@@ -15,12 +15,18 @@ import { ExamInvitationService } from "../exam-invitation/exam-invitation.servic
 
 /** external dependencies */
 import { Repository } from "typeorm";
+
+import {
+  PromptTemplate,
+  FewShotPromptTemplate,
+  SemanticSimilarityExampleSelector,
+} from "langchain/prompts";
 import { LLMChain } from "langchain/chains";
 import { Document } from "langchain/document";
 import { OpenAI } from "langchain/llms/openai";
-import { PromptTemplate } from "langchain/prompts";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { CustomListOutputParser } from "langchain/output_parsers";
 import { ScoreThresholdRetriever } from "langchain/retrievers/score_threshold";
 
 /** entities */
@@ -51,7 +57,7 @@ export class ExamService {
 
   // vector store for exam description suggestions
   // in production, this should be a database
-  private vectorStore: MemoryVectorStore | undefined;
+  private examDescriptionVectorStore: MemoryVectorStore | undefined;
 
   constructor(
     @InjectRepository(Exam)
@@ -141,7 +147,13 @@ export class ExamService {
     updateExamDto: UpdateExamDto
   ): Promise<Exam> {
     // check if exam exists and is owned by user
-    await this.findOne(userId, "id", examId);
+    const exam = await this.findOne(userId, "id", examId);
+
+    // check if exam status is draft
+    if (exam.status !== "draft")
+      throw new UnauthorizedException(
+        "Exam is not in draft status. Process was aborted."
+      );
 
     // update exam
     await _update(
@@ -393,8 +405,8 @@ export class ExamService {
     suggestDescriptionDto: SuggestDescriptionDto
   ): Promise<string> {
     // instantiate vector store (in production, this should be a database)
-    if (!this.vectorStore)
-      this.vectorStore = await MemoryVectorStore.fromTexts(
+    if (!this.examDescriptionVectorStore)
+      this.examDescriptionVectorStore = await MemoryVectorStore.fromTexts(
         [
           "O teste de recrutamento para estágio em Engenharia de Software avalia habilidades técnicas, aprendizado e adaptação a novas tecnologias. Inclui questões teóricas e práticas sobre programação, desenvolvimento web e bancos de dados, além de avaliar habilidades de trabalho em equipe, resolução de problemas e comunicação. O objetivo é identificar candidatos com potencial de crescimento na empresa.",
         ],
@@ -404,9 +416,9 @@ export class ExamService {
 
     // instantiate new retriever and search for relevant documents
     const retriever = ScoreThresholdRetriever.fromVectorStore(
-      this.vectorStore,
+      this.examDescriptionVectorStore,
       {
-        minSimilarityScore: 0.8,
+        minSimilarityScore: 0.85,
         maxK: 5,
         kIncrement: 2,
       }
@@ -445,7 +457,7 @@ export class ExamService {
       });
     }
 
-    this.vectorStore.addDocuments([
+    this.examDescriptionVectorStore.addDocuments([
       new Document({
         pageContent: res.text,
         metadata: suggestDescriptionDto,
@@ -453,5 +465,65 @@ export class ExamService {
     ]);
 
     return res.text;
+  }
+
+  async suggestSections(userId: number, examId: number): Promise<any> {
+    // try to get exam by id, check if exam exists and is owned by user
+    const exam = await this.findOne(userId, "id", examId);
+
+    // 1. MySQL database: return sections from exams with similar descriptions and comparable jobTitles and jobLevels
+
+    // find all exam descriptions in database, except from current exam description
+    const jobDescriptions = await this.examRepository
+      .createQueryBuilder("exam")
+      .select("exam.description")
+      .addSelect("exam.jobTitle")
+      .addSelect("exam.jobLevel")
+      .addSelect("exam.id")
+      .where("exam.id != :examId", { examId })
+      // .distinct(true)     check if this is necessary
+      .getRawMany();
+
+    // instantiate example prompt and example selector, required for dynamic prompting
+    const examplePrompt = PromptTemplate.fromTemplate("{exam_id}");
+
+    const exampleSelector =
+      await SemanticSimilarityExampleSelector.fromExamples(
+        jobDescriptions,
+        new OpenAIEmbeddings(),
+        MemoryVectorStore,
+        { k: 5 }
+      );
+
+    const dynamicPrompt = new FewShotPromptTemplate({
+      exampleSelector,
+      examplePrompt,
+      inputVariables: ["exam_description"],
+    });
+
+    // format prompt with current exam description
+    const similarDescriptions = await dynamicPrompt.format({
+      exam_description: exam.description,
+    });
+
+    // parse output into array of most similar exam ids
+    const parser = new CustomListOutputParser({ separator: "\n\n" });
+    const parsedOutputArr = await parser.invoke(similarDescriptions);
+    const similarExamIds = parsedOutputArr.map((id) => {
+      return +id;
+    });
+
+    // starting from highest similarity, return sections from similar exams until 3 sections are found
+    const suggestedSections = [];
+    for (const id of similarExamIds) {
+      const exam = await this.findOne(userId, "id", id, ["sections"], true);
+      suggestedSections.push(...(await exam.sections));
+    }
+
+    return { ...exam, suggestedSections: suggestedSections.slice(0, 3) };
+
+    // 2. Vector Store: if not enough sections are found, suggest new sections based on vector store
+
+    // 3. LLM call: if not enough sections are found, suggest new ones altogether
   }
 }

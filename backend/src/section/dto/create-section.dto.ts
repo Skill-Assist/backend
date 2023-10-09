@@ -1,7 +1,7 @@
 import {
   Min,
   Max,
-  Length,
+  MaxLength,
   IsNumber,
   Validate,
   IsString,
@@ -12,20 +12,12 @@ import { isValid } from "date-fns";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateSectionDto {
-  @IsString({
-    message: "Name must be a string",
-  })
-  @Length(1, 100, {
-    message: "Name cannot be longer than 100 characters",
-  })
+  @IsString()
+  @MaxLength(100)
   name: string;
 
-  @IsString({
-    message: "Description must be a string",
-  })
-  @Length(15, 500, {
-    message: "Description cannot be longer than 500 characters",
-  })
+  @IsString()
+  @MaxLength(500)
   description: string;
 
   @IsNumber()

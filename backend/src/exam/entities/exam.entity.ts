@@ -23,7 +23,7 @@ export class Exam extends SQLBaseEntity {
   @Column()
   jobLevel: string;
 
-  @Column()
+  @Column("longtext")
   description: string;
 
   @Column()

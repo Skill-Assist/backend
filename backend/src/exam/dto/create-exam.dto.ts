@@ -1,16 +1,22 @@
-import { Length, IsNumber, IsString, IsBoolean, IsIn } from "class-validator";
+import {
+  IsIn,
+  IsNumber,
+  IsString,
+  IsBoolean,
+  MaxLength,
+} from "class-validator";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class CreateExamDto {
   @IsString()
-  @Length(1, 50)
+  @MaxLength(50)
   jobTitle: string;
 
   @IsIn(["Estágio", "Trainee", "Júnior", "Pleno", "Sênior", "Outro"])
   jobLevel: string;
 
   @IsString()
-  @Length(1, 400)
+  @MaxLength(400)
   description: string;
 
   @IsNumber()
