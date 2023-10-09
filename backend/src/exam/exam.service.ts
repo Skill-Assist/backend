@@ -22,7 +22,6 @@ import {
   SemanticSimilarityExampleSelector,
 } from "langchain/prompts";
 import { LLMChain } from "langchain/chains";
-import { Document } from "langchain/document";
 import { OpenAI } from "langchain/llms/openai";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { MemoryVectorStore } from "langchain/vectorstores/memory";
@@ -55,9 +54,10 @@ export class ExamService {
   private userService: UserService;
   private examInvitationService: ExamInvitationService;
 
-  // vector store for exam description suggestions
-  // in production, this should be a database
-  private examDescriptionVectorStore: MemoryVectorStore | undefined;
+  private llm: OpenAI = new OpenAI({
+    modelName: "gpt-4",
+    temperature: 0,
+  });
 
   constructor(
     @InjectRepository(Exam)
@@ -404,48 +404,76 @@ export class ExamService {
   async suggestDescription(
     suggestDescriptionDto: SuggestDescriptionDto
   ): Promise<string> {
-    // instantiate vector store (in production, this should be a database)
-    if (!this.examDescriptionVectorStore)
-      this.examDescriptionVectorStore = await MemoryVectorStore.fromTexts(
-        [
-          "O teste de recrutamento para estágio em Engenharia de Software avalia habilidades técnicas, aprendizado e adaptação a novas tecnologias. Inclui questões teóricas e práticas sobre programação, desenvolvimento web e bancos de dados, além de avaliar habilidades de trabalho em equipe, resolução de problemas e comunicação. O objetivo é identificar candidatos com potencial de crescimento na empresa.",
-        ],
-        [{ jobTitle: "Engenheiro de software", jobLevel: "Estágio" }],
-        new OpenAIEmbeddings()
-      );
+    // 1. MySQL database: return exam description of most similar exam based on similarity with jobTitle and jobLevel
 
-    // instantiate new retriever and search for relevant documents
-    const retriever = ScoreThresholdRetriever.fromVectorStore(
-      this.examDescriptionVectorStore,
-      {
-        minSimilarityScore: 0.85,
-        maxK: 5,
-        kIncrement: 2,
-      }
-    );
+    // find all exam descriptions in database
+    const exams = await this.examRepository
+      .createQueryBuilder("exam")
+      .select("exam.description")
+      .addSelect("exam.jobTitle")
+      .addSelect("exam.jobLevel")
+      .getMany();
 
-    const result = await retriever.getRelevantDocuments(
-      JSON.stringify(suggestDescriptionDto)
-    );
-
-    if (result.length) {
-      return result[0].pageContent;
-    }
-
-    // if no relevant documents were found, generate a new description and save it to the vector store before returning it
-    const llm = new OpenAI({
-      modelName: "gpt-4",
-      temperature: 0,
+    // instantiate vector store with data from these exams
+    // in production, this should adapted to use a persistent vector store and updated with new data
+    const data = exams.map((e) => {
+      return `${e.jobTitle}| ${e.jobLevel}| ${e.description}`;
     });
 
+    const store = await MemoryVectorStore.fromTexts(
+      data,
+      {},
+      new OpenAIEmbeddings()
+    );
+
+    // instantiate new retriever to search for relevant documents given some similarity score threshold
+    const retriever = ScoreThresholdRetriever.fromVectorStore(store, {
+      minSimilarityScore: 0.85,
+      maxK: 5,
+      kIncrement: 2,
+    });
+
+    // search for relevant documents based on jobTitle and jobLevel
+    const result = await retriever.getRelevantDocuments(
+      `${suggestDescriptionDto.jobTitle} | ${suggestDescriptionDto.jobLevel}`
+    );
+
+    // if a relevant document was found, adapt it to current context, if necessary
+    if (result.length) {
+      const parser = new CustomListOutputParser({ length: 3, separator: "|" });
+      const parsedOutput = await parser.invoke(result[0].pageContent);
+
+      if (
+        parsedOutput[0] === suggestDescriptionDto.jobTitle &&
+        parsedOutput[1] === suggestDescriptionDto.jobLevel
+      ) {
+        return parsedOutput[2];
+      }
+
+      const prompt = PromptTemplate.fromTemplate(
+        "Adapte a descrição a seguir para um exame de {jobTitle} no nível de {jobLevel}? {description}"
+      );
+
+      const chain = new LLMChain({ llm: this.llm, prompt });
+      let res = await chain.call({
+        ...suggestDescriptionDto,
+        description: parsedOutput[2],
+      });
+
+      return res.text;
+    }
+
+    // 2. LLM call: if no proper description is found based on vectors, suggest new one altogether
+
+    // query LLM for new description based on jobTitle and jobLevel
     let prompt = PromptTemplate.fromTemplate(
       "Elabore uma descrição resumida para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}?"
     );
 
-    const chain = new LLMChain({ llm, prompt });
-
+    const chain = new LLMChain({ llm: this.llm, prompt });
     let res = await chain.call(suggestDescriptionDto);
 
+    // if description is too long, prompt LLM to summarize it
     while (res.text.length > 400) {
       chain.prompt = PromptTemplate.fromTemplate(
         "Resuma a seguinte descrição para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}? {description}"
@@ -457,13 +485,7 @@ export class ExamService {
       });
     }
 
-    this.examDescriptionVectorStore.addDocuments([
-      new Document({
-        pageContent: res.text,
-        metadata: suggestDescriptionDto,
-      }),
-    ]);
-
+    // return new description
     return res.text;
   }
 
