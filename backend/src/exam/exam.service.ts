@@ -206,8 +206,8 @@ export class ExamService {
     // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 
-    // validate status. allowed: draft, published, live, archived
-    if (!["draft", "published", "live", "archived"].includes(status))
+    // validate status. allowed: draft, published, archived
+    if (!["draft", "published", "archived"].includes(status))
       throw new UnauthorizedException("Invalid status. Process was aborted.");
 
     // if status is published, check if exam is draft
@@ -216,23 +216,14 @@ export class ExamService {
         "Exam is not in draft status. Process was aborted."
       );
 
-    // if status is live, check if exam is draft or published
-    if (
-      status === "live" &&
-      !(exam.status === "draft" || exam.status === "published")
-    )
-      throw new UnauthorizedException(
-        "Exam is not in draft or published status. Process was aborted."
-      );
-
-    // if status is draft or archived, throw not implemented exception
-    if (status === "draft" || status === "archived")
+    // if status is archived, throw not implemented exception
+    if (status === "archived")
       throw new NotImplementedException(
-        "Switching exam status to draft or archived is not implemented yet."
+        "Switching exam status to archived is not implemented yet."
       );
 
-    // if status is published or live check if:
-    if (status === "published" || status === "live") {
+    // if status is published check if:
+    if (status === "published") {
       // exam has sections
       const sections = await exam!.sections;
       if (sections.length === 0)
