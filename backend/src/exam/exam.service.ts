@@ -18,17 +18,10 @@ import { ExamInvitationService } from "../exam-invitation/exam-invitation.servic
 import { Repository } from "typeorm";
 import { Pinecone } from "@pinecone-database/pinecone";
 
-import {
-  PromptTemplate,
-  FewShotPromptTemplate,
-  SemanticSimilarityExampleSelector,
-} from "langchain/prompts";
 import { LLMChain } from "langchain/chains";
 import { OpenAI } from "langchain/llms/openai";
+import { PromptTemplate } from "langchain/prompts";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
-import { MemoryVectorStore } from "langchain/vectorstores/memory";
-import { CustomListOutputParser } from "langchain/output_parsers";
-import { ScoreThresholdRetriever } from "langchain/retrievers/score_threshold";
 
 /** entities */
 import { Exam } from "./entities/exam.entity";
@@ -53,12 +46,20 @@ import {
 
 @Injectable()
 export class ExamService {
+  private PINECONE_EXAM_INDEX_NAME: string = "vector-store";
+  private PINECONE_EXAM_INDEX_DIMENSION: number = 2054;
+
   private userService: UserService;
   private examInvitationService: ExamInvitationService;
 
   private llm: OpenAI = new OpenAI({
     modelName: "gpt-4",
     temperature: 0,
+  });
+
+  private vectorStore: Pinecone = new Pinecone({
+    apiKey: this.configService.get<string>("PINECONE_API_KEY")!,
+    environment: this.configService.get<string>("PINECONE_ENVIRONMENT")!,
   });
 
   constructor(
@@ -85,7 +86,7 @@ export class ExamService {
     // add exam's metadata to vector store
     await this.manageVectorStore(
       "upsert",
-      "exam-description",
+      this.PINECONE_EXAM_INDEX_NAME,
       exam.id,
       exam.jobTitle,
       exam.jobLevel,
@@ -180,7 +181,7 @@ export class ExamService {
     const updatedExam = await this.findOne(userId, "id", examId);
     this.manageVectorStore(
       "upsert",
-      "exam-description",
+      this.PINECONE_EXAM_INDEX_NAME,
       updatedExam.id,
       updatedExam.jobTitle,
       updatedExam.jobLevel,
@@ -204,7 +205,7 @@ export class ExamService {
     await _delete(examId, this.examRepository, "exam");
 
     // delete exam's metadata from vector store
-    this.manageVectorStore("delete", "exam-description", examId);
+    this.manageVectorStore("delete", this.PINECONE_EXAM_INDEX_NAME, examId);
   }
 
   /** custom methods */
@@ -422,70 +423,76 @@ export class ExamService {
   async suggestDescription(
     suggestDescriptionDto: SuggestDescriptionDto
   ): Promise<string> {
-    // 1. return most similar description based on jobTitle and jobLevel
-
-    // find all exam descriptions in database
-    const exams = await this.examRepository
+    // 1. MySQL database: return exam description based on jobTitle and jobLevel
+    const exam = await this.examRepository
       .createQueryBuilder("exam")
       .select("exam.description")
-      .addSelect("exam.jobTitle")
-      .addSelect("exam.jobLevel")
-      .getMany();
+      .where("exam.jobTitle = :jobTitle", {
+        jobTitle: suggestDescriptionDto.jobTitle,
+      })
+      .andWhere("exam.jobLevel = :jobLevel", {
+        jobLevel: suggestDescriptionDto.jobLevel,
+      })
+      .getOne();
 
-    // instantiate vector store with data from these exams
-    // in production, this should adapted to use a persistent vector store and updated with new data
-    const data = exams.map((e) => {
-      return `${e.jobTitle}| ${e.jobLevel}| ${e.description}`;
-    });
+    if (exam) return exam.description;
 
-    const store = await MemoryVectorStore.fromTexts(
-      data,
-      {},
-      new OpenAIEmbeddings()
+    // 2. Vector Store: if no description is found, suggest new one based on vector store
+    const pineconeIndex = this.vectorStore.index(this.PINECONE_EXAM_INDEX_NAME);
+
+    const embeddings = new OpenAIEmbeddings();
+    const embeddedQuery = await embeddings.embedQuery(
+      `${suggestDescriptionDto.jobTitle}|${suggestDescriptionDto.jobLevel}`
     );
 
-    // instantiate new retriever to search for relevant documents given some similarity score threshold
-    const retriever = ScoreThresholdRetriever.fromVectorStore(store, {
-      minSimilarityScore: 0.85,
-      maxK: 5,
-      kIncrement: 2,
-    });
-
-    // search for relevant documents based on jobTitle and jobLevel
-    const result = await retriever.getRelevantDocuments(
-      `${suggestDescriptionDto.jobTitle} | ${suggestDescriptionDto.jobLevel}`
-    );
-
-    // if a relevant document was found, adapt it to current context, if necessary
-    if (result.length) {
-      const parser = new CustomListOutputParser({ length: 3, separator: "|" });
-      const parsedOutput = await parser.invoke(result[0].pageContent);
-
-      if (
-        parsedOutput[0] === suggestDescriptionDto.jobTitle &&
-        parsedOutput[1] === suggestDescriptionDto.jobLevel
-      ) {
-        return parsedOutput[2];
-      }
-
-      const prompt = PromptTemplate.fromTemplate(
-        "Adapte a descrição a seguir para um exame de {jobTitle} no nível de {jobLevel}? {description}"
+    if (embeddedQuery.length > this.PINECONE_EXAM_INDEX_DIMENSION)
+      throw new Error(
+        `Query dimension (${embeddedQuery.length}) is larger than index dimension (${this.PINECONE_EXAM_INDEX_DIMENSION}).`
       );
 
-      const chain = new LLMChain({ llm: this.llm, prompt });
-      let res = await chain.call({
-        ...suggestDescriptionDto,
-        description: parsedOutput[2],
-      });
+    const zerosArray: number[] = [];
+    for (
+      let i = 0;
+      i < this.PINECONE_EXAM_INDEX_DIMENSION - embeddedQuery.length;
+      i++
+    ) {
+      zerosArray.push(0);
+    }
+    embeddedQuery.push(...zerosArray);
 
-      return res.text;
+    const queryResponse = await pineconeIndex.query({
+      topK: 1,
+      vector: embeddedQuery,
+      filter: {
+        module: { $eq: "exam-description" },
+      },
+      includeMetadata: true,
+    });
+
+    if (queryResponse.matches) {
+      const match = queryResponse.matches[0];
+
+      if (match.score && match.score >= 0.85) {
+        // prettier-ignore
+        const exam = (await _findOne(this.examRepository, "exam", "id", +match.id)) as Exam;
+
+        const prompt = PromptTemplate.fromTemplate(
+          "Adapte a descrição a seguir para um teste de recrutamento cujo título é {jobTitle} no nível de {jobLevel}? {description}. Leve em consideração aspectos socias, como gênero, raça, etnia, orientação sexual, etc., se estiverem implícitos na descrição do título da vaga. A descrição deve ser similar ao seguinte exemplo: O exame de recrutamento para {jobTitle} {jobLevel} ..."
+        );
+
+        const chain = new LLMChain({ llm: this.llm, prompt });
+        let res = await chain.call({
+          ...suggestDescriptionDto,
+          description: exam.description,
+        });
+
+        return res.text;
+      }
     }
 
-    // 2. LLM call: if no proper description is found based on vectors, suggest new one altogether
-
-    // query LLM for new description based on jobTitle and jobLevel
+    // 3. LLM call: if no proper description is found based on vectors, suggest new one altogether
     let prompt = PromptTemplate.fromTemplate(
-      "Elabore uma descrição resumida para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}?"
+      "Elabore uma descrição resumida para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}. Leve em consideração aspectos socias, como gênero, raça, etnia, orientação sexual, etc."
     );
 
     const chain = new LLMChain({ llm: this.llm, prompt });
@@ -503,68 +510,7 @@ export class ExamService {
       });
     }
 
-    // return new description
     return res.text;
-  }
-
-  async suggestSections(userId: number, examId: number): Promise<any> {
-    // try to get exam by id, check if exam exists and is owned by user
-    const exam = await this.findOne(userId, "id", examId);
-
-    // 1. MySQL database: return sections from exams with similar descriptions and comparable jobTitles and jobLevels
-
-    // find all exam descriptions in database, except from current exam description
-    const jobDescriptions = await this.examRepository
-      .createQueryBuilder("exam")
-      .select("exam.description")
-      .addSelect("exam.jobTitle")
-      .addSelect("exam.jobLevel")
-      .addSelect("exam.id")
-      .where("exam.id != :examId", { examId })
-      // .distinct(true)     check if this is necessary
-      .getRawMany();
-
-    // instantiate example prompt and example selector, required for dynamic prompting
-    const examplePrompt = PromptTemplate.fromTemplate("{exam_id}");
-
-    const exampleSelector =
-      await SemanticSimilarityExampleSelector.fromExamples(
-        jobDescriptions,
-        new OpenAIEmbeddings(),
-        MemoryVectorStore,
-        { k: 5 }
-      );
-
-    const dynamicPrompt = new FewShotPromptTemplate({
-      exampleSelector,
-      examplePrompt,
-      inputVariables: ["exam_description"],
-    });
-
-    // format prompt with current exam description
-    const similarDescriptions = await dynamicPrompt.format({
-      exam_description: exam.description,
-    });
-
-    // parse output into array of most similar exam ids
-    const parser = new CustomListOutputParser({ separator: "\n\n" });
-    const parsedOutputArr = await parser.invoke(similarDescriptions);
-    const similarExamIds = parsedOutputArr.map((id) => {
-      return +id;
-    });
-
-    // starting from highest similarity, return sections from similar exams until 3 sections are found
-    const suggestedSections = [];
-    for (const id of similarExamIds) {
-      const exam = await this.findOne(userId, "id", id, ["sections"], true);
-      suggestedSections.push(...(await exam.sections));
-    }
-
-    return { ...exam, suggestedSections: suggestedSections.slice(0, 3) };
-
-    // 2. Vector Store: if not enough sections are found, suggest new sections based on vector store
-
-    // 3. LLM call: if not enough sections are found, suggest new ones altogether
   }
 
   async manageVectorStore(
@@ -575,29 +521,23 @@ export class ExamService {
     jobLevel?: string,
     description?: string
   ): Promise<void> {
-    const pinecone = new Pinecone({
-      apiKey: this.configService.get<string>("PINECONE_API_KEY")!,
-      environment: this.configService.get<string>("PINECONE_ENVIRONMENT")!,
-    });
-
-    const pineconeIndex = pinecone.index(pineconeIdx);
-    const INDEX_DIMENSION = 2054;
+    const pineconeIndex = this.vectorStore.index(pineconeIdx);
 
     if (mode === "upsert") {
       const embeddings = new OpenAIEmbeddings();
       const embeddedDescription = await embeddings.embedDocuments([
-        description!,
+        `${jobTitle}|${jobLevel}|${description}`,
       ]);
 
-      if (embeddedDescription[0].length > INDEX_DIMENSION)
+      if (embeddedDescription[0].length > this.PINECONE_EXAM_INDEX_DIMENSION)
         throw new Error(
-          `Document dimension (${embeddedDescription[0].length}) is larger than index dimension (${INDEX_DIMENSION}).`
+          `Document dimension (${embeddedDescription[0].length}) is larger than index dimension (${this.PINECONE_EXAM_INDEX_DIMENSION}).`
         );
 
       const zerosArray: number[] = [];
       for (
         let i = 0;
-        i < INDEX_DIMENSION - embeddedDescription[0].length;
+        i < this.PINECONE_EXAM_INDEX_DIMENSION - embeddedDescription[0].length;
         i++
       ) {
         zerosArray.push(0);
@@ -608,7 +548,9 @@ export class ExamService {
         {
           id: String(examId),
           values: embeddedDescription[0],
-          metadata: { jobTitle: jobTitle!, jobLevel: jobLevel! },
+          metadata: {
+            module: "exam-description",
+          },
         },
       ]);
     }

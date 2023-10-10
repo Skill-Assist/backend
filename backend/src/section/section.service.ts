@@ -4,6 +4,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
@@ -13,6 +14,8 @@ import { QueryRunnerService } from "../query-runner/query-runner.service";
 /** external dependencies */
 import { ObjectId } from "mongodb";
 import { Repository } from "typeorm";
+import { Pinecone } from "@pinecone-database/pinecone";
+import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 
 /** entities */
 import { Section } from "./entities/section.entity";
@@ -28,10 +31,19 @@ import { _create, _findOne, _update } from "../utils/typeorm.utils";
 
 @Injectable()
 export class SectionService {
+  private PINECONE_SECTION_INDEX_NAME: string = "vector-store";
+  private PINECONE_SECTION_INDEX_DIMENSION: number = 2054;
+
+  private vectorStore: Pinecone = new Pinecone({
+    apiKey: this.configService.get<string>("PINECONE_API_KEY")!,
+    environment: this.configService.get<string>("PINECONE_ENVIRONMENT")!,
+  });
+
   constructor(
     @InjectRepository(Section)
     private readonly sectionRepository: Repository<Section>,
     private readonly examService: ExamService,
+    private readonly configService: ConfigService,
     private readonly queryRunner: QueryRunnerService
   ) {}
 
@@ -63,16 +75,25 @@ export class SectionService {
       );
 
     // create section
-    const section = await _create(this.queryRunner, this.sectionRepository, {
+    const section = (await _create(this.queryRunner, this.sectionRepository, {
       ...createSectionDto,
       questionId: [],
-    });
+    })) as Section;
+
+    // add exam's metadata to vector store
+    await this.manageVectorStore(
+      "upsert",
+      this.PINECONE_SECTION_INDEX_NAME,
+      section.id,
+      section.name,
+      section.description
+    );
 
     // set relation between section and exam
     await _update(section.id, { exam }, this.sectionRepository, "section");
 
     // return updated section
-    return <Section>await this.findOne(userId, "id", section.id);
+    return await this.findOne(userId, "id", section.id);
   }
 
   async findOne(
@@ -144,7 +165,18 @@ export class SectionService {
       this.sectionRepository,
       "section"
     );
-    return <Section>await this.findOne(userId, "id", sectionId);
+
+    // update section's metadata in vector store
+    const updatedSection = await this.findOne(userId, "id", sectionId);
+    this.manageVectorStore(
+      "upsert",
+      this.PINECONE_SECTION_INDEX_NAME,
+      updatedSection.id,
+      updatedSection.name,
+      updatedSection.description
+    );
+
+    return updatedSection;
   }
 
   /** custom methods */
@@ -155,5 +187,50 @@ export class SectionService {
       this.sectionRepository,
       "section"
     );
+  }
+
+  async manageVectorStore(
+    mode: string = "upsert" || "delete",
+    pineconeIdx: string,
+    examId: number,
+    name?: string,
+    description?: string
+  ): Promise<void> {
+    const pineconeIndex = this.vectorStore.index(pineconeIdx);
+
+    if (mode === "upsert") {
+      const embeddings = new OpenAIEmbeddings();
+      const embeddedDescription = await embeddings.embedDocuments([
+        `${name}|${description}`,
+      ]);
+
+      if (embeddedDescription[0].length > this.PINECONE_SECTION_INDEX_DIMENSION)
+        throw new Error(
+          `Document dimension (${embeddedDescription[0].length}) is larger than index dimension (${this.PINECONE_SECTION_INDEX_DIMENSION}).`
+        );
+
+      const zerosArray: number[] = [];
+      for (
+        let i = 0;
+        i <
+        this.PINECONE_SECTION_INDEX_DIMENSION - embeddedDescription[0].length;
+        i++
+      ) {
+        zerosArray.push(0);
+      }
+      embeddedDescription[0].push(...zerosArray);
+
+      await pineconeIndex.upsert([
+        {
+          id: String(examId),
+          values: embeddedDescription[0],
+          metadata: {
+            module: "section-description",
+          },
+        },
+      ]);
+    }
+
+    if (mode === "delete") pineconeIndex.deleteOne(String(examId));
   }
 }
