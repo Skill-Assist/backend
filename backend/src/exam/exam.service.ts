@@ -6,6 +6,7 @@ import {
   NotImplementedException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
+import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
@@ -15,6 +16,7 @@ import { ExamInvitationService } from "../exam-invitation/exam-invitation.servic
 
 /** external dependencies */
 import { Repository } from "typeorm";
+import { Pinecone } from "@pinecone-database/pinecone";
 
 import {
   PromptTemplate,
@@ -63,6 +65,7 @@ export class ExamService {
     @InjectRepository(Exam)
     private readonly examRepository: Repository<Exam>,
     private readonly moduleRef: ModuleRef,
+    private readonly configService: ConfigService,
     private readonly queryRunner: QueryRunnerService
   ) {}
 
@@ -73,18 +76,28 @@ export class ExamService {
       this.userService ?? this.moduleRef.get(UserService, { strict: false });
 
     // create exam
-    const exam = await _create(
+    const exam = (await _create(
       this.queryRunner,
       this.examRepository,
       createExamDto
+    )) as Exam;
+
+    // add exam's metadata to vector store
+    await this.manageVectorStore(
+      "upsert",
+      "exam-description",
+      exam.id,
+      exam.jobTitle,
+      exam.jobLevel,
+      exam.description
     );
 
     // set relation between exam and user
-    const user = <User>await this.userService.findOne("id", userId);
+    const user = await this.userService.findOne("id", userId);
     await _update(exam.id, { createdBy: user }, this.examRepository, "exam");
 
     // return updated exam
-    return <Exam>await this.findOne(userId, "id", exam.id);
+    return await this.findOne(userId, "id", exam.id);
   }
 
   async findAll(
@@ -163,7 +176,18 @@ export class ExamService {
       "exam"
     );
 
-    return <Exam>await this.findOne(userId, "id", examId);
+    // update exam's metadata in vector store
+    const updatedExam = await this.findOne(userId, "id", examId);
+    this.manageVectorStore(
+      "upsert",
+      "exam-description",
+      updatedExam.id,
+      updatedExam.jobTitle,
+      updatedExam.jobLevel,
+      updatedExam.description
+    );
+
+    return updatedExam;
   }
 
   async delete(userId: number, examId: number): Promise<void> {
@@ -178,6 +202,9 @@ export class ExamService {
 
     // delete exam
     await _delete(examId, this.examRepository, "exam");
+
+    // delete exam's metadata from vector store
+    this.manageVectorStore("delete", "exam-description", examId);
   }
 
   /** custom methods */
@@ -279,10 +306,10 @@ export class ExamService {
     // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 
-    // check if exam is published or live
-    if (!["published", "live"].includes(exam!.status))
+    // check if exam is published
+    if (exam.status !== "published")
       throw new UnauthorizedException(
-        "Exam is not published or live. Process was aborted."
+        "Exam is not published. Process was aborted."
       );
 
     // check if email addresses are already in exam
@@ -312,7 +339,7 @@ export class ExamService {
           email,
           expirationInHours: inviteDto.expirationInHours,
         },
-        exam!,
+        exam,
         user
       );
     }
@@ -395,7 +422,7 @@ export class ExamService {
   async suggestDescription(
     suggestDescriptionDto: SuggestDescriptionDto
   ): Promise<string> {
-    // 1. MySQL database: return exam description of most similar exam based on similarity with jobTitle and jobLevel
+    // 1. return most similar description based on jobTitle and jobLevel
 
     // find all exam descriptions in database
     const exams = await this.examRepository
@@ -538,5 +565,54 @@ export class ExamService {
     // 2. Vector Store: if not enough sections are found, suggest new sections based on vector store
 
     // 3. LLM call: if not enough sections are found, suggest new ones altogether
+  }
+
+  async manageVectorStore(
+    mode: string = "upsert" || "delete",
+    pineconeIdx: string,
+    examId: number,
+    jobTitle?: string,
+    jobLevel?: string,
+    description?: string
+  ): Promise<void> {
+    const pinecone = new Pinecone({
+      apiKey: this.configService.get<string>("PINECONE_API_KEY")!,
+      environment: this.configService.get<string>("PINECONE_ENVIRONMENT")!,
+    });
+
+    const pineconeIndex = pinecone.index(pineconeIdx);
+    const INDEX_DIMENSION = 2054;
+
+    if (mode === "upsert") {
+      const embeddings = new OpenAIEmbeddings();
+      const embeddedDescription = await embeddings.embedDocuments([
+        description!,
+      ]);
+
+      if (embeddedDescription[0].length > INDEX_DIMENSION)
+        throw new Error(
+          `Document dimension (${embeddedDescription[0].length}) is larger than index dimension (${INDEX_DIMENSION}).`
+        );
+
+      const zerosArray: number[] = [];
+      for (
+        let i = 0;
+        i < INDEX_DIMENSION - embeddedDescription[0].length;
+        i++
+      ) {
+        zerosArray.push(0);
+      }
+      embeddedDescription[0].push(...zerosArray);
+
+      await pineconeIndex.upsert([
+        {
+          id: String(examId),
+          values: embeddedDescription[0],
+          metadata: { jobTitle: jobTitle!, jobLevel: jobLevel! },
+        },
+      ]);
+    }
+
+    if (mode === "delete") pineconeIndex.deleteOne(String(examId));
   }
 }
