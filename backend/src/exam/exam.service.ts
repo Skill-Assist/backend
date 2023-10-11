@@ -46,8 +46,9 @@ import {
 
 @Injectable()
 export class ExamService {
-  private PINECONE_EXAM_INDEX_NAME: string = "vector-store";
-  private PINECONE_EXAM_INDEX_DIMENSION: number = 2054;
+  public PINECONE_EXAM_INDEX_NAME: string = "vector-store";
+  public PINECONE_EXAM_INDEX_DIMENSION: number = 2054;
+  public PINECONE_EXAM_INDEX_MODULE: string = "exam-description";
 
   private userService: UserService;
   private examInvitationService: ExamInvitationService;
@@ -420,10 +421,62 @@ export class ExamService {
     return response;
   }
 
+  async findSimilarSections(
+    userId: number,
+    examId: number,
+    mode: "general" | "strict" = "general"
+  ) {
+    const { jobTitle, jobLevel } = await this.findOne(userId, "id", examId);
+
+    let similarExams: any[] = [];
+    if (mode === "general") {
+      similarExams = await this.examRepository
+        .createQueryBuilder("exam")
+        .where("exam.jobTitle = :jobTitle", { jobTitle })
+        .andWhere("exam.jobLevel = :jobLevel", { jobLevel })
+        .andWhere("exam.id != :examId", { examId })
+        .getMany();
+
+      if (!similarExams.length) {
+        return similarExams;
+      }
+    }
+
+    if (mode === "strict") {
+      similarExams = await this.examRepository
+        .createQueryBuilder("exam")
+        .where("exam.id = :examId", { examId })
+        .getMany();
+    }
+
+    const similarSections: any[] = [];
+    for (let i = 0; i < similarExams.length; i++) {
+      const exam = similarExams[i];
+
+      const sections = await this.examRepository
+        .createQueryBuilder("exam")
+        .relation(Exam, "sections")
+        .of(exam)
+        .loadMany();
+
+      const data = sections.map((section) => {
+        return {
+          id: section.id,
+          name: section.name,
+          description: section.description,
+        };
+      });
+
+      similarSections.push(...data);
+    }
+
+    return similarSections;
+  }
+
   async suggestDescription(
     suggestDescriptionDto: SuggestDescriptionDto
   ): Promise<string> {
-    // 1. MySQL database: return exam description based on jobTitle and jobLevel
+    // 1. MySQL database: return description based on jobTitle and jobLevel
     const exam = await this.examRepository
       .createQueryBuilder("exam")
       .select("exam.description")
@@ -437,7 +490,7 @@ export class ExamService {
 
     if (exam) return exam.description;
 
-    // 2. Vector Store: if no description is found, suggest new one based on vector store
+    // 2. Pinecone: if no description, suggest based on vector similarity
     const pineconeIndex = this.vectorStore.index(this.PINECONE_EXAM_INDEX_NAME);
 
     const embeddings = new OpenAIEmbeddings();
@@ -464,7 +517,7 @@ export class ExamService {
       topK: 1,
       vector: embeddedQuery,
       filter: {
-        module: { $eq: "exam-description" },
+        module: { $eq: this.PINECONE_EXAM_INDEX_MODULE },
       },
       includeMetadata: true,
     });
@@ -490,7 +543,7 @@ export class ExamService {
       }
     }
 
-    // 3. LLM call: if no proper description is found based on vectors, suggest new one altogether
+    // 3. LLM call: if no description, suggest based on LLM
     let prompt = PromptTemplate.fromTemplate(
       "Elabore uma descrição resumida para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}. Leve em consideração aspectos socias, como gênero, raça, etnia, orientação sexual, etc."
     );
@@ -549,7 +602,7 @@ export class ExamService {
           id: String(examId),
           values: embeddedDescription[0],
           metadata: {
-            module: "exam-description",
+            module: this.PINECONE_EXAM_INDEX_MODULE,
           },
         },
       ]);

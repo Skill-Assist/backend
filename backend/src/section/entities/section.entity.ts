@@ -11,7 +11,7 @@ export class Section extends SQLBaseEntity {
   @Column()
   name: string;
 
-  @Column()
+  @Column("longtext")
   description: string;
 
   @Column({ type: "decimal", precision: 4, scale: 2 })

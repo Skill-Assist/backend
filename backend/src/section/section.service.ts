@@ -15,7 +15,12 @@ import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { ObjectId } from "mongodb";
 import { Repository } from "typeorm";
 import { Pinecone } from "@pinecone-database/pinecone";
+
+import { LLMChain } from "langchain/chains";
+import { OpenAI } from "langchain/llms/openai";
+import { PromptTemplate } from "langchain/prompts";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
+import { StructuredOutputParser } from "langchain/output_parsers";
 
 /** entities */
 import { Section } from "./entities/section.entity";
@@ -33,6 +38,11 @@ import { _create, _findOne, _update } from "../utils/typeorm.utils";
 export class SectionService {
   private PINECONE_SECTION_INDEX_NAME: string = "vector-store";
   private PINECONE_SECTION_INDEX_DIMENSION: number = 2054;
+
+  private llm: OpenAI = new OpenAI({
+    modelName: "gpt-4",
+    temperature: 0,
+  });
 
   private vectorStore: Pinecone = new Pinecone({
     apiKey: this.configService.get<string>("PINECONE_API_KEY")!,
@@ -232,5 +242,110 @@ export class SectionService {
     }
 
     if (mode === "delete") pineconeIndex.deleteOne(String(examId));
+  }
+
+  async suggestDescription(userId: number, examId: number) {
+    const suggestedSectionsArr: any[] = [];
+
+    // 1. MySQL database: return section suggestions based on job title and job level
+    const sectionsFromEquivalentExams =
+      await this.examService.findSimilarSections(userId, examId);
+
+    suggestedSectionsArr.push(...sectionsFromEquivalentExams);
+
+    if (suggestedSectionsArr.length > 2) return suggestedSectionsArr;
+
+    // 2. Pinecone: if not enough similar sections, suggest based on vector similarity
+    const exam = await this.examService.findOne(userId, "id", examId);
+
+    const pineconeIndex = this.vectorStore.index(
+      this.examService.PINECONE_EXAM_INDEX_NAME
+    );
+
+    const embeddings = new OpenAIEmbeddings();
+    const embeddedQuery = await embeddings.embedQuery(
+      `${exam.jobTitle}|${exam.jobLevel}|${exam.description}`
+    );
+
+    if (embeddedQuery.length > this.examService.PINECONE_EXAM_INDEX_DIMENSION)
+      throw new Error(
+        `Query dimension (${embeddedQuery.length}) is larger than index dimension (${this.examService.PINECONE_EXAM_INDEX_DIMENSION}).`
+      );
+
+    const zerosArray: number[] = [];
+    for (
+      let i = 0;
+      i < this.examService.PINECONE_EXAM_INDEX_DIMENSION - embeddedQuery.length;
+      i++
+    ) {
+      zerosArray.push(0);
+    }
+    embeddedQuery.push(...zerosArray);
+
+    const queryResponse = await pineconeIndex.query({
+      topK: 4,
+      vector: embeddedQuery,
+      filter: {
+        module: { $eq: this.examService.PINECONE_EXAM_INDEX_MODULE },
+      },
+    });
+
+    if (queryResponse.matches) {
+      const matches = queryResponse.matches.map((match) => {
+        return { id: match.id, score: match.score };
+      });
+
+      for (let i = 0; i < matches.length; i++) {
+        if (
+          +matches[i].id !== examId &&
+          matches[i].score &&
+          +matches[i].score! >= 0.95
+        ) {
+          const suggestedSections = await this.examService.findSimilarSections(
+            userId,
+            +matches[i].id,
+            "strict"
+          );
+
+          suggestedSectionsArr.push(...suggestedSections);
+        }
+
+        if (suggestedSectionsArr.length > 2) return suggestedSectionsArr;
+      }
+    }
+
+    // 3. LLM call: if not enough similar sections, suggest based on LLM
+    const basePrompt =
+      "Sugira uma seção para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}. A seção deve ser um objeto JSON com as propriedades name e description. A seção sugerida deve fazer sentido para a vaga, por exemplo, um engenheiro de software deve ter uma seção de programação, um contador deve ter uma seção de contabilidade, e assim por diante.";
+
+    const parser = StructuredOutputParser.fromNamesAndDescriptions({
+      name: "nome da seção do teste de recrutamento",
+      description: "descrição da seção do teste de recrutamento",
+    });
+
+    while (true) {
+      const currentSections = suggestedSectionsArr
+        .map((section) => {
+          return section.name;
+        })
+        .join(", ");
+
+      const prompt = PromptTemplate.fromTemplate(
+        currentSections
+          ? `${basePrompt} A seção sugerida não pode ser nenhuma das seguintes: ${currentSections}.`
+          : basePrompt
+      );
+
+      const chain = new LLMChain({ llm: this.llm, prompt });
+
+      let res = await chain.call({
+        jobTitle: exam.jobTitle,
+        jobLevel: exam.jobLevel,
+      });
+
+      suggestedSectionsArr.push(await parser.invoke(res.text));
+
+      if (suggestedSectionsArr.length > 2) return suggestedSectionsArr;
+    }
   }
 }

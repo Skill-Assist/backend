@@ -71,4 +71,13 @@ export class SectionController {
   ): Promise<Section> {
     return this.sectionService.update(req.user!.id, id, updateSectionDto);
   }
+
+  @Get("suggestDescription")
+  @Roles(UserRole.RECRUITER)
+  suggestDescription(
+    @Req() req: PassportRequest,
+    @Query("examId") examId: number
+  ) {
+    return this.sectionService.suggestDescription(req.user!.id, examId);
+  }
 }
