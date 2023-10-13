@@ -5,6 +5,8 @@ import {
   JoinTable,
   ManyToOne,
   ManyToMany,
+  BeforeInsert,
+  BeforeUpdate,
 } from "typeorm";
 
 import { User } from "../../user/entities/user.entity";
@@ -57,6 +59,13 @@ export class Exam extends SQLBaseEntity {
 
   @OneToMany(() => AnswerSheet, (answerSheet) => answerSheet.exam)
   answerSheets: Promise<AnswerSheet[]>;
+
+  /** hooks */
+  @BeforeInsert()
+  @BeforeUpdate()
+  async castToLowerCase() {
+    this.jobTitle = this.jobTitle.toLowerCase();
+  }
 
   /** constructor */
   constructor(partial: Partial<Exam>) {

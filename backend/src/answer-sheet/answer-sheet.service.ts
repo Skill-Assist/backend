@@ -193,11 +193,11 @@ export class AnswerSheetService {
         "You have already started this answer sheet."
       );
 
-    // check is exam status is live
+    // check is exam status is published
     const exam = await answerSheet.exam;
-    if (exam.status !== "live")
+    if (exam.status !== "published")
       throw new UnauthorizedException(
-        "You can't start this exam because it is not live."
+        "You can't start this exam because it is not published."
       );
 
     // start answer sheet

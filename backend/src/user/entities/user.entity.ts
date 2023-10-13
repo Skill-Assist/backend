@@ -79,7 +79,7 @@ export class User extends SQLBaseEntity {
   @BeforeInsert()
   async insertionHook() {
     // set nickname
-    if (this.name && !this.nickname) this.nickname = this.name.split(" ")[0];
+    if (this.name && !this.nickname) this.nickname = "Recrutador";
 
     // check password match and encrypt password
     await passwordMatch.call(this);

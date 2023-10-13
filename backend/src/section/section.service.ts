@@ -16,11 +16,11 @@ import { ObjectId } from "mongodb";
 import { Repository } from "typeorm";
 import { Pinecone } from "@pinecone-database/pinecone";
 
-import { LLMChain } from "langchain/chains";
-import { OpenAI } from "langchain/llms/openai";
 import { PromptTemplate } from "langchain/prompts";
+import { ChatOpenAI } from "langchain/chat_models/openai";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
-import { StructuredOutputParser } from "langchain/output_parsers";
+import { RunnableSequence } from "langchain/schema/runnable";
+// import { StructuredOutputParser } from "langchain/output_parsers";
 
 /** entities */
 import { Section } from "./entities/section.entity";
@@ -39,7 +39,7 @@ export class SectionService {
   private PINECONE_SECTION_INDEX_NAME: string = "vector-store";
   private PINECONE_SECTION_INDEX_DIMENSION: number = 2054;
 
-  private llm: OpenAI = new OpenAI({
+  private llm: ChatOpenAI = new ChatOpenAI({
     modelName: "gpt-4",
     temperature: 0,
   });
@@ -316,12 +316,33 @@ export class SectionService {
 
     // 3. LLM call: if not enough similar sections, suggest based on LLM
     const basePrompt =
-      "Sugira uma seção para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}. A seção deve ser um objeto JSON com as propriedades name e description. A seção sugerida deve fazer sentido para a vaga, por exemplo, um engenheiro de software deve ter uma seção de programação, um contador deve ter uma seção de contabilidade, e assim por diante.";
+      "Sugira uma seção para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}. A seção deve ser um objeto JSON com as propriedades name e description. A seção sugerida deve conter uma descrição detalhada do conteúdo a ser testado pelo candidato e fazer sentido para a vaga, por exemplo, um engenheiro de software deve ter uma seção de programação, um contador deve ter uma seção de contabilidade, e assim por diante.";
 
-    const parser = StructuredOutputParser.fromNamesAndDescriptions({
-      name: "nome da seção do teste de recrutamento",
-      description: "descrição da seção do teste de recrutamento",
-    });
+    // const outputParser = StructuredOutputParser.fromNamesAndDescriptions({
+    //   name: "nome da seção do teste de recrutamento",
+    //   description: "descrição da seção do teste de recrutamento",
+    // });
+
+    const functionSchema = [
+      {
+        name: "sectionSuggestions",
+        description: "sugere uma seção para um teste de recrutamento",
+        parameters: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "nome da seção do teste de recrutamento",
+            },
+            description: {
+              type: "string",
+              description: "descrição da seção do teste de recrutamento",
+            },
+          },
+          required: ["name", "description"],
+        },
+      },
+    ];
 
     while (true) {
       const currentSections = suggestedSectionsArr
@@ -336,14 +357,20 @@ export class SectionService {
           : basePrompt
       );
 
-      const chain = new LLMChain({ llm: this.llm, prompt });
+      const chain = RunnableSequence.from([
+        prompt,
+        this.llm.bind({
+          functions: functionSchema,
+          function_call: { name: "sectionSuggestions" },
+        }),
+      ]);
 
-      let res = await chain.call({
+      const result = await chain.invoke({
         jobTitle: exam.jobTitle,
         jobLevel: exam.jobLevel,
       });
 
-      suggestedSectionsArr.push(await parser.invoke(res.text));
+      suggestedSectionsArr.push(result);
 
       if (suggestedSectionsArr.length > 2) return suggestedSectionsArr;
     }

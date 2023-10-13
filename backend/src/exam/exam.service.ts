@@ -245,6 +245,18 @@ export class ExamService {
         "Exam is not in draft status. Process was aborted."
       );
 
+    // if status is draft, check if exam is archived
+    if (status === "draft" && exam.status !== "archived")
+      throw new UnauthorizedException(
+        "Exam is not in archived status. Process was aborted."
+      );
+
+    // if status is draft, throw not implemented exception
+    if (status === "draft")
+      throw new NotImplementedException(
+        "Switching exam status to archived is not implemented yet."
+      );
+
     // if status is archived, throw not implemented exception
     if (status === "archived")
       throw new NotImplementedException(
@@ -476,6 +488,26 @@ export class ExamService {
   async suggestDescription(
     suggestDescriptionDto: SuggestDescriptionDto
   ): Promise<string> {
+    const validateLength = async (
+      text: string,
+      maxLength: number,
+      chain: LLMChain<string, OpenAI<any>>
+    ): Promise<string> => {
+      // if description is too long, prompt LLM to summarize it
+      while (text.length > maxLength) {
+        chain.prompt = PromptTemplate.fromTemplate(
+          "Resuma a seguinte descrição para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}? {description}"
+        );
+
+        res = await chain.call({
+          ...suggestDescriptionDto,
+          description: res.text,
+        });
+      }
+
+      return res.text;
+    };
+
     // 1. MySQL database: return description based on jobTitle and jobLevel
     const exam = await this.examRepository
       .createQueryBuilder("exam")
@@ -539,7 +571,7 @@ export class ExamService {
           description: exam.description,
         });
 
-        return res.text;
+        return validateLength(res.text, 400, chain);
       }
     }
 
@@ -551,19 +583,7 @@ export class ExamService {
     const chain = new LLMChain({ llm: this.llm, prompt });
     let res = await chain.call(suggestDescriptionDto);
 
-    // if description is too long, prompt LLM to summarize it
-    while (res.text.length > 400) {
-      chain.prompt = PromptTemplate.fromTemplate(
-        "Resuma a seguinte descrição para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}? {description}"
-      );
-
-      res = await chain.call({
-        ...suggestDescriptionDto,
-        description: res.text,
-      });
-    }
-
-    return res.text;
+    return validateLength(res.text, 400, chain);
   }
 
   async manageVectorStore(

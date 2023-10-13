@@ -1,4 +1,11 @@
-import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  OneToMany,
+  BeforeInsert,
+  BeforeUpdate,
+} from "typeorm";
 
 import { Exam } from "../../exam/entities/exam.entity";
 import { SQLBaseEntity } from "../../utils/base-entity.utils";
@@ -41,6 +48,13 @@ export class Section extends SQLBaseEntity {
     (sectionToAnswerSheet) => sectionToAnswerSheet.section
   )
   sectionToAnswerSheets: Promise<SectionToAnswerSheet[]>;
+
+  /** hooks */
+  @BeforeInsert()
+  @BeforeUpdate()
+  async castToLowerCase() {
+    this.name = this.name.toLowerCase();
+  }
 
   /** constructor */
   constructor(partial: Partial<Section>) {
