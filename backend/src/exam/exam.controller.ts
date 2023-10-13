@@ -122,4 +122,9 @@ export class ExamController {
   ): Promise<string> {
     return this.examService.suggestDescription(suggestDescriptionDto);
   }
+
+  @Get("justCheck")
+  justCheck() {
+    return this.examService.justCheck();
+  }
 }

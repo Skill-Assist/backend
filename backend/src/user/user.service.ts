@@ -66,6 +66,7 @@ export class UserService {
     // if user is candidate, check for pending invitations
     if (user.roles.includes("candidate")) {
       const invitations = await this.examInvitationService.findPending(
+        "email",
         user.email
       );
 

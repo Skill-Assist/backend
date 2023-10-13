@@ -12,7 +12,7 @@ export class CreateExamDto {
   @MaxLength(50)
   jobTitle: string;
 
-  @IsIn(["Estágio", "Trainee", "Júnior", "Pleno", "Sênior", "Outro"])
+  @IsIn(["estágio", "trainee", "júnior", "pleno", "sênior"])
   jobLevel: string;
 
   @IsString()

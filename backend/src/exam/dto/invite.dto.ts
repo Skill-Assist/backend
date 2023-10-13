@@ -1,5 +1,5 @@
 import { Transform } from "class-transformer";
-import { IsArray, IsEmail, IsNumber, Min, Max } from "class-validator";
+import { IsArray, IsEmail, IsNumber, Max } from "class-validator";
 //////////////////////////////////////////////////////////////////////////////////////
 
 export class InviteDto {
@@ -8,7 +8,6 @@ export class InviteDto {
   @IsEmail({}, { each: true })
   email: string[];
 
-  @Min(1)
   @Max(24 * 7)
   @IsNumber()
   expirationInHours: number;

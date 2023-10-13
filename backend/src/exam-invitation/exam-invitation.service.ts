@@ -135,6 +135,9 @@ export class ExamInvitationService {
     // check if invitation exists
     if (!invitation) throw new NotFoundException("Invitation not found.");
 
+    // if user is -1, ie an internal call, return invitation
+    if (userId === -1) return invitation;
+
     // check if user owns invitation/exam or user email is invitee email
     const user = await this.userService.findOne("id", userId);
     const exam = await invitation.exam;
@@ -201,7 +204,7 @@ export class ExamInvitationService {
     const invitation = await this.findOne(userId, "id", invitationId);
 
     // check if user is invitee of invitation
-    if ((await invitation.user).id !== userId)
+    if (userId !== -1 && (await invitation.user).id !== userId)
       throw new UnauthorizedException(
         "You are not authorized to reject this invitation."
       );
@@ -268,15 +271,32 @@ export class ExamInvitationService {
     return <ExamInvitation[]>await this.findAll("id", invitation.id);
   }
 
-  async findPending(userEmail: string): Promise<ExamInvitation[]> {
-    return (await this.examInvitationRepository
+  async findPending(key?: string, value?: string): Promise<ExamInvitation[]> {
+    const pendingInvitations = (await this.examInvitationRepository
       .createQueryBuilder("examInvitation")
       .where(
         "examInvitation.accepted = :accepted OR examInvitation.accepted IS NULL",
         { accepted: false }
       )
-      .andWhere("examInvitation.email = :userEmail", { userEmail })
+      // .andWhere("examInvitation.email = :userEmail", { userEmail: value })
       .getMany()) as ExamInvitation[];
+
+    // if userEmail is provided, filter out invitations for other users
+    if (key && key === "email") {
+      return pendingInvitations.filter(
+        (invitation) => invitation.email === value
+      );
+    }
+
+    // if examId is provided, filter out invitations for other exams
+    if (key && key === "examId") {
+      return pendingInvitations.filter(
+        async (invitation) => (await invitation.exam).id === +value!
+      );
+    }
+
+    // return all pending invitations
+    return pendingInvitations;
   }
 
   async fetchOwn(userId: number): Promise<ExamInvitation[]> {

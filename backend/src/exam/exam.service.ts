@@ -3,7 +3,6 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
-  NotImplementedException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
@@ -214,12 +213,21 @@ export class ExamService {
     // get exams created by user
     const exams = await this.findAll("createdBy", userId);
 
-    // get exams user is enrolled in
-    const enrolledExams = await this.examRepository
-      .createQueryBuilder("exam")
-      .leftJoinAndSelect("exam.enrolledUsers", "enrolledUsers")
-      .where("enrolledUsers.id = :userId", { userId })
-      .getMany();
+    // get user and check if user is candidate
+    this.userService =
+      this.userService ?? this.moduleRef.get(UserService, { strict: false });
+
+    const user = await this.userService.findOne("id", userId);
+
+    let enrolledExams: Exam[] = [];
+    if (user?.roles.includes("candidate")) {
+      // get exams user is enrolled in
+      enrolledExams = await this.examRepository
+        .createQueryBuilder("exam")
+        .leftJoinAndSelect("exam.enrolledUsers", "enrolledUsers")
+        .where("enrolledUsers.id = :userId", { userId })
+        .getMany();
+    }
 
     // return exams removed duplicates
     return [...exams, ...enrolledExams].filter(
@@ -232,40 +240,20 @@ export class ExamService {
     examId: number,
     status: string
   ): Promise<Exam> {
+    // get exam invitation service from moduleRef
+    this.examInvitationService =
+      this.examInvitationService ??
+      this.moduleRef.get(ExamInvitationService, { strict: false });
+
     // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 
-    // validate status. allowed: draft, published, archived
-    if (!["draft", "published", "archived"].includes(status))
+    // validate status. allowed: published and archived
+    if (!["published", "archived"].includes(status))
       throw new UnauthorizedException("Invalid status. Process was aborted.");
 
-    // if status is published, check if exam is draft
-    if (status === "published" && exam.status !== "draft")
-      throw new UnauthorizedException(
-        "Exam is not in draft status. Process was aborted."
-      );
-
-    // if status is draft, check if exam is archived
-    if (status === "draft" && exam.status !== "archived")
-      throw new UnauthorizedException(
-        "Exam is not in archived status. Process was aborted."
-      );
-
-    // if status is draft, throw not implemented exception
-    if (status === "draft")
-      throw new NotImplementedException(
-        "Switching exam status to archived is not implemented yet."
-      );
-
-    // if status is archived, throw not implemented exception
-    if (status === "archived")
-      throw new NotImplementedException(
-        "Switching exam status to archived is not implemented yet."
-      );
-
-    // if status is published check if:
     if (status === "published") {
-      // exam has sections
+      // check if exam has sections
       const sections = await exam!.sections;
       if (sections.length === 0)
         throw new UnauthorizedException(
@@ -275,7 +263,7 @@ export class ExamService {
       let examWeight = 0;
 
       for (const section of sections) {
-        // sections have questions
+        // if sections have questions
         if (!section.questions || !section.questions.length)
           throw new UnauthorizedException(
             "Exam has sections without questions. Process was aborted."
@@ -284,11 +272,31 @@ export class ExamService {
         examWeight += +section.weight;
       }
 
-      // sections's weights add to 1
+      // if sections's weights add to 1
       if (examWeight !== 1)
         throw new UnauthorizedException(
           "Exam has sections with weights that do not add to 1. Process was aborted."
         );
+    }
+
+    if (status === "archived") {
+      // check if exam is published
+      if (exam.status !== "published")
+        throw new UnauthorizedException(
+          "Exam is not published. Process was aborted."
+        );
+
+      // if exam has pending invitations and revoke them
+      const pendingInvitations = await this.examInvitationService.findPending(
+        "examId",
+        "1"
+      );
+
+      pendingInvitations.forEach(async (invitation) => {
+        await this.examInvitationService.reject(invitation.id, -1);
+      });
+
+      // if exam has started answer sheets, return days left to finish
     }
 
     // switch status of exam
@@ -301,6 +309,10 @@ export class ExamService {
 
     // return updated exam
     return <Exam>await this.findOne(userId, "id", examId);
+  }
+
+  async justCheck() {
+    return "ok";
   }
 
   async sendInvitations(
