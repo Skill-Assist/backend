@@ -92,7 +92,7 @@ export class ExamController {
     @Req() req: PassportRequest,
     @Query("id") id: number,
     @Query("status") status: string
-  ): Promise<Exam> {
+  ): Promise<Exam | Record<string, number>> {
     return this.examService.switchStatus(req.user!.id, id, status);
   }
 
@@ -121,10 +121,5 @@ export class ExamController {
     @Body() suggestDescriptionDto: SuggestDescriptionDto
   ): Promise<string> {
     return this.examService.suggestDescription(suggestDescriptionDto);
-  }
-
-  @Get("justCheck")
-  justCheck() {
-    return this.examService.justCheck();
   }
 }

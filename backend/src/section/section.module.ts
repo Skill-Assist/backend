@@ -1,6 +1,6 @@
 /** nestjs */
-import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { forwardRef, Module } from "@nestjs/common";
 
 /** modules */
 import { ExamModule } from "../exam/exam.module";
@@ -17,7 +17,7 @@ import { Section } from "./entities/section.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Module({
-  imports: [ExamModule, TypeOrmModule.forFeature([Section])],
+  imports: [forwardRef(() => ExamModule), TypeOrmModule.forFeature([Section])],
   controllers: [SectionController],
   providers: [SectionService, QueryRunnerService],
   exports: [SectionService],

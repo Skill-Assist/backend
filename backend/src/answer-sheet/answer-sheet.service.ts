@@ -31,12 +31,12 @@ import { _create, _findAll, _findOne, _update } from "../utils/typeorm.utils";
 export class AnswerSheetService {
   private userService: UserService;
   private answerService: AnswerService;
+  private examService: ExamService;
 
   constructor(
     @InjectRepository(AnswerSheet)
     private readonly answerSheetRepository: Repository<AnswerSheet>,
     private readonly moduleRef: ModuleRef,
-    private readonly examService: ExamService,
     private readonly queryRunner: QueryRunnerService,
     private readonly examInvitationService: ExamInvitationService,
     private readonly sectionToAnswerSheetService: SectionToAnswerSheetService
@@ -48,6 +48,10 @@ export class AnswerSheetService {
     examId: number,
     invitationId: number
   ): Promise<AnswerSheet> {
+    // get exam service from moduleRef
+    this.examService =
+      this.examService ?? this.moduleRef.get(ExamService, { strict: false });
+
     // check if exam exists and if user is enrolled in it
     const exam = await this.examService.findOne(user.id, "id", examId);
 
@@ -256,6 +260,10 @@ export class AnswerSheetService {
     relations?: string[],
     map?: boolean
   ): Promise<AnswerSheet[]> {
+    // get exam service from moduleRef
+    this.examService =
+      this.examService ?? this.moduleRef.get(ExamService, { strict: false });
+
     // get answerSheets created by user
     const answerSheets = await this.findAll("user", userId, relations, map);
 

@@ -1,8 +1,9 @@
 /** nestjs */
-import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { forwardRef, Module } from "@nestjs/common";
 
 /** modules */
+import { AnswerSheetModule } from "../answer-sheet/answer-sheet.module";
 import { ExamInvitationModule } from "../exam-invitation/exam-invitation.module";
 
 /** controllers */
@@ -17,7 +18,11 @@ import { Exam } from "./entities/exam.entity";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Module({
-  imports: [ExamInvitationModule, TypeOrmModule.forFeature([Exam])],
+  imports: [
+    AnswerSheetModule,
+    TypeOrmModule.forFeature([Exam]),
+    forwardRef(() => ExamInvitationModule),
+  ],
   controllers: [ExamController],
   providers: [ExamService, QueryRunnerService],
   exports: [ExamService],

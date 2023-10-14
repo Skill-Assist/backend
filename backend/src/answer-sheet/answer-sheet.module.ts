@@ -1,6 +1,6 @@
 /** nestjs */
-import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { forwardRef, Module } from "@nestjs/common";
 
 /** modules */
 import { ExamModule } from "../exam/exam.module";
@@ -24,10 +24,10 @@ import { AutocloseInterceptor } from "./interceptors/autoclose.interceptor";
 
 @Module({
   imports: [
-    ExamModule,
     AnswerModule,
     ExamInvitationModule,
     SectionToAnswerSheetModule,
+    forwardRef(() => ExamModule),
     TypeOrmModule.forFeature([AnswerSheet]),
   ],
   controllers: [AnswerSheetController],

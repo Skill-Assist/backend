@@ -10,6 +10,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 
 /** providers */
 import { UserService } from "../user/user.service";
+import { AnswerSheetService } from "../answer-sheet/answer-sheet.service";
 import { QueryRunnerService } from "../query-runner/query-runner.service";
 import { ExamInvitationService } from "../exam-invitation/exam-invitation.service";
 
@@ -50,6 +51,7 @@ export class ExamService {
   public PINECONE_EXAM_INDEX_MODULE: string = "exam-description";
 
   private userService: UserService;
+  private answerSheetService: AnswerSheetService;
   private examInvitationService: ExamInvitationService;
 
   private llm: OpenAI = new OpenAI({
@@ -239,11 +241,16 @@ export class ExamService {
     userId: number,
     examId: number,
     status: string
-  ): Promise<Exam> {
+  ): Promise<Exam | Record<string, number>> {
     // get exam invitation service from moduleRef
     this.examInvitationService =
       this.examInvitationService ??
       this.moduleRef.get(ExamInvitationService, { strict: false });
+
+    // get answerSheet service from moduleRef
+    this.answerSheetService =
+      this.answerSheetService ??
+      this.moduleRef.get(AnswerSheetService, { strict: false });
 
     // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
@@ -289,14 +296,32 @@ export class ExamService {
       // if exam has pending invitations and revoke them
       const pendingInvitations = await this.examInvitationService.findPending(
         "examId",
-        "1"
+        String(examId)
       );
 
       pendingInvitations.forEach(async (invitation) => {
         await this.examInvitationService.reject(invitation.id, -1);
       });
 
-      // if exam has started answer sheets, return days left to finish
+      // if exam has answer sheets, close non-initiated and return days left to finish initiated
+      const answerSheets = await exam.answerSheets;
+
+      const daysRemaining: number[] = [];
+
+      answerSheets.forEach(async (answerSheet) => {
+        if (answerSheet.deadline) {
+          daysRemaining.push(answerSheet.deadline.getTime() - Date.now());
+        } else {
+          this.answerSheetService.start(userId, answerSheet.id);
+          this.answerSheetService.submit(userId, answerSheet.id);
+        }
+      });
+
+      if (daysRemaining.length) {
+        return {
+          daysRemaining: Math.max(...daysRemaining),
+        };
+      }
     }
 
     // switch status of exam
@@ -309,10 +334,6 @@ export class ExamService {
 
     // return updated exam
     return <Exam>await this.findOne(userId, "id", examId);
-  }
-
-  async justCheck() {
-    return "ok";
   }
 
   async sendInvitations(
@@ -506,18 +527,21 @@ export class ExamService {
       chain: LLMChain<string, OpenAI<any>>
     ): Promise<string> => {
       // if description is too long, prompt LLM to summarize it
-      while (text.length > maxLength) {
+      let tempText = text;
+      while (tempText.length > maxLength) {
         chain.prompt = PromptTemplate.fromTemplate(
           "Resuma a seguinte descrição para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}? {description}"
         );
 
         res = await chain.call({
           ...suggestDescriptionDto,
-          description: res.text,
+          description: tempText,
         });
+
+        tempText = res.text;
       }
 
-      return res.text;
+      return tempText;
     };
 
     // 1. MySQL database: return description based on jobTitle and jobLevel
@@ -566,7 +590,7 @@ export class ExamService {
       includeMetadata: true,
     });
 
-    if (queryResponse.matches) {
+    if (queryResponse.matches?.length) {
       const match = queryResponse.matches[0];
 
       if (match.score && match.score >= 0.85) {
