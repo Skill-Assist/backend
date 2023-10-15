@@ -381,7 +381,9 @@ export class SectionService {
         jobLevel: exam.jobLevel,
       });
 
-      suggestedSectionsArr.push(result);
+      suggestedSectionsArr.push(
+        JSON.parse(result.additional_kwargs.function_call!.arguments)
+      );
 
       if (suggestedSectionsArr.length > 2) return suggestedSectionsArr;
     }

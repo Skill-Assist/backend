@@ -319,7 +319,7 @@ export class ExamService {
 
       if (daysRemaining.length) {
         return {
-          daysRemaining: Math.max(...daysRemaining),
+          daysRemaining: Math.max(...daysRemaining) / 1000 / 60 / 60 / 24,
         };
       }
     }
@@ -613,7 +613,7 @@ export class ExamService {
 
     // 3. LLM call: if no description, suggest based on LLM
     let prompt = PromptTemplate.fromTemplate(
-      "Elabore uma descrição resumida para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}. Leve em consideração aspectos socias, como gênero, raça, etnia, orientação sexual, etc."
+      "Elabore uma descrição resumida para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}. Leve em consideração aspectos socias, como gênero, raça, etnia, orientação sexual, etc. A descrição deve ser similar ao seguinte exemplo: O exame de recrutamento para {jobTitle} {jobLevel} ..."
     );
 
     const chain = new LLMChain({ llm: this.llm, prompt });
