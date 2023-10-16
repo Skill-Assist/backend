@@ -132,47 +132,57 @@ export class UserService {
 
   async updateProfile(
     id: number,
-    updateUserDto: UpdateUserDto,
+    updateUserDto?: UpdateUserDto,
     file?: Express.Multer.File
   ): Promise<User> {
-    // check if user is trying to update password
-    if (updateUserDto.password || updateUserDto.passwordConfirm)
-      throw new NotImplementedException(
-        "Password update is not implemented yet"
-      );
+    if (!updateUserDto && !file)
+      throw new UnauthorizedException("Nothing to update");
 
-    // check if user is trying to update email
-    if (updateUserDto.email)
-      throw new NotImplementedException("Email update is not implemented yet");
+    if (updateUserDto) {
+      // check if user is trying to update password
+      if (updateUserDto.password || updateUserDto.passwordConfirm)
+        throw new NotImplementedException(
+          "Password update is not implemented yet"
+        );
 
-    // check if user is trying to update roles
-    if (updateUserDto.roles)
-      throw new NotImplementedException("Roles update is not implemented yet");
+      // check if user is trying to update email
+      if (updateUserDto.email)
+        throw new NotImplementedException(
+          "Email update is not implemented yet"
+        );
 
-    // upload file to s3 bucket
+      // check if user is trying to update roles
+      if (updateUserDto.roles)
+        throw new NotImplementedException(
+          "Roles update is not implemented yet"
+        );
+    }
+
+    const _updateUserDto = updateUserDto || {};
+
     if (file) {
       const format = file.mimetype.split("/")[1];
-      const nodeEnv = this.configService.get<string>("NODE_ENV");
+      const nodeEnv = this.configService.get<string>("NODE_ENV")!;
 
-      if (nodeEnv === "dev") {
+      if (["dev", "test"].includes(nodeEnv)) {
         const filePath = path.join(__dirname, `../../logo/${id}.${format}`);
         await fs.appendFile(filePath, file.buffer);
 
-        updateUserDto.logo = `https://wallpapers.com/images/featured-full/cool-profile-picture-87h46gcobjl5e4xu.jpg`;
+        _updateUserDto.logo = `https://wallpapers.com/images/featured-full/cool-profile-picture-87h46gcobjl5e4xu.jpg`;
       } else if (nodeEnv === "prod") {
         const bucket = this.configService.get<string>("AWS_S3_BUCKET_NAME");
         const s3Key = `logo/${id}.${format}`;
 
         await this.awsService.uploadFileToS3(s3Key, file);
 
-        updateUserDto.logo = `https://${bucket}.s3.sa-east-1.amazonaws.com/logo/${id}.${format}`;
+        _updateUserDto.logo = `https://${bucket}.s3.sa-east-1.amazonaws.com/logo/${id}.${format}`;
       }
     }
 
     // update user
     await _update(
       id,
-      updateUserDto as unknown as Record<string, unknown>,
+      _updateUserDto as unknown as Record<string, unknown>,
       this.repository,
       "user"
     );

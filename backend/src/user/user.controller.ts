@@ -10,6 +10,7 @@ import {
   UseInterceptors,
   ClassSerializerInterceptor,
   UnprocessableEntityException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 
@@ -43,9 +44,12 @@ export class UserController {
   @UseInterceptors(FileInterceptor("file"))
   updateProfile(
     @Req() req: PassportRequest,
-    @Body() updateUserDto: UpdateUserDto,
+    @Body() updateUserDto?: UpdateUserDto,
     @UploadedFile() file?: Express.Multer.File
   ): Promise<User> {
+    if (!updateUserDto && !file)
+      throw new UnauthorizedException("No data provided");
+
     if (
       file &&
       (!file.mimetype.startsWith("image") || file.size > 10 * 1024 * 1024)
