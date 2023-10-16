@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   UnauthorizedException,
+  OnModuleInit,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { InjectModel } from "@nestjs/mongoose";
@@ -31,7 +32,7 @@ import { TResult } from "../utils/nlp-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
-export class QuestionService {
+export class QuestionService implements OnModuleInit {
   private userService: UserService;
 
   constructor(
@@ -42,6 +43,12 @@ export class QuestionService {
     private readonly naturalLanguageService: NaturalLanguageService
   ) {}
 
+  onModuleInit() {
+    this.userService = this.moduleRef.get<UserService>(UserService, {
+      strict: false,
+    });
+  }
+
   /** basic CRUD methods */
   async create(
     createQuestionDto: CreateQuestionDto,
@@ -49,13 +56,6 @@ export class QuestionService {
     sectionId?: number,
     weight?: number
   ): Promise<Question> {
-    // get answerService from moduleRef
-    this.userService =
-      this.userService ??
-      this.moduleRef.get<UserService>(UserService, {
-        strict: false,
-      });
-
     // if type is multipleChoice, check if there are at least 2 choices
     if (
       createQuestionDto.type === "multipleChoice" &&

@@ -2,6 +2,7 @@
 import {
   Injectable,
   NotFoundException,
+  OnModuleInit,
   UnauthorizedException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
@@ -28,7 +29,7 @@ import { _create, _findAll, _findOne, _update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
-export class AnswerSheetService {
+export class AnswerSheetService implements OnModuleInit {
   private userService: UserService;
   private answerService: AnswerService;
   private examService: ExamService;
@@ -42,16 +43,24 @@ export class AnswerSheetService {
     private readonly sectionToAnswerSheetService: SectionToAnswerSheetService
   ) {}
 
+  onModuleInit() {
+    this.userService = this.moduleRef.get<UserService>(UserService, {
+      strict: false,
+    });
+    this.answerService = this.moduleRef.get<AnswerService>(AnswerService, {
+      strict: false,
+    });
+    this.examService = this.moduleRef.get<ExamService>(ExamService, {
+      strict: false,
+    });
+  }
+
   /** basic CRUD methods */
   async create(
     user: User,
     examId: number,
     invitationId: number
   ): Promise<AnswerSheet> {
-    // get exam service from moduleRef
-    this.examService =
-      this.examService ?? this.moduleRef.get(ExamService, { strict: false });
-
     // check if exam exists and if user is enrolled in it
     const exam = await this.examService.findOne(user.id, "id", examId);
 
@@ -181,13 +190,6 @@ export class AnswerSheetService {
 
   /** custom methods */
   async start(userId: number, answerSheetId: number): Promise<AnswerSheet> {
-    // get userService from moduleRef
-    this.userService =
-      this.userService ??
-      this.moduleRef.get<UserService>(UserService, {
-        strict: false,
-      });
-
     // check if answer sheet exists and user allowed to start it
     const answerSheet = await this.findOne(userId, "id", answerSheetId);
 
@@ -260,10 +262,6 @@ export class AnswerSheetService {
     relations?: string[],
     map?: boolean
   ): Promise<AnswerSheet[]> {
-    // get exam service from moduleRef
-    this.examService =
-      this.examService ?? this.moduleRef.get(ExamService, { strict: false });
-
     // get answerSheets created by user
     const answerSheets = await this.findAll("user", userId, relations, map);
 
@@ -298,13 +296,6 @@ export class AnswerSheetService {
     userId: number,
     answerSheetId: number
   ): Promise<AnswerSheet> {
-    // get answerService from moduleRef
-    this.answerService =
-      this.answerService ??
-      this.moduleRef.get<AnswerService>(AnswerService, {
-        strict: false,
-      });
-
     // initialize answerSheet score at 0
     let answerSheetScore: number = 0;
 

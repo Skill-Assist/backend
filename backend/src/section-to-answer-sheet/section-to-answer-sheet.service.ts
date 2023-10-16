@@ -2,6 +2,7 @@
 import {
   Injectable,
   NotFoundException,
+  OnModuleInit,
   UnauthorizedException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
@@ -27,7 +28,7 @@ import { _create, _findOne, _findAll, _update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
-export class SectionToAnswerSheetService {
+export class SectionToAnswerSheetService implements OnModuleInit {
   private answerService: AnswerService;
   private answerSheetService: AnswerSheetService;
 
@@ -39,19 +40,21 @@ export class SectionToAnswerSheetService {
     private readonly queryRunner: QueryRunnerService
   ) {}
 
+  onModuleInit() {
+    this.answerService = this.moduleRef.get(AnswerService, {
+      strict: false,
+    });
+    this.answerSheetService = this.moduleRef.get(AnswerSheetService, {
+      strict: false,
+    });
+  }
+
   /** basic CRUD methods */
   async create(
     userId: number,
     sectionId: number,
     answerSheetId: number
   ): Promise<SectionToAnswerSheet> {
-    // get answer service from moduleRef
-    this.answerSheetService =
-      this.answerSheetService ??
-      this.moduleRef.get<AnswerSheetService>(AnswerSheetService, {
-        strict: false,
-      });
-
     // check if section exists and user is enrolled in exam
     const section = await this.sectionService.findOne(userId, "id", sectionId);
 
@@ -207,13 +210,6 @@ export class SectionToAnswerSheetService {
     sectionId: number,
     answerSheetId: number
   ): Promise<SectionToAnswerSheet> {
-    // get answer service from moduleRef
-    this.answerService =
-      this.answerService ??
-      this.moduleRef.get(AnswerService, {
-        strict: false,
-      });
-
     // create a section to answer sheet
     const sectionToAnswerSheet = await this.create(
       userId,

@@ -2,6 +2,7 @@
 import {
   Injectable,
   NotFoundException,
+  OnModuleInit,
   UnauthorizedException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
@@ -28,7 +29,7 @@ import { _create, _findOne, _findAll, _update } from "../utils/typeorm.utils";
 //////////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
-export class ExamInvitationService {
+export class ExamInvitationService implements OnModuleInit {
   private userService: UserService;
   private examService: ExamService;
 
@@ -38,6 +39,16 @@ export class ExamInvitationService {
     private readonly moduleRef: ModuleRef,
     private readonly queryRunner: QueryRunnerService
   ) {}
+
+  onModuleInit() {
+    this.userService = this.moduleRef.get(UserService, {
+      strict: false,
+    });
+
+    this.examService = this.moduleRef.get(ExamService, {
+      strict: false,
+    });
+  }
 
   /** basic CRUD methods */
   async create(
@@ -116,13 +127,6 @@ export class ExamInvitationService {
     relations?: string[],
     map?: boolean
   ): Promise<ExamInvitation> {
-    // get userService from moduleRef
-    this.userService =
-      this.userService ??
-      this.moduleRef.get(UserService, {
-        strict: false,
-      });
-
     const invitation = (await _findOne(
       this.examInvitationRepository,
       "examInvitation",
@@ -300,20 +304,6 @@ export class ExamInvitationService {
   }
 
   async fetchOwn(userId: number): Promise<ExamInvitation[]> {
-    // get userService from moduleRef
-    this.userService =
-      this.userService ??
-      this.moduleRef.get(UserService, {
-        strict: false,
-      });
-
-    // get examService from moduleRef
-    this.examService =
-      this.examService ??
-      this.moduleRef.get(ExamService, {
-        strict: false,
-      });
-
     // get user by id
     const user = (await this.userService.findOne("id", userId)) as User;
 

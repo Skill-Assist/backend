@@ -2,6 +2,7 @@
 import {
   Injectable,
   NotFoundException,
+  OnModuleInit,
   UnauthorizedException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
@@ -45,7 +46,7 @@ import {
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
-export class ExamService {
+export class ExamService implements OnModuleInit {
   public PINECONE_EXAM_INDEX_NAME: string = "vector-store";
   public PINECONE_EXAM_INDEX_DIMENSION: number = 2054;
   public PINECONE_EXAM_INDEX_MODULE: string = "exam-description";
@@ -72,12 +73,18 @@ export class ExamService {
     private readonly queryRunner: QueryRunnerService
   ) {}
 
+  onModuleInit() {
+    this.userService = this.moduleRef.get(UserService, { strict: false });
+    this.answerSheetService = this.moduleRef.get(AnswerSheetService, {
+      strict: false,
+    });
+    this.examInvitationService = this.moduleRef.get(ExamInvitationService, {
+      strict: false,
+    });
+  }
+
   /** basic CRUD methods */
   async create(userId: number, createExamDto: CreateExamDto): Promise<Exam> {
-    // get user service from moduleRef
-    this.userService =
-      this.userService ?? this.moduleRef.get(UserService, { strict: false });
-
     // create exam
     const exam = (await _create(
       this.queryRunner,
@@ -242,16 +249,6 @@ export class ExamService {
     examId: number,
     status: string
   ): Promise<Exam | Record<string, number>> {
-    // get exam invitation service from moduleRef
-    this.examInvitationService =
-      this.examInvitationService ??
-      this.moduleRef.get(ExamInvitationService, { strict: false });
-
-    // get answerSheet service from moduleRef
-    this.answerSheetService =
-      this.answerSheetService ??
-      this.moduleRef.get(AnswerSheetService, { strict: false });
-
     // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 
@@ -341,15 +338,6 @@ export class ExamService {
     examId: number,
     inviteDto: InviteDto
   ): Promise<string> {
-    // get user service and exam invitation service from moduleRef
-    this.userService =
-      this.userService ?? this.moduleRef.get(UserService, { strict: false });
-    this.examInvitationService =
-      this.examInvitationService ??
-      this.moduleRef.get(ExamInvitationService, {
-        strict: false,
-      });
-
     // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 
@@ -408,13 +396,6 @@ export class ExamService {
   }
 
   async fetchCandidates(userId: number, examId: number): Promise<any> {
-    // get ExamInvitationService from moduleRef
-    this.examInvitationService =
-      this.examInvitationService ??
-      this.moduleRef.get(ExamInvitationService, {
-        strict: false,
-      });
-
     // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 

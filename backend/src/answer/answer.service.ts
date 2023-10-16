@@ -1,6 +1,7 @@
 /** nestjs */
 import {
   Injectable,
+  OnModuleInit,
   NotFoundException,
   BadRequestException,
   UnauthorizedException,
@@ -38,7 +39,7 @@ import { _create, _findOne, _findAll, _update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
-export class AnswerService {
+export class AnswerService implements OnModuleInit {
   private sasService: SectionToAnswerSheetService;
 
   constructor(
@@ -52,19 +53,18 @@ export class AnswerService {
     private readonly naturalLanguageService: NaturalLanguageService
   ) {}
 
+  onModuleInit() {
+    this.sasService = this.moduleRef.get(SectionToAnswerSheetService, {
+      strict: false,
+    });
+  }
+
   /** basic CRUD methods */
   async create(
     userId: number,
     sasId: number,
     createAnswerDto: CreateAnswerDto
   ): Promise<Answer> {
-    // get sectionToAnswerSheetService from moduleRef
-    this.sasService =
-      this.sasService ??
-      this.moduleRef.get(SectionToAnswerSheetService, {
-        strict: false,
-      });
-
     // check if sectionToAnswerSheet exists and belongs to user
     const sectionToAnswerSheet = await this.sasService.findOne(
       userId,
@@ -237,13 +237,6 @@ export class AnswerService {
     submitAnswersDto: SubmitAnswersDto,
     file?: Express.Multer.File
   ): Promise<Answer> {
-    // get sectionToAnswerSheetService from moduleRef
-    this.sasService =
-      this.sasService ??
-      this.moduleRef.get(SectionToAnswerSheetService, {
-        strict: false,
-      });
-
     // update answer with submitted content
     const answer = await this.submit(
       userId,

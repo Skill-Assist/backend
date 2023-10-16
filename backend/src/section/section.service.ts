@@ -2,6 +2,7 @@
 import {
   Injectable,
   NotFoundException,
+  OnModuleInit,
   UnauthorizedException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
@@ -36,7 +37,7 @@ import { _create, _findOne, _update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
-export class SectionService {
+export class SectionService implements OnModuleInit {
   private PINECONE_SECTION_INDEX_NAME: string = "vector-store";
   private PINECONE_SECTION_INDEX_DIMENSION: number = 2054;
 
@@ -60,16 +61,18 @@ export class SectionService {
     private readonly queryRunner: QueryRunnerService
   ) {}
 
+  onModuleInit() {
+    this.examService = this.moduleRef.get(ExamService, {
+      strict: false,
+    });
+  }
+
   /** basic CRUD methods */
   async create(
     userId: number,
     examId: number,
     createSectionDto: CreateSectionDto
   ): Promise<Section> {
-    // get exam service from moduleRef
-    this.examService =
-      this.examService ?? this.moduleRef.get(ExamService, { strict: false });
-
     // check if exam exists and is owned by user
     const exam = await this.examService.findOne(userId, "id", examId);
     if (!exam) throw new NotFoundException("Exam not found.");
@@ -252,10 +255,6 @@ export class SectionService {
   }
 
   async suggestDescription(userId: number, examId: number) {
-    // get exam service from moduleRef
-    this.examService =
-      this.examService ?? this.moduleRef.get(ExamService, { strict: false });
-
     const suggestedSectionsArr: any[] = [];
 
     // 1. MySQL database: return section suggestions based on job title and job level

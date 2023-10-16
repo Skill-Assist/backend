@@ -5,6 +5,7 @@ import {
   OneToMany,
   ManyToMany,
   BeforeInsert,
+  BeforeUpdate,
 } from "typeorm";
 import * as bcrypt from "bcrypt";
 import { Exclude } from "class-transformer";
@@ -74,9 +75,14 @@ export class User extends SQLBaseEntity {
 
   /** hooks */
   @BeforeInsert()
+  @BeforeUpdate()
   async insertionHook() {
     // set nickname
-    if (this.name && !this.nickname) this.nickname = "Recrutador";
+    if (this.name && !this.nickname) {
+      if (this.roles.includes(UserRole.RECRUITER)) this.nickname = "Recrutador";
+    } else if (this.roles.includes(UserRole.CANDIDATE)) {
+      this.nickname = this.name.split(" ")[0];
+    }
 
     // check password match and encrypt password
     await passwordMatch.call(this);
