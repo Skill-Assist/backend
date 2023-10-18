@@ -303,22 +303,16 @@ export class ExamService implements OnModuleInit {
       // if exam has answer sheets, close non-initiated and return days left to finish initiated
       const answerSheets = await exam.answerSheets;
 
-      const daysRemaining: number[] = [];
-
       answerSheets.forEach(async (answerSheet) => {
         if (answerSheet.deadline) {
-          daysRemaining.push(answerSheet.deadline.getTime() - Date.now());
+          throw new UnauthorizedException(
+            "The exam contain pending answer sheets. Process was aborted."
+          );
         } else {
           this.answerSheetService.start(userId, answerSheet.id);
           this.answerSheetService.submit(userId, answerSheet.id);
         }
       });
-
-      if (daysRemaining.length) {
-        return {
-          daysRemaining: Math.max(...daysRemaining) / 1000 / 60 / 60 / 24,
-        };
-      }
     }
 
     // switch status of exam
@@ -331,6 +325,27 @@ export class ExamService implements OnModuleInit {
 
     // return updated exam
     return <Exam>await this.findOne(userId, "id", examId);
+  }
+
+  async checkIfArchivable(
+    userId: number,
+    examId: number
+  ): Promise<Record<string, number>> {
+    // try to get exam by id, check if exam exists and is owned by user
+    const exam = await this.findOne(userId, "id", examId);
+
+    const answerSheets = await exam.answerSheets;
+
+    const daysRemaining: number[] = [];
+
+    answerSheets.forEach(async (answerSheet) => {
+      if (answerSheet.deadline)
+        daysRemaining.push(answerSheet.deadline.getTime() - Date.now());
+    });
+
+    return {
+      daysRemaining: Math.max(...daysRemaining) / 1000 / 60 / 60 / 24,
+    };
   }
 
   async sendInvitations(
