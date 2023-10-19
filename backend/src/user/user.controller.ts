@@ -46,7 +46,7 @@ export class UserController {
     @Req() req: PassportRequest,
     @Body() updateUserDto?: UpdateUserDto,
     @UploadedFile() file?: Express.Multer.File
-  ): Promise<User> {
+  ): Promise<User | null> {
     if (!updateUserDto && !file)
       throw new UnauthorizedException("No data provided");
 

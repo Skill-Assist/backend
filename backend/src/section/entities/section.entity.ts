@@ -25,13 +25,7 @@ export class Section extends SQLBaseEntity {
   weight: number;
 
   @Column({ nullable: true })
-  startDate: Date;
-
-  @Column({ nullable: true })
   durationInHours: number;
-
-  @Column({ default: true })
-  isShuffleQuestions: boolean;
 
   @Column({ default: false })
   hasProctoring: boolean;

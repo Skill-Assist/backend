@@ -1,8 +1,10 @@
 /** nestjs */
 import {
   Injectable,
-  NotImplementedException,
+  NotFoundException,
+  BadRequestException,
   UnauthorizedException,
+  NotImplementedException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -26,9 +28,6 @@ import { User } from "./entities/user.entity";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { AddQuestionDto } from "./dto/add-question.dto";
-
-/** utils */
-import { _create, _findOne, _update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -58,48 +57,85 @@ export class UserService {
       );
 
     // create user
-    const user = <User>await _create(this.queryRunner, this.repository, {
-      ...createUserDto,
-      ownedQuestions: [],
-    });
+    await this.queryRunner.connect();
+    await this.queryRunner.startTransaction();
 
-    // if user is candidate, check for pending invitations
-    if (user.roles.includes("candidate")) {
-      const invitations = await this.examInvitationService.findPending(
-        "email",
-        user.email
-      );
+    try {
+      const user = this.repository.create({
+        ...createUserDto,
+        ownedQuestions: [],
+      });
 
-      //  set relation between invitation and user
-      for (const invitation of invitations) {
-        await this.examInvitationService.update(user.id, invitation.id, {
-          user,
-        });
+      await this.queryRunner.commitTransaction(user);
+
+      // if user is candidate, check for pending invitations
+      if (user.roles.includes("candidate")) {
+        const invitations = await this.examInvitationService.findPending(
+          "email",
+          user.email
+        );
+
+        //  set relation between invitation and user
+        for (const invitation of invitations) {
+          await this.examInvitationService.update(user.id, invitation.id, {
+            user,
+          });
+        }
       }
-    }
 
-    return user;
+      return user;
+    } catch (err) {
+      // rollback changes made in case of error
+      await this.queryRunner.rollbackTransaction();
+      throw new BadRequestException(err.message);
+    } finally {
+      // release queryRunner after transaction
+      await this.queryRunner.release();
+    }
   }
 
+  async update(id: number, updateUserDto: UpdateUserDto): Promise<User | null> {
+    // update user
+    const data = await this.repository
+      .createQueryBuilder()
+      .update()
+      .set(updateUserDto)
+      .where("id = :id", { id })
+      .execute();
+
+    // check if user was updated
+    if (!data.affected) throw new NotFoundException("User not found.");
+
+    return await this.findOne("id", id);
+  }
+
+  // internal use only
   async findOne(
     key: string,
     value: unknown,
     relations?: string[],
     map?: boolean
   ): Promise<User | null> {
-    return (await _findOne(
-      this.repository,
-      "user",
-      key,
-      value,
-      relations,
-      map
-    )) as User;
+    const queryBuilder = this.repository
+      .createQueryBuilder("user")
+      .where(`user.${key} = :${key}`, { [key]: value });
+
+    if (relations)
+      for (const relation of relations) {
+        map
+          ? queryBuilder.leftJoinAndSelect(`user.${relation}`, `${relation}`)
+          : queryBuilder.loadRelationIdAndMap(
+              `${relation}Ref`,
+              `user.${relation}`
+            );
+      }
+
+    return await queryBuilder.getOne();
   }
 
   /** custom methods */
   async profile(id: number): Promise<User> {
-    const user = <User>await this.findOne("id", id);
+    const user = (await this.findOne("id", id)) as User;
 
     let _query = this.repository.createQueryBuilder("user");
 
@@ -127,14 +163,14 @@ export class UserService {
         "exam"
       );
 
-    return <User>await _query.where("user.id = :id", { id }).getOne();
+    return (await _query.where("user.id = :id", { id }).getOne()) as User;
   }
 
   async updateProfile(
     id: number,
     updateUserDto?: UpdateUserDto,
     file?: Express.Multer.File
-  ): Promise<User> {
+  ): Promise<User | null> {
     if (!updateUserDto && !file)
       throw new UnauthorizedException("Nothing to update");
 
@@ -162,15 +198,19 @@ export class UserService {
 
     if (file) {
       const format = file.mimetype.split("/")[1];
-      const nodeEnv = this.configService.get<string>("NODE_ENV")!;
+      const nodeEnv = this.configService.get("NODE_ENV")!;
 
-      if (["dev", "test"].includes(nodeEnv)) {
+      if (nodeEnv === "test") {
+        _updateUserDto.logo = `https://example.com/${id}.png`;
+      }
+      if (nodeEnv === "dev") {
         const filePath = path.join(__dirname, `../../logo/${id}.${format}`);
         await fs.appendFile(filePath, file.buffer);
 
         _updateUserDto.logo = `https://wallpapers.com/images/featured-full/cool-profile-picture-87h46gcobjl5e4xu.jpg`;
-      } else if (nodeEnv === "prod") {
-        const bucket = this.configService.get<string>("AWS_S3_BUCKET_NAME");
+      }
+      if (nodeEnv === "prod") {
+        const bucket = this.configService.get("AWS_S3_BUCKET_NAME");
         const s3Key = `logo/${id}.${format}`;
 
         await this.awsService.uploadFileToS3(s3Key, file);
@@ -179,24 +219,20 @@ export class UserService {
       }
     }
 
-    // update user
-    await _update(
-      id,
-      _updateUserDto as unknown as Record<string, unknown>,
-      this.repository,
-      "user"
-    );
-
-    return <User>await this.findOne("id", id);
+    // return updated user
+    return this.update(id, _updateUserDto);
   }
 
-  async addQuestion(id: number, payload: AddQuestionDto): Promise<void> {
-    await _update(
-      id,
-      payload as unknown as Record<string, unknown>,
-      this.repository,
-      "user"
-    );
+  async addQuestion(id: number, addQuestionDto: AddQuestionDto): Promise<void> {
+    const data = await this.repository
+      .createQueryBuilder()
+      .update()
+      .set(addQuestionDto as unknown as Record<string, unknown>)
+      .where("id = :id", { id })
+      .execute();
+
+    // check if update was successful
+    if (!data.affected) throw new NotFoundException("Update failed.");
   }
 
   async acceptInvitation(invitationId: number, user: User): Promise<User> {

@@ -344,7 +344,7 @@ export class ExamService implements OnModuleInit {
     });
 
     return {
-      daysRemaining: Math.max(...daysRemaining) / 1000 / 60 / 60 / 24,
+      daysRemaining: Math.max(...daysRemaining) / 1000,
     };
   }
 
