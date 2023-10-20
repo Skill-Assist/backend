@@ -14,7 +14,6 @@ proctoring/
 logo/
 answers/
 node_modules/
-**/package-lock.json
 
 # typeScript cache
 *.tsbuildinfo
