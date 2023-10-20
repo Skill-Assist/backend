@@ -26,7 +26,7 @@ export enum UserRole {
 
 @Entity()
 export class User extends SQLBaseEntity {
-  /** properties */
+  /** --- properties -----------------------------------------------------------*/
   @Column({ nullable: true })
   name: string;
 
@@ -60,7 +60,7 @@ export class User extends SQLBaseEntity {
   @Column({ type: "simple-array" })
   ownedQuestions: string[];
 
-  /** relations */
+  /** --- relations ------------------------------------------------------------*/
   @OneToMany(() => Exam, (exam) => exam.createdBy)
   ownedExams: Promise<Exam[]>;
 
@@ -73,29 +73,29 @@ export class User extends SQLBaseEntity {
   @OneToMany(() => AnswerSheet, (answerSheet) => answerSheet.user)
   answerSheets: Promise<AnswerSheet[]>;
 
-  /** hooks */
+  /** --- hooks ----------------------------------------------------------------*/
   @BeforeInsert()
   @BeforeUpdate()
-  async insertionHook() {
+  async function() {
     // set nickname
     if (this.name && !this.nickname) {
       if (this.roles.includes(UserRole.RECRUITER)) this.nickname = "Recrutador";
-    } else if (this.roles.includes(UserRole.CANDIDATE)) {
-      this.nickname = this.name.split(" ")[0];
+      if (this.roles.includes(UserRole.CANDIDATE))
+        this.nickname = this.name.split(" ")[0];
     }
 
     // check password match and encrypt password
     await passwordMatch.call(this);
   }
 
-  /** constructor */
+  /** --- constructor-----------------------------------------------------------*/
   constructor(partial: Partial<User>) {
     super();
     Object.assign(this, partial);
   }
 }
 
-/** helper authentication methods */
+/** --- helper authentication methods ----------------------------------------*/
 export async function passwordMatch(this: Partial<User>) {
   if (!this.password || !this.passwordConfirm)
     throw new UnauthorizedException(

@@ -43,7 +43,7 @@ export class UserService {
     private readonly examInvitationService: ExamInvitationService
   ) {}
 
-  /** basic CRUD methods */
+  /** --- basic CRUD methods ---------------------------------------------------*/
   async create(createUserDto: CreateUserDto): Promise<User> {
     // check if email already exists
     if (await this.findOne("email", createUserDto.email)) {
@@ -133,7 +133,7 @@ export class UserService {
     return await queryBuilder.getOne();
   }
 
-  /** custom methods */
+  /** --- custom methods -------------------------------------------------------*/
   async profile(id: number): Promise<User> {
     const user = (await this.findOne("id", id)) as User;
 
@@ -249,11 +249,11 @@ export class UserService {
     // create empty answer sheet for user
     await this.answerSheetService.create(user, exam.id, invitationId);
 
-    return <User>await this.profile(user.id);
+    return await this.profile(user.id);
   }
 
   async rejectInvitation(invitationId: number, user: User): Promise<User> {
     await this.examInvitationService.reject(invitationId, user.id);
-    return <User>await this.profile(user.id);
+    return await this.profile(user.id);
   }
 }

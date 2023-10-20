@@ -3,6 +3,10 @@ import { ConfigService } from "@nestjs/config";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { Test, TestingModule } from "@nestjs/testing";
 
+/** external dependencies */
+import * as path from "path";
+import { promises as fs } from "fs";
+
 /** providers */
 import { UserService } from "./user.service";
 import { AwsService } from "../aws/aws.service";
@@ -14,9 +18,6 @@ import { ExamInvitationService } from "../exam-invitation/exam-invitation.servic
 /** entities */
 import { User } from "./entities/user.entity";
 ////////////////////////////////////////////////////////////////////////////////
-
-/** --- global test variables ------------------------------------------------*/
-let service: UserService;
 
 /** --- mock data ------------------------------------------------------------*/
 const mockUser: Partial<User> = {
@@ -31,6 +32,14 @@ const mockUserDB: Partial<User>[] = [mockUser];
 
 /** --- mock providers -------------------------------------------------------*/
 const mockRepository = {
+  set: jest.fn().mockReturnThis(),
+  where: jest.fn().mockReturnThis(),
+  update: jest.fn().mockReturnThis(),
+  leftJoinAndSelect: jest.fn().mockReturnThis(),
+  leftJoinAndMapOne: jest.fn().mockReturnThis(),
+  createQueryBuilder: jest.fn().mockReturnThis(),
+  leftJoinAndMapMany: jest.fn().mockReturnThis(),
+  loadRelationIdAndMap: jest.fn().mockReturnThis(),
   create: jest.fn().mockImplementation(function (this: any) {
     const { email, password, roles, ownedQuestions } =
       this.create.mock.lastCall[0];
@@ -46,17 +55,9 @@ const mockRepository = {
 
     return user;
   }),
-  createQueryBuilder: jest.fn().mockReturnThis(),
-  where: jest.fn().mockReturnThis(),
-  leftJoinAndSelect: jest.fn().mockReturnThis(),
-  loadRelationIdAndMap: jest.fn().mockReturnThis(),
-  leftJoinAndMapMany: jest.fn().mockReturnThis(),
-  leftJoinAndMapOne: jest.fn().mockReturnThis(),
-  update: jest.fn().mockReturnThis(),
-  set: jest.fn().mockReturnThis(),
   execute: jest.fn().mockImplementation(function (this: any) {
     const { id } = this.where.mock.lastCall[1];
-    const updateUserDto = Object.entries(this.set.mock.lastCall[0]);
+    const updateDto = Object.entries(this.set.mock.lastCall[0]);
 
     const user = mockUserDB.find((u: User) => u.id === id);
     if (!user)
@@ -64,8 +65,10 @@ const mockRepository = {
         affected: 0,
       });
 
-    updateUserDto.forEach(([key, value]) => {
-      (user as any)[key] = value;
+    updateDto.forEach(([key, value]) => {
+      key === "ownedQuestions"
+        ? (value as any[]).forEach((q: any) => (user as any)[key].push(q))
+        : ((user as any)[key] = value);
     });
 
     return Promise.resolve({ affected: 1 });
@@ -84,22 +87,41 @@ const mockRepository = {
 
 const mockQueryRunner = {
   connect: jest.fn().mockReturnThis(),
+  release: jest.fn().mockReturnThis(),
   startTransaction: jest.fn().mockReturnThis(),
   commitTransaction: jest.fn().mockReturnThis(),
   rollbackTransaction: jest.fn().mockReturnThis(),
-  release: jest.fn().mockReturnThis(),
 };
 
 const mockExamInvitationService = {
-  findPending: jest.fn().mockResolvedValue([{ id: 1 }]),
   update: jest.fn().mockReturnThis(),
+  reject: jest.fn().mockReturnThis(),
+  findPending: jest.fn().mockResolvedValue([{ id: 1 }]),
+  accept: jest.fn().mockImplementation(() => Promise.resolve({ exam: "test" })),
 };
 
 const mockConfigService = {
   get: jest.fn().mockReturnValue("test"),
 };
 
+const mockExamService = {
+  enrollUser: jest.fn().mockReturnThis(),
+};
+
+const mockAnswerSheetService = {
+  create: jest.fn().mockReturnThis(),
+};
+
+const mockAwsService = {
+  uploadFileToS3: jest.fn().mockReturnThis(),
+};
+
 /** --- setup ----------------------------------------------------------------*/
+let service: UserService;
+
+const originalCreateMock = mockRepository.create;
+const originalEnv = mockConfigService.get;
+
 beforeAll(async () => {
   const moduleRef: TestingModule = await Test.createTestingModule({
     providers: [
@@ -108,11 +130,11 @@ beforeAll(async () => {
         provide: getRepositoryToken(User),
         useValue: mockRepository,
       },
-      { provide: AwsService, useValue: {} },
-      { provide: ExamService, useValue: {} },
+      { provide: AwsService, useValue: mockAwsService },
+      { provide: ExamService, useValue: mockExamService },
       { provide: ConfigService, useValue: mockConfigService },
       { provide: QueryRunnerService, useValue: mockQueryRunner },
-      { provide: AnswerSheetService, useValue: {} },
+      { provide: AnswerSheetService, useValue: mockAnswerSheetService },
       { provide: ExamInvitationService, useValue: mockExamInvitationService },
     ],
   }).compile();
@@ -122,6 +144,11 @@ beforeAll(async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+afterEach(() => {
+  mockRepository.create = jest.fn().mockImplementation(originalCreateMock);
+  mockConfigService.get = jest.fn().mockImplementation(originalEnv);
 });
 
 /** --- test suite -----------------------------------------------------------*/
@@ -172,13 +199,13 @@ describe("UserService", () => {
       });
 
       expect(mockQueryRunner.connect).toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalled();
       expect(mockQueryRunner.startTransaction).toHaveBeenCalled();
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
       expect(mockRepository.create).toHaveBeenCalledWith({
         ...payload,
         ownedQuestions: [],
       });
-      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
-      expect(mockQueryRunner.release).toHaveBeenCalled();
     });
 
     it("if user is candidate, should check for pending invitations and set relation between invitation and user", async () => {
@@ -218,23 +245,29 @@ describe("UserService", () => {
         })
       ).rejects.toThrowError("Something went wrong");
 
+      expect(mockQueryRunner.release).toHaveBeenCalled();
       expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
+  });
 
-      mockRepository.create.mockImplementation(function (this: any) {
-        const { email, password, roles, ownedQuestions } =
-          this.create.mock.lastCall[0];
-
-        const user = {
-          id: mockUserDB.length + 1,
-          email,
-          password,
-          roles,
-          ownedQuestions,
-        };
-        mockUserDB.push(user);
-
-        return user;
+  describe("update method", () => {
+    it("should update a user based on provided update dto", async () => {
+      expect(
+        await service.update(mockUser.id!, {
+          nickname: "Test User",
+        })
+      ).toEqual({
+        ...mockUser,
+        nickname: "Test User",
       });
+    });
+
+    it("should throw an error if user is not found", async () => {
+      await expect(
+        service.update(999, {
+          nickname: "Test User",
+        })
+      ).rejects.toThrowError("User not found.");
     });
   });
 
@@ -242,11 +275,12 @@ describe("UserService", () => {
     it("should return a user if found", async () => {
       const result = await service.findOne("email", "user@example.com");
       expect(result).toEqual(mockUser);
+
+      expect(mockRepository.getOne).toHaveBeenCalled();
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("user");
       expect(mockRepository.where).toHaveBeenCalledWith("user.email = :email", {
         email: "user@example.com",
       });
-      expect(mockRepository.getOne).toHaveBeenCalled();
     });
 
     it("should return null if no user is found", async () => {
@@ -255,12 +289,8 @@ describe("UserService", () => {
     });
 
     it("should return a user with relations", async () => {
-      await service.findOne("email", "user@example.com", [
-        "ownedExams",
-        "invitations",
-        "enrolledExams",
-        "answerSheets",
-      ]);
+      await service.findOne("email", "user@example.com", ["", "", "", ""]);
+
       expect(mockRepository.loadRelationIdAndMap).toHaveBeenCalledTimes(4);
       expect(mockRepository.leftJoinAndSelect).toHaveBeenCalledTimes(0);
     });
@@ -269,20 +299,20 @@ describe("UserService", () => {
       await service.findOne(
         "email",
         "user@example.com",
-        ["ownedExams", "invitations", "enrolledExams", "answerSheets"],
+        ["", "", "", ""],
         true
       );
+
       expect(mockRepository.leftJoinAndSelect).toHaveBeenCalledTimes(4);
       expect(mockRepository.loadRelationIdAndMap).toHaveBeenCalledTimes(0);
     });
   });
 
   describe("profile method", () => {
-    it("should return the profile for a recruiter", async () => {
+    it("should return the profile of a recruiter", async () => {
       const user = await service.profile(mockUser.id!);
       expect(user).toBeDefined();
 
-      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("user");
       expect(mockRepository.leftJoinAndMapMany).toHaveBeenCalledWith(
         "user.ownedExamsRef",
         "user.ownedExams",
@@ -292,9 +322,10 @@ describe("UserService", () => {
         id: mockUser.id!,
       });
       expect(mockRepository.getOne).toHaveBeenCalled();
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("user");
     });
 
-    it("should return the profile for a candidate", async () => {
+    it("should return the profile of a candidate", async () => {
       const user = await service.profile(3);
       expect(user).toBeDefined();
 
@@ -332,7 +363,7 @@ describe("UserService", () => {
     });
   });
 
-  describe("update method", () => {
+  describe("updateProfile method", () => {
     it("should throw an error if no data is provided", async () => {
       await expect(service.updateProfile(mockUser.id!)).rejects.toThrowError(
         "Nothing to update"
@@ -385,25 +416,93 @@ describe("UserService", () => {
       });
     });
 
-    it("should update a user based on provided file", async () => {
+    it("should update a user based on provided file and store file accordingly", async () => {
       const file = {
         mimetype: "image/png",
       } as Express.Multer.File;
 
+      // "test" environment
       expect(
         await service.updateProfile(mockUser.id!, undefined, file)
       ).toEqual({
         ...mockUser,
         logo: `https://example.com/${mockUser.id}.png`,
       });
+
+      // "dev" environment
+      mockConfigService.get.mockReturnValue("dev");
+      const joinMock = jest.spyOn(path, "join");
+      joinMock.mockImplementation(() => "");
+
+      const appendFileMock = jest.spyOn(fs, "appendFile");
+      appendFileMock.mockImplementation(async () => Promise.resolve());
+
+      expect(
+        await service.updateProfile(mockUser.id!, undefined, file)
+      ).toEqual({
+        ...mockUser,
+        logo: "https://wallpapers.com/images/featured-full/cool-profile-picture-87h46gcobjl5e4xu.jpg",
+      });
+
+      expect(joinMock).toHaveBeenCalled();
+      expect(appendFileMock).toHaveBeenCalled();
+
+      joinMock.mockRestore();
+      appendFileMock.mockRestore();
+
+      // "prod" environment
+      mockConfigService.get
+        .mockReturnValueOnce("prod")
+        .mockReturnValue("bucket");
+
+      expect(
+        await service.updateProfile(mockUser.id!, undefined, file)
+      ).toEqual({
+        ...mockUser,
+        logo: "https://bucket.s3.sa-east-1.amazonaws.com/logo/1.png",
+      });
+    });
+
+    it("should throw an error if user is not found", async () => {
+      await expect(service.updateProfile(999, {})).rejects.toThrowError(
+        "User not found"
+      );
+    });
+  });
+
+  describe("addQuestion method", () => {
+    it("should add a question to user's owned questions", async () => {
+      const questionDto = { ownedQuestions: ["mongoId"] };
+      await service.addQuestion(mockUser.id!, questionDto);
+      expect(mockUserDB[mockUser.id! - 1].ownedQuestions).toEqual(
+        questionDto.ownedQuestions
+      );
     });
 
     it("should throw an error if user is not found", async () => {
       await expect(
-        service.updateProfile(999, {
-          name: "Test User",
-        })
-      ).rejects.toThrowError("User not found");
+        service.addQuestion(999, { ownedQuestions: ["mongoId"] })
+      ).rejects.toThrowError("Update failed.");
+    });
+  });
+
+  describe("acceptInvitation method", () => {
+    it("should accept an invitation", async () => {
+      const user = await service.findOne("id", mockUser.id!);
+      await service.acceptInvitation(mockUser.id!, user!);
+
+      expect(mockExamInvitationService.accept).toHaveBeenCalled();
+      expect(mockExamService.enrollUser).toHaveBeenCalled();
+      expect(mockAnswerSheetService.create).toHaveBeenCalled();
+    });
+  });
+
+  describe("rejectInvitation method", () => {
+    it("should reject an invitation", async () => {
+      const user = await service.findOne("id", mockUser.id!);
+      service.rejectInvitation(mockUser.id!, user!);
+
+      expect(mockExamInvitationService.reject).toHaveBeenCalled();
     });
   });
 });

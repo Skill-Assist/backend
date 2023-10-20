@@ -1,4 +1,8 @@
 /** nestjs */
+import {
+  UnauthorizedException,
+  UnprocessableEntityException,
+} from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 
 /** controllers */
@@ -15,16 +19,9 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 
 /** utils */
 import { PassportRequest } from "../utils/api-types.utils";
-import {
-  UnauthorizedException,
-  UnprocessableEntityException,
-} from "@nestjs/common";
 ////////////////////////////////////////////////////////////////////////////////
 
-/** global test variables */
-let controller: UserController;
-
-/** mock data */
+/** --- mock data ------------------------------------------------------------*/
 const mockUser = {
   id: 1,
   email: "user@example.com",
@@ -44,37 +41,26 @@ const mockRequest = {
   },
 } as PassportRequest;
 
-/** setup */
+/** --- mock providers -------------------------------------------------------*/
+const mockUserService: Partial<UserService> = {
+  profile: jest.fn().mockReturnValue(Promise.resolve(mockUser)),
+  acceptInvitation: jest.fn().mockReturnValue(Promise.resolve(mockUser)),
+  rejectInvitation: jest.fn().mockReturnValue(Promise.resolve(mockUser)),
+  updateProfile: jest
+    .fn()
+    .mockImplementation(
+      (
+        _: PassportRequest,
+        mockUpdateUserDto: UpdateUserDto,
+        __: Express.Multer.File
+      ) => Promise.resolve({ ...mockUser, ...mockUpdateUserDto })
+    ),
+};
+
+/** --- setup ----------------------------------------------------------------*/
+let controller: UserController;
+
 beforeAll(async () => {
-  const mockUserService: Partial<UserService> = {
-    profile: jest.fn().mockImplementation((mockRequest: PassportRequest) => {
-      return Promise.resolve(mockUser);
-    }),
-
-    // prettier-ignore
-    updateProfile: jest
-      .fn()
-      .mockImplementation(
-        (mockRequest: PassportRequest, 
-         mockUpdateUserDto: UpdateUserDto, 
-         mockUploadedFile: Express.Multer.File) => {
-          return Promise.resolve({ ...mockUser, ...mockUpdateUserDto });
-        }
-      ),
-
-    acceptInvitation: jest
-      .fn()
-      .mockImplementation((invitationId: number, user: User) => {
-        return Promise.resolve(mockUser);
-      }),
-
-    rejectInvitation: jest
-      .fn()
-      .mockImplementation((invitationId: number, user: User) => {
-        return Promise.resolve(mockUser);
-      }),
-  };
-
   // initialize test module
   const moduleRef: TestingModule = await Test.createTestingModule({
     controllers: [UserController],
@@ -85,7 +71,7 @@ beforeAll(async () => {
   controller = moduleRef.get<UserController>(UserController);
 });
 
-/** test suite */
+/** --- test suite -----------------------------------------------------------*/
 describe("UserController", () => {
   it("should be defined", () => {
     expect(controller).toBeDefined();
@@ -101,8 +87,6 @@ describe("UserController", () => {
     it("should throw an error if no data is provided", () => {
       try {
         expect(controller.updateProfile(mockRequest));
-
-        // if no error is thrown, then the test fails
         fail("expected error to be thrown");
       } catch (err) {
         expect(err).toBeInstanceOf(UnauthorizedException);
@@ -117,8 +101,6 @@ describe("UserController", () => {
             mimetype: "application/pdf",
           } as Express.Multer.File)
         );
-
-        //  if no error is thrown, then the test fails
         fail("expected error to be thrown");
       } catch (err) {
         expect(err).toBeInstanceOf(UnprocessableEntityException);
@@ -134,8 +116,6 @@ describe("UserController", () => {
             size: 100000000,
           } as Express.Multer.File)
         );
-
-        // if no error is thrown, then the test fails
         fail("expected error to be thrown");
       } catch (err) {
         expect(err).toBeInstanceOf(UnprocessableEntityException);
@@ -151,9 +131,17 @@ describe("UserController", () => {
   });
 
   describe("acceptInvitation method", () => {
-    it("should return a user profile", async () => {
+    it("should accept a pending invitation", async () => {
       await expect(
         controller.acceptInvitation(mockRequest, 1)
+      ).resolves.toEqual(mockUser);
+    });
+  });
+
+  describe("rejectInvitation method", () => {
+    it("should reject a pending invitation", async () => {
+      await expect(
+        controller.rejectInvitation(mockRequest, 1)
       ).resolves.toEqual(mockUser);
     });
   });
