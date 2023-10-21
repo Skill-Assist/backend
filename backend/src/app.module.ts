@@ -48,35 +48,46 @@ import { AppInterceptor } from "./app.interceptor";
       // ignoreEnvFile: process.env.NODE_ENV === "prod" ? true : false,
     }),
     /** see https://docs.nestjs.com/security/rate-limiting */
-    ThrottlerModule.forRoot({
-      ttl: 60,
-      limit: 250,
-    }),
+    ThrottlerModule.forRoot([{  ttl: 60, limit: 250}]),
     /** see https://typeorm.io/data-source-options */
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const user = configService.get<string>("MYSQL_USER");
-        const pass = configService.get<string>("MYSQL_ROOT_PASS");
-        const host = configService.get<string>("MYSQL_HOST");
-        const script = configService.get<string>("npm_lifecycle_script");
+        const nodeEnv = configService.get<string>("NODE_ENV");
 
-        // gracefully shutdown if NODE_ENV is not set
-        if (!script?.includes("NODE_ENV")) {
-          console.log("NODE_ENV is not set. Exiting...");
-          process.exit(1);
+        let user, pass, host;
+
+        switch(nodeEnv) {
+          case "prod":
+            host = configService.get<string>("MYSQL_HOST");
+            user = configService.get<string>("MYSQL_USER");
+            pass = configService.get<string>("MYSQL_ROOT_PASS");
+            break;
+          case "dev":
+            host = "mysql";
+            user = "root";
+            pass = "password";
+            break;
+          case "test":
+            host = "localhost";
+            user = "root";
+            pass = "password";
+            break;
+          default:
+            console.log("NODE_ENV is not set. Exiting...");
+            process.exit(1);
         }
 
         return {
           type: "mysql",
-          host: script.includes("prod") ? host : "mysql",
+          host: host,
           port: 3306,
-          username: script.includes("prod") ? user : "root",
-          password: script.includes("prod") ? pass : "password",
+          username: user,
+          password: pass,
           database: "db",
           autoLoadEntities: true,
           cache: { duration: 30000 },
-          synchronize: script.includes("prod") ? false : true,
+          synchronize: nodeEnv === "prod" ? false : true,
         };
       },
     }),
@@ -84,20 +95,27 @@ import { AppInterceptor } from "./app.interceptor";
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const user = configService.get<string>("MONGO_USER");
-        const pass = configService.get<string>("MONGO_USER_PASS");
-        const host = configService.get<string>("MONGO_HOST");
-        const script = configService.get<string>("npm_lifecycle_script");
-
-        // gracefully shutdown if NODE_ENV is not set
-        if (!script?.includes("NODE_ENV")) {
-          console.log("NODE_ENV is not set. Exiting...");
-          process.exit(1);
-        }
-
-        const uri = script.includes("prod")
-          ? `mongodb+srv://${user}:${pass}@${host}/database?retryWrites=true&w=majority`
-          : `mongodb://username:password@mongodb:27017/database?authSource=admin`;
+        const nodeEnv = configService.get<string>("NODE_ENV");
+        
+        let uri;
+        
+        switch(nodeEnv) {
+          case "prod":
+              const user = configService.get<string>("MONGO_USER");
+              const pass = configService.get<string>("MONGO_USER_PASS");
+              const host = configService.get<string>("MONGO_HOST");
+              uri = `mongodb+srv://${user}:${pass}@${host}/database?retryWrites=true&w=majority`;
+              break;
+          case "dev":
+            uri = "mongodb://username:password@mongodb:27017/database?authSource=admin";
+            break;
+          case "test":
+            uri = "mongodb://127.0.0.1:27017/database";
+            break;
+          default:
+            console.log("NODE_ENV is not set. Exiting...");
+            process.exit(1);
+          }
 
         return { uri };
       },

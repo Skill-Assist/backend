@@ -1,6 +1,5 @@
 /** nestjs */
 import {
-  Get,
   Req,
   Post,
   Body,
@@ -25,8 +24,7 @@ import { AllowAnon } from "./guards/allow-anon.guard";
 /** utils */
 import {
   PassportJwt,
-  SessionRequest,
-  PassportRequest,
+  SessionRequest
 } from "../utils/api-types.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -52,26 +50,5 @@ export class AuthController {
       throw new UnauthorizedException("User not found. Please try again.");
 
     return await this.authService.login(req.user);
-
-    // if (!req.session.user) {
-    //   req.session.user = {
-    //     [req.user.id]: {
-    //       visits: 1,
-    //     },
-    //   };
-    // } else if (!req.session.user[req.user.id]) {
-    //   req.session.user[req.user.id] = {
-    //     visits: 1,
-    //   };
-    // } else {
-    //   req.session.user[req.user.id].visits++;
-    // }
-
-    // console.log("req.session: ", req.session);
-  }
-
-  @Get("signout")
-  signout(@Req() req: PassportRequest): string {
-    return "TODO : add jwt to blacklist";
   }
 }
