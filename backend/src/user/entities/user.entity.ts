@@ -5,7 +5,6 @@ import {
   OneToMany,
   ManyToMany,
   BeforeInsert,
-  BeforeUpdate,
 } from "typeorm";
 import * as bcrypt from "bcrypt";
 import { Exclude } from "class-transformer";
@@ -75,7 +74,6 @@ export class User extends SQLBaseEntity {
 
   /** --- hooks ----------------------------------------------------------------*/
   @BeforeInsert()
-  @BeforeUpdate()
   async function() {
     // set nickname
     if (this.name && !this.nickname) {
@@ -108,14 +106,10 @@ export async function passwordMatch(this: Partial<User>) {
     );
   }
 
-  this.password = await encryptPassword(this.password);
+  this.password = await bcrypt.hash(this.password, 10);
   this.passwordConfirm = undefined;
 
   return this;
-}
-
-export async function encryptPassword(password: string): Promise<string> {
-  return await bcrypt.hash(password, 10);
 }
 
 export async function decryptPassword(

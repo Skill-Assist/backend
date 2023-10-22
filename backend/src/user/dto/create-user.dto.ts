@@ -1,6 +1,5 @@
 import {
   IsIn,
-  IsUrl,
   Length,
   IsEmail,
   IsString,
@@ -20,6 +19,7 @@ export class CreateUserDto {
   name?: string;
 
   @IsOptional()
+  @Transform((nickname) => nickname.value.trim())
   @IsString()
   @MaxLength(12, {
     message: "Nickname cannot be longer than 12 characters",
@@ -38,7 +38,7 @@ export class CreateUserDto {
 
   @IsString()
   @Length(8, 20, {
-    message: "Password confirm must be between 8 and 20 characters long",
+    message: "Password must be between 8 and 20 characters long",
   })
   passwordConfirm: string;
 
@@ -47,10 +47,6 @@ export class CreateUserDto {
 
   @IsOptional()
   nationalId?: string;
-
-  @IsOptional()
-  @IsUrl()
-  logo?: string;
 
   @IsIn(["candidate", "recruiter"], {
     each: true,
