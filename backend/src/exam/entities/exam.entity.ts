@@ -28,10 +28,10 @@ export class Exam extends SQLBaseEntity {
   @Column("longtext")
   description: string;
 
-  @Column()
+  @Column({ type: "decimal", precision: 10, scale: 5 })
   durationInHours: number;
 
-  @Column()
+  @Column({ type: "decimal", precision: 10, scale: 5 })
   submissionInHours: number;
 
   @Column()

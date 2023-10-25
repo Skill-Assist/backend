@@ -65,7 +65,7 @@ export class AnswerSheetService implements OnModuleInit {
     const exam = await this.examService.findOne(user.id, "id", examId);
 
     // check if user has already attempted the exam
-    for (const answerSheet of await exam.answerSheets) {
+    for (const answerSheet of await exam!.answerSheets) {
       if ((await answerSheet.user).id === user.id) {
         throw new UnauthorizedException(
           "You have already attempted this exam. You can't attempt it again."

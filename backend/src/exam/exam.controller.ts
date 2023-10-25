@@ -37,7 +37,7 @@ import { PassportRequest } from "../utils/api-types.utils";
 export class ExamController {
   constructor(private readonly examService: ExamService) {}
 
-  /** basic CRUD endpoints */
+  /** --- basic CRUD endpoints -------------------------------------------------*/
   @Post()
   @Roles(UserRole.RECRUITER)
   create(
@@ -54,7 +54,7 @@ export class ExamController {
     @Query("value") value: unknown,
     @Query("relations") relations: string,
     @Query("map") map: boolean
-  ): Promise<Exam> {
+  ): Promise<Exam | null> {
     return this.examService.findOne(
       req.user!.id,
       key,
@@ -80,7 +80,15 @@ export class ExamController {
     return this.examService.delete(req.user!.id, id);
   }
 
-  /** custom endpoints */
+  /** --- custom endpoints -----------------------------------------------------*/
+  @Post("suggestDescription")
+  @Roles(UserRole.RECRUITER)
+  suggestDescription(
+    @Body() suggestDescriptionDto: SuggestDescriptionDto
+  ): Promise<string> {
+    return this.examService.suggestDescription(suggestDescriptionDto);
+  }
+
   @Get("fetchOwn")
   fetchOwn(@Req() req: PassportRequest): Promise<Exam[]> {
     return this.examService.fetchOwn(req.user!.id);
@@ -122,13 +130,5 @@ export class ExamController {
     @Query("id") id: number
   ): Promise<any> {
     return this.examService.fetchCandidates(req.user!.id, id);
-  }
-
-  @Post("suggestDescription")
-  @Roles(UserRole.RECRUITER)
-  suggestDescription(
-    @Body() suggestDescriptionDto: SuggestDescriptionDto
-  ): Promise<string> {
-    return this.examService.suggestDescription(suggestDescriptionDto);
   }
 }
