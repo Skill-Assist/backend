@@ -35,6 +35,7 @@ import { PassportRequest } from "../utils/api-types.utils";
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  /** --- custom endpoints -----------------------------------------------------*/
   @Get("profile")
   profile(@Req() req: PassportRequest): Promise<User> {
     return this.userService.profile(req.user!.id);

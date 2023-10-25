@@ -1,9 +1,10 @@
 /** nestjs */
 import {
   Injectable,
-  NotFoundException,
   OnModuleInit,
+  NotFoundException,
   UnauthorizedException,
+  BadRequestException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
@@ -47,27 +48,27 @@ import {
 
 @Injectable()
 export class ExamService implements OnModuleInit {
-  public PINECONE_EXAM_INDEX_NAME: string = "vector-store";
-  public PINECONE_EXAM_INDEX_DIMENSION: number = 2054;
-  public PINECONE_EXAM_INDEX_MODULE: string = "exam-description";
+  public PINECONE_INDEX_NAME: string = "vector-store";
+  public PINECONE_INDEX_DIMENSION: number = 1536;
+  public PINECONE_INDEX_MODULE: string = "exam-description";
 
   private userService: UserService;
   private answerSheetService: AnswerSheetService;
   private examInvitationService: ExamInvitationService;
 
-  private llm: OpenAI = new OpenAI({
+  llm: OpenAI = new OpenAI({
     modelName: "gpt-4",
     temperature: 0,
   });
 
-  private vectorStore: Pinecone = new Pinecone({
+  vectorStore: Pinecone = new Pinecone({
     apiKey: this.configService.get<string>("PINECONE_API_KEY")!,
     environment: this.configService.get<string>("PINECONE_ENVIRONMENT")!,
   });
 
   constructor(
     @InjectRepository(Exam)
-    private readonly examRepository: Repository<Exam>,
+    private readonly repository: Repository<Exam>,
     private readonly moduleRef: ModuleRef,
     private readonly configService: ConfigService,
     private readonly queryRunner: QueryRunnerService
@@ -83,31 +84,40 @@ export class ExamService implements OnModuleInit {
     });
   }
 
-  /** basic CRUD methods */
+  /** --- basic CRUD methods ---------------------------------------------------*/
   async create(userId: number, createExamDto: CreateExamDto): Promise<Exam> {
     // create exam
-    const exam = (await _create(
-      this.queryRunner,
-      this.examRepository,
-      createExamDto
-    )) as Exam;
+    await this.queryRunner.connect();
+    await this.queryRunner.startTransaction();
 
-    // add exam's metadata to vector store
-    await this.manageVectorStore(
-      "upsert",
-      this.PINECONE_EXAM_INDEX_NAME,
-      exam.id,
-      exam.jobTitle,
-      exam.jobLevel,
-      exam.description
-    );
+    try {
+      const exam = this.repository.create(createExamDto);
 
-    // set relation between exam and user
-    const user = await this.userService.findOne("id", userId);
-    await _update(exam.id, { createdBy: user }, this.examRepository, "exam");
+      await this.queryRunner.commitTransaction(exam);
 
-    // return updated exam
-    return await this.findOne(userId, "id", exam.id);
+      // add exam's metadata to vector store
+      await this.manageVectorStore(
+        "upsert",
+        this.PINECONE_INDEX_NAME,
+        exam.id,
+        exam.jobTitle,
+        exam.jobLevel,
+        exam.description
+      );
+
+      // set relation between exam and user
+      const user = await this.userService.findOne("id", userId);
+      await _update(exam.id, { createdBy: user }, this.repository, "exam");
+
+      return exam;
+    } catch (err) {
+      // rollback changes made in case of error
+      await this.queryRunner.rollbackTransaction();
+      throw new BadRequestException(err.message);
+    } finally {
+      // release queryRunner after transaction
+      await this.queryRunner.release();
+    }
   }
 
   async findAll(
@@ -119,7 +129,7 @@ export class ExamService implements OnModuleInit {
     if (key && !value) throw new NotFoundException("Value not provided.");
 
     return (await _findAll(
-      this.examRepository,
+      this.repository,
       "exam",
       key,
       value,
@@ -134,13 +144,12 @@ export class ExamService implements OnModuleInit {
     value: unknown,
     relations?: string[],
     map?: boolean
-  ): Promise<Exam> {
-    const exam = (await _findOne(
-      this.examRepository,
-      "exam",
-      key,
-      value
-    )) as Exam;
+  ): Promise<Exam | null> {
+    const queryBuilder = this.repository
+      .createQueryBuilder("exam")
+      .where(`user.${key} = :${key}`, { [key]: value });
+
+    const exam = await queryBuilder.getOne();
 
     // check if exam exists
     if (!exam) throw new NotFoundException("Exam with given id not found.");
@@ -154,14 +163,17 @@ export class ExamService implements OnModuleInit {
         "You are not authorized to access this exam."
       );
 
-    return (await _findOne(
-      this.examRepository,
-      "exam",
-      key,
-      value,
-      relations,
-      map
-    )) as Exam;
+    if (relations)
+      for (const relation of relations) {
+        map
+          ? queryBuilder.leftJoinAndSelect(`exam.${relation}`, `${relation}`)
+          : queryBuilder.loadRelationIdAndMap(
+              `${relation}Ref`,
+              `exam.${relation}`
+            );
+      }
+
+    return await queryBuilder.getOne();
   }
 
   async update(
@@ -173,7 +185,7 @@ export class ExamService implements OnModuleInit {
     const exam = await this.findOne(userId, "id", examId);
 
     // check if exam status is draft
-    if (exam.status !== "draft")
+    if (exam!.status !== "draft")
       throw new UnauthorizedException(
         "Exam is not in draft status. Process was aborted."
       );
@@ -182,7 +194,7 @@ export class ExamService implements OnModuleInit {
     await _update(
       examId,
       updateExamDto as Record<string, unknown>,
-      this.examRepository,
+      this.repository,
       "exam"
     );
 
@@ -190,14 +202,14 @@ export class ExamService implements OnModuleInit {
     const updatedExam = await this.findOne(userId, "id", examId);
     this.manageVectorStore(
       "upsert",
-      this.PINECONE_EXAM_INDEX_NAME,
-      updatedExam.id,
-      updatedExam.jobTitle,
-      updatedExam.jobLevel,
-      updatedExam.description
+      this.PINECONE_INDEX_NAME,
+      updatedExam!.id,
+      updatedExam!.jobTitle,
+      updatedExam!.jobLevel,
+      updatedExam!.description
     );
 
-    return updatedExam;
+    return updatedExam!;
   }
 
   async delete(userId: number, examId: number): Promise<void> {
@@ -205,19 +217,98 @@ export class ExamService implements OnModuleInit {
     const exam = await this.findOne(userId, "id", examId);
 
     // check if exam status is draft
-    if (exam.status !== "draft")
+    if (exam!.status !== "draft")
       throw new UnauthorizedException(
         "Exam is not in draft status. Process was aborted."
       );
 
     // delete exam
-    await _delete(examId, this.examRepository, "exam");
+    await _delete(examId, this.repository, "exam");
 
     // delete exam's metadata from vector store
-    this.manageVectorStore("delete", this.PINECONE_EXAM_INDEX_NAME, examId);
+    this.manageVectorStore("delete", this.PINECONE_INDEX_NAME, examId);
   }
 
-  /** custom methods */
+  /** --- custom methods -------------------------------------------------------*/
+  async suggestDescription(
+    suggestDescriptionDto: SuggestDescriptionDto
+  ): Promise<string> {
+    // 1. MySQL database: return description based on jobTitle and jobLevel
+    const exam = await this.repository
+      .createQueryBuilder("exam")
+      .select("exam.description")
+      .where("exam.jobTitle = :jobTitle", {
+        jobTitle: suggestDescriptionDto.jobTitle,
+      })
+      .andWhere("exam.jobLevel = :jobLevel", {
+        jobLevel: suggestDescriptionDto.jobLevel,
+      })
+      .getOne();
+
+    if (exam) return exam.description;
+
+    // 2. Pinecone: if no description, suggest based on vector similarity
+    const pineconeIndex = this.vectorStore.index(this.PINECONE_INDEX_NAME);
+
+    const embeddings = new OpenAIEmbeddings();
+    const embeddedQuery = await embeddings.embedQuery(
+      `${suggestDescriptionDto.jobTitle}|${suggestDescriptionDto.jobLevel}`
+    );
+
+    const queryResponse = await pineconeIndex.query({
+      topK: 1,
+      vector: embeddedQuery,
+      filter: {
+        module: { $eq: this.PINECONE_INDEX_MODULE },
+      },
+      includeMetadata: true,
+    });
+
+    if (queryResponse.matches?.length) {
+      const match = queryResponse.matches[0];
+
+      if (match.score && match.score >= 0.85) {
+        const exam = await this.repository
+          .createQueryBuilder("exam")
+          .where("user.id = :id", { id: +match.id })
+          .getOne();
+
+        if (!exam) throw new NotFoundException("Exam with given id not found.");
+        return exam.description;
+      }
+    }
+
+    // 3. LLM call: if no description, suggest based on LLM
+    let prompt = PromptTemplate.fromTemplate(
+      "Elabore uma descrição resumida para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}. Leve em consideração aspectos socias, como gênero, raça, etnia, orientação sexual, etc. A descrição deve ser similar ao seguinte exemplo: Esse exame de recrutamento ..."
+    );
+
+    const chain = new LLMChain({ llm: this.llm, prompt });
+    let res = await chain.call(suggestDescriptionDto);
+
+    // if suggested description is too long, prompt LLM to summarize it
+    const validateLength = async (
+      text: string,
+      maxLength: number,
+      chain: LLMChain<string, OpenAI<any>>
+    ): Promise<string> => {
+      let description = text;
+
+      chain.prompt = PromptTemplate.fromTemplate(
+        "Resuma a seguinte descrição para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}? {description}"
+      );
+
+      while (description.length > maxLength) {
+        const res = await chain.call({ ...suggestDescriptionDto, description });
+        description = res.text;
+      }
+
+      return description;
+    };
+
+    return validateLength(res.text, 400, chain);
+  }
+
   async fetchOwn(userId: number): Promise<Exam[]> {
     // get exams created by user
     const exams = await this.findAll("createdBy", userId);
@@ -231,7 +322,7 @@ export class ExamService implements OnModuleInit {
     let enrolledExams: Exam[] = [];
     if (user?.roles.includes("candidate")) {
       // get exams user is enrolled in
-      enrolledExams = await this.examRepository
+      enrolledExams = await this.repository
         .createQueryBuilder("exam")
         .leftJoinAndSelect("exam.enrolledUsers", "enrolledUsers")
         .where("enrolledUsers.id = :userId", { userId })
@@ -285,7 +376,7 @@ export class ExamService implements OnModuleInit {
 
     if (status === "archived") {
       // check if exam is published
-      if (exam.status !== "published")
+      if (exam!.status !== "published")
         throw new UnauthorizedException(
           "Exam is not published. Process was aborted."
         );
@@ -301,7 +392,7 @@ export class ExamService implements OnModuleInit {
       });
 
       // if exam has answer sheets, close non-initiated and return days left to finish initiated
-      const answerSheets = await exam.answerSheets;
+      const answerSheets = await exam!.answerSheets;
 
       answerSheets.forEach(async (answerSheet) => {
         if (answerSheet.deadline) {
@@ -316,7 +407,7 @@ export class ExamService implements OnModuleInit {
     }
 
     // switch status of exam
-    await this.examRepository
+    await this.repository
       .createQueryBuilder()
       .update(Exam)
       .set({ status })
@@ -334,7 +425,7 @@ export class ExamService implements OnModuleInit {
     // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 
-    const answerSheets = await exam.answerSheets;
+    const answerSheets = await exam!.answerSheets;
 
     const daysRemaining: number[] = [];
 
@@ -357,7 +448,7 @@ export class ExamService implements OnModuleInit {
     const exam = await this.findOne(userId, "id", examId);
 
     // check if exam is published
-    if (exam.status !== "published")
+    if (exam!.status !== "published")
       throw new UnauthorizedException(
         "Exam is not published. Process was aborted."
       );
@@ -365,7 +456,7 @@ export class ExamService implements OnModuleInit {
     // check if email addresses are already in exam
     for (const email of inviteDto.email) {
       if (
-        await this.examRepository
+        await this.repository
           .createQueryBuilder("exam")
           .leftJoinAndSelect("exam.enrolledUsers", "enrolledUsers")
           .where("exam.id = :examId", { examId })
@@ -389,7 +480,7 @@ export class ExamService implements OnModuleInit {
           email,
           expirationInHours: inviteDto.expirationInHours,
         },
-        exam,
+        exam!,
         user
       );
     }
@@ -400,7 +491,7 @@ export class ExamService implements OnModuleInit {
 
   async enrollUser(exam: Exam, user: User): Promise<Exam> {
     // enroll user in exam
-    await this.examRepository
+    await this.repository
       .createQueryBuilder()
       .relation(Exam, "enrolledUsers")
       .of(exam)
@@ -417,7 +508,7 @@ export class ExamService implements OnModuleInit {
     // get exam invitations
     const examInvitations = await this.examInvitationService.findAll(
       "exam",
-      exam.id
+      exam!.id
     );
 
     let response = [];
@@ -467,11 +558,11 @@ export class ExamService implements OnModuleInit {
     examId: number,
     mode: "general" | "strict" = "general"
   ) {
-    const { jobTitle, jobLevel } = await this.findOne(userId, "id", examId);
+    const { jobTitle, jobLevel } = (await this.findOne(userId, "id", examId))!;
 
     let similarExams: any[] = [];
     if (mode === "general") {
-      similarExams = await this.examRepository
+      similarExams = await this.repository
         .createQueryBuilder("exam")
         .where("exam.jobTitle = :jobTitle", { jobTitle })
         .andWhere("exam.jobLevel = :jobLevel", { jobLevel })
@@ -484,7 +575,7 @@ export class ExamService implements OnModuleInit {
     }
 
     if (mode === "strict") {
-      similarExams = await this.examRepository
+      similarExams = await this.repository
         .createQueryBuilder("exam")
         .where("exam.id = :examId", { examId })
         .getMany();
@@ -494,7 +585,7 @@ export class ExamService implements OnModuleInit {
     for (let i = 0; i < similarExams.length; i++) {
       const exam = similarExams[i];
 
-      const sections = await this.examRepository
+      const sections = await this.repository
         .createQueryBuilder("exam")
         .relation(Exam, "sections")
         .of(exam)
@@ -514,110 +605,6 @@ export class ExamService implements OnModuleInit {
     return similarSections;
   }
 
-  async suggestDescription(
-    suggestDescriptionDto: SuggestDescriptionDto
-  ): Promise<string> {
-    const validateLength = async (
-      text: string,
-      maxLength: number,
-      chain: LLMChain<string, OpenAI<any>>
-    ): Promise<string> => {
-      // if description is too long, prompt LLM to summarize it
-      let tempText = text;
-      while (tempText.length > maxLength) {
-        chain.prompt = PromptTemplate.fromTemplate(
-          "Resuma a seguinte descrição para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}? {description}"
-        );
-
-        res = await chain.call({
-          ...suggestDescriptionDto,
-          description: tempText,
-        });
-
-        tempText = res.text;
-      }
-
-      return tempText;
-    };
-
-    // 1. MySQL database: return description based on jobTitle and jobLevel
-    const exam = await this.examRepository
-      .createQueryBuilder("exam")
-      .select("exam.description")
-      .where("exam.jobTitle = :jobTitle", {
-        jobTitle: suggestDescriptionDto.jobTitle,
-      })
-      .andWhere("exam.jobLevel = :jobLevel", {
-        jobLevel: suggestDescriptionDto.jobLevel,
-      })
-      .getOne();
-
-    if (exam) return exam.description;
-
-    // 2. Pinecone: if no description, suggest based on vector similarity
-    const pineconeIndex = this.vectorStore.index(this.PINECONE_EXAM_INDEX_NAME);
-
-    const embeddings = new OpenAIEmbeddings();
-    const embeddedQuery = await embeddings.embedQuery(
-      `${suggestDescriptionDto.jobTitle}|${suggestDescriptionDto.jobLevel}`
-    );
-
-    if (embeddedQuery.length > this.PINECONE_EXAM_INDEX_DIMENSION)
-      throw new Error(
-        `Query dimension (${embeddedQuery.length}) is larger than index dimension (${this.PINECONE_EXAM_INDEX_DIMENSION}).`
-      );
-
-    const zerosArray: number[] = [];
-    for (
-      let i = 0;
-      i < this.PINECONE_EXAM_INDEX_DIMENSION - embeddedQuery.length;
-      i++
-    ) {
-      zerosArray.push(0);
-    }
-    embeddedQuery.push(...zerosArray);
-
-    const queryResponse = await pineconeIndex.query({
-      topK: 1,
-      vector: embeddedQuery,
-      filter: {
-        module: { $eq: this.PINECONE_EXAM_INDEX_MODULE },
-      },
-      includeMetadata: true,
-    });
-
-    if (queryResponse.matches?.length) {
-      const match = queryResponse.matches[0];
-
-      if (match.score && match.score >= 0.85) {
-        // prettier-ignore
-        const exam = (await _findOne(this.examRepository, "exam", "id", +match.id)) as Exam;
-
-        const prompt = PromptTemplate.fromTemplate(
-          "Adapte a descrição a seguir para um teste de recrutamento cujo título é {jobTitle} no nível de {jobLevel}? {description}. Leve em consideração aspectos socias, como gênero, raça, etnia, orientação sexual, etc., se estiverem implícitos na descrição do título da vaga. A descrição deve ser similar ao seguinte exemplo: O exame de recrutamento para {jobTitle} {jobLevel} ..."
-        );
-
-        const chain = new LLMChain({ llm: this.llm, prompt });
-        let res = await chain.call({
-          ...suggestDescriptionDto,
-          description: exam.description,
-        });
-
-        return validateLength(res.text, 400, chain);
-      }
-    }
-
-    // 3. LLM call: if no description, suggest based on LLM
-    let prompt = PromptTemplate.fromTemplate(
-      "Elabore uma descrição resumida para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}. Leve em consideração aspectos socias, como gênero, raça, etnia, orientação sexual, etc. A descrição deve ser similar ao seguinte exemplo: O exame de recrutamento para {jobTitle} {jobLevel} ..."
-    );
-
-    const chain = new LLMChain({ llm: this.llm, prompt });
-    let res = await chain.call(suggestDescriptionDto);
-
-    return validateLength(res.text, 400, chain);
-  }
-
   async manageVectorStore(
     mode: string = "upsert" || "delete",
     pineconeIdx: string,
@@ -634,15 +621,15 @@ export class ExamService implements OnModuleInit {
         `${jobTitle}|${jobLevel}|${description}`,
       ]);
 
-      if (embeddedDescription[0].length > this.PINECONE_EXAM_INDEX_DIMENSION)
+      if (embeddedDescription[0].length > this.PINECONE_INDEX_DIMENSION)
         throw new Error(
-          `Document dimension (${embeddedDescription[0].length}) is larger than index dimension (${this.PINECONE_EXAM_INDEX_DIMENSION}).`
+          `Document dimension (${embeddedDescription[0].length}) is larger than index dimension (${this.PINECONE_INDEX_DIMENSION}).`
         );
 
       const zerosArray: number[] = [];
       for (
         let i = 0;
-        i < this.PINECONE_EXAM_INDEX_DIMENSION - embeddedDescription[0].length;
+        i < this.PINECONE_INDEX_DIMENSION - embeddedDescription[0].length;
         i++
       ) {
         zerosArray.push(0);
@@ -654,7 +641,7 @@ export class ExamService implements OnModuleInit {
           id: String(examId),
           values: embeddedDescription[0],
           metadata: {
-            module: this.PINECONE_EXAM_INDEX_MODULE,
+            module: this.PINECONE_INDEX_MODULE,
           },
         },
       ]);

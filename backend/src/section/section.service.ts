@@ -269,23 +269,23 @@ export class SectionService implements OnModuleInit {
     const exam = await this.examService.findOne(userId, "id", examId);
 
     const pineconeIndex = this.vectorStore.index(
-      this.examService.PINECONE_EXAM_INDEX_NAME
+      this.examService.PINECONE_INDEX_NAME
     );
 
     const embeddings = new OpenAIEmbeddings();
     const embeddedQuery = await embeddings.embedQuery(
-      `${exam.jobTitle}|${exam.jobLevel}|${exam.description}`
+      `${exam!.jobTitle}|${exam!.jobLevel}|${exam!.description}`
     );
 
-    if (embeddedQuery.length > this.examService.PINECONE_EXAM_INDEX_DIMENSION)
+    if (embeddedQuery.length > this.examService.PINECONE_INDEX_DIMENSION)
       throw new Error(
-        `Query dimension (${embeddedQuery.length}) is larger than index dimension (${this.examService.PINECONE_EXAM_INDEX_DIMENSION}).`
+        `Query dimension (${embeddedQuery.length}) is larger than index dimension (${this.examService.PINECONE_INDEX_DIMENSION}).`
       );
 
     const zerosArray: number[] = [];
     for (
       let i = 0;
-      i < this.examService.PINECONE_EXAM_INDEX_DIMENSION - embeddedQuery.length;
+      i < this.examService.PINECONE_INDEX_DIMENSION - embeddedQuery.length;
       i++
     ) {
       zerosArray.push(0);
@@ -296,7 +296,7 @@ export class SectionService implements OnModuleInit {
       topK: 4,
       vector: embeddedQuery,
       filter: {
-        module: { $eq: this.examService.PINECONE_EXAM_INDEX_MODULE },
+        module: { $eq: this.examService.PINECONE_INDEX_MODULE },
       },
     });
 
@@ -376,8 +376,8 @@ export class SectionService implements OnModuleInit {
       ]);
 
       const result = await chain.invoke({
-        jobTitle: exam.jobTitle,
-        jobLevel: exam.jobLevel,
+        jobTitle: exam!.jobTitle,
+        jobLevel: exam!.jobLevel,
       });
 
       suggestedSectionsArr.push(

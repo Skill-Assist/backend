@@ -77,13 +77,13 @@ describe("UserController", () => {
     expect(controller).toBeDefined();
   });
 
-  describe("profile method", () => {
+  describe("GET /profile endpoint", () => {
     it("should return a user profile", async () => {
       await expect(controller.profile(mockRequest)).resolves.toEqual(mockUser);
     });
   });
 
-  describe("updateProfile method", () => {
+  describe("PATCH /updateProfile endpoint", () => {
     it("should throw an error if no data is provided", () => {
       try {
         expect(controller.updateProfile(mockRequest));
@@ -130,7 +130,7 @@ describe("UserController", () => {
     });
   });
 
-  describe("acceptInvitation method", () => {
+  describe("GET /acceptInvitation endpoint", () => {
     it("should accept a pending invitation", async () => {
       await expect(
         controller.acceptInvitation(mockRequest, 1)
@@ -138,7 +138,7 @@ describe("UserController", () => {
     });
   });
 
-  describe("rejectInvitation method", () => {
+  describe("GET /rejectInvitation endpoint", () => {
     it("should reject a pending invitation", async () => {
       await expect(
         controller.rejectInvitation(mockRequest, 1)
