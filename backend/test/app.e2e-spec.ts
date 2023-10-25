@@ -228,17 +228,59 @@ describe("Application (e2e)", () => {
   });
 
   describe("Exam creation and configuration", () => {
-    it("should suggest an exam description based on a Job Title and a Job Level", async () => {});
+    describe("Functional requirements", () => {
+      it("should suggest an exam description based on a Job Title and a Job Level", async () => {});
 
-    it("should create a new exam and return it", async () => {});
+      it("should not suggest an exam description if called by a candidate", async () => {});
 
-    it("should update an existing exam and return it", async () => {});
+      it("should throw an exception if the job title is too short or too long", async () => {
+        // await expect(
+        //   controller.suggestDescription({
+        //     jobTitle: "",
+        //     jobLevel: "estágio",
+        //   })
+        // ).rejects.toThrow();
+        // await expect(
+        //   controller.suggestDescription({
+        //     jobTitle: "a".repeat(51),
+        //     jobLevel: "estágio",
+        //   })
+        // ).rejects.toThrow();
+      });
 
-    it("should delete an existing exam and return it", async () => {});
+      it("should trim the job title before using it to generate the description", async () => {
+        // await expect(
+        //   controller.suggestDescription({
+        //     jobTitle: "  Test title  ",
+        //     jobLevel: "estágio",
+        //   })
+        // ).resolves.toEqual("Suggested description");
+      });
 
-    it("should find an existing exam and return it", async () => {});
+      it("should throw an exception if the job level is not one of the allowed values", async () => {
+        // ["estágio", "trainee", "júnior", "pleno", "sênior", "outro"]
+        // await expect(
+        //   controller.suggestDescription({
+        //     jobTitle: "Test title",
+        //     jobLevel: "invalid",
+        //   })
+        // ).rejects.toThrow();
+      });
 
-    it("should return a list of all exams created by the current user", async () => {});
+      it("should create a new exam and return it", async () => {});
+
+      it("should update an existing exam and return it", async () => {});
+
+      it("should delete an existing exam and return it", async () => {});
+
+      it("should find an existing exam and return it", async () => {});
+
+      it("should return a list of all exams created by the current user", async () => {});
+    });
+
+    describe("Non-functional requirements", () => {
+      it("POST /exam/suggestDescription should respond within predefined latency limits", async () => {});
+    });
   });
 
   describe("Section management and organization", () => {});
