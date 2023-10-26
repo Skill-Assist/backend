@@ -3,8 +3,8 @@ import {
   Injectable,
   OnModuleInit,
   NotFoundException,
-  UnauthorizedException,
   BadRequestException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
@@ -43,13 +43,12 @@ import {
   _update,
   _delete,
 } from "../utils/typeorm.utils";
-
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
 export class ExamService implements OnModuleInit {
-  public PINECONE_INDEX_NAME: string = "vector-store";
   public PINECONE_INDEX_DIMENSION: number = 1536;
+  public PINECONE_INDEX_NAME: string = "vector-store";
   public PINECONE_INDEX_MODULE: string = "exam-description";
 
   private userService: UserService;
@@ -107,7 +106,11 @@ export class ExamService implements OnModuleInit {
 
       // set relation between exam and user
       const user = await this.userService.findOne("id", userId);
-      await _update(exam.id, { createdBy: user }, this.repository, "exam");
+      await this.repository
+        .createQueryBuilder()
+        .relation(Exam, "createdBy")
+        .of(exam)
+        .set(user);
 
       return exam;
     } catch (err) {
@@ -128,14 +131,21 @@ export class ExamService implements OnModuleInit {
   ): Promise<Exam[]> {
     if (key && !value) throw new NotFoundException("Value not provided.");
 
-    return (await _findAll(
-      this.repository,
-      "exam",
-      key,
-      value,
-      relations,
-      map
-    )) as Exam[];
+    const queryBuilder = this.repository.createQueryBuilder("exam");
+
+    if (key) queryBuilder.where(`exam.${key} = :${key}`, { [key]: value });
+
+    if (relations)
+      for (const relation of relations) {
+        map
+          ? queryBuilder.leftJoinAndSelect(`exam.${relation}`, `${relation}`)
+          : queryBuilder.loadRelationIdAndMap(
+              `${relation}Ref`,
+              `exam.${relation}`
+            );
+      }
+
+    return await queryBuilder.getMany();
   }
 
   async findOne(
@@ -147,7 +157,7 @@ export class ExamService implements OnModuleInit {
   ): Promise<Exam | null> {
     const queryBuilder = this.repository
       .createQueryBuilder("exam")
-      .where(`user.${key} = :${key}`, { [key]: value });
+      .where(`exam.${key} = :${key}`, { [key]: value });
 
     const exam = await queryBuilder.getOne();
 
@@ -191,22 +201,25 @@ export class ExamService implements OnModuleInit {
       );
 
     // update exam
-    await _update(
-      examId,
-      updateExamDto as Record<string, unknown>,
-      this.repository,
-      "exam"
-    );
+    await this.repository
+      .createQueryBuilder()
+      .update()
+      .set(updateExamDto)
+      .where("id = :id", { id: examId })
+      .execute();
 
     // update exam's metadata in vector store
     const updatedExam = await this.findOne(userId, "id", examId);
-    this.manageVectorStore(
+
+    const { id, jobTitle, jobLevel, description } = updatedExam!;
+
+    await this.manageVectorStore(
       "upsert",
       this.PINECONE_INDEX_NAME,
-      updatedExam!.id,
-      updatedExam!.jobTitle,
-      updatedExam!.jobLevel,
-      updatedExam!.description
+      id,
+      jobTitle,
+      jobLevel,
+      description
     );
 
     return updatedExam!;
