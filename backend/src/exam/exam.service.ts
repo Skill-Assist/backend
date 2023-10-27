@@ -125,11 +125,14 @@ export class ExamService implements OnModuleInit {
 
   async findAll(
     key?: string,
-    value?: unknown,
+    value?: string | number,
     relations?: string[],
     map?: boolean
   ): Promise<Exam[]> {
-    if (key && !value) throw new NotFoundException("Value not provided.");
+    if (key && !value)
+      throw new NotFoundException(
+        "Key provided without value. Process aborted."
+      );
 
     const queryBuilder = this.repository.createQueryBuilder("exam");
 
@@ -236,7 +239,12 @@ export class ExamService implements OnModuleInit {
       );
 
     // delete exam
-    await _delete(examId, this.repository, "exam");
+    await this.repository
+      .createQueryBuilder()
+      .delete()
+      .from(Exam)
+      .where("id = :id", { id: examId })
+      .execute();
 
     // delete exam's metadata from vector store
     this.manageVectorStore("delete", this.PINECONE_INDEX_NAME, examId);
@@ -327,11 +335,7 @@ export class ExamService implements OnModuleInit {
     const exams = await this.findAll("createdBy", userId);
 
     // get user and check if user is candidate
-    this.userService =
-      this.userService ?? this.moduleRef.get(UserService, { strict: false });
-
     const user = await this.userService.findOne("id", userId);
-
     let enrolledExams: Exam[] = [];
     if (user?.roles.includes("candidate")) {
       // get exams user is enrolled in
@@ -352,7 +356,7 @@ export class ExamService implements OnModuleInit {
     userId: number,
     examId: number,
     status: string
-  ): Promise<Exam | Record<string, number>> {
+  ): Promise<string> {
     // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 
@@ -394,6 +398,15 @@ export class ExamService implements OnModuleInit {
           "Exam is not published. Process was aborted."
         );
 
+      // check if archivable
+      const { daysRemaining } = await this.getDaysRemaining(userId, examId);
+      if (daysRemaining > 0)
+        throw new UnauthorizedException(
+          `Exam is not archivable. ${Math.round(
+            daysRemaining / 60 / 60 / 24
+          )} days remaining. Process was aborted.`
+        );
+
       // if exam has pending invitations and revoke them
       const pendingInvitations = await this.examInvitationService.findPending(
         "examId",
@@ -404,18 +417,12 @@ export class ExamService implements OnModuleInit {
         await this.examInvitationService.reject(invitation.id, -1);
       });
 
-      // if exam has answer sheets, close non-initiated and return days left to finish initiated
+      // close non-initiated answer sheets
       const answerSheets = await exam!.answerSheets;
 
       answerSheets.forEach(async (answerSheet) => {
-        if (answerSheet.deadline) {
-          throw new UnauthorizedException(
-            "The exam contain pending answer sheets. Process was aborted."
-          );
-        } else {
-          this.answerSheetService.start(userId, answerSheet.id);
-          this.answerSheetService.submit(userId, answerSheet.id);
-        }
+        this.answerSheetService.start(userId, answerSheet.id);
+        this.answerSheetService.submit(userId, answerSheet.id);
       });
     }
 
@@ -424,14 +431,15 @@ export class ExamService implements OnModuleInit {
       .createQueryBuilder()
       .update(Exam)
       .set({ status })
-      .where("id = :examId", { examId })
+      .where("id = :id", { id: examId })
       .execute();
 
-    // return updated exam
-    return <Exam>await this.findOne(userId, "id", examId);
+    return status === "published"
+      ? "Exam has been published."
+      : "Exam has been archived.";
   }
 
-  async checkIfArchivable(
+  async getDaysRemaining(
     userId: number,
     examId: number
   ): Promise<Record<string, number>> {
@@ -440,7 +448,7 @@ export class ExamService implements OnModuleInit {
 
     const answerSheets = await exam!.answerSheets;
 
-    const daysRemaining: number[] = [];
+    const daysRemaining: number[] = [0];
 
     answerSheets.forEach(async (answerSheet) => {
       if (answerSheet.deadline)

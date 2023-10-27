@@ -100,17 +100,17 @@ export class ExamController {
     @Req() req: PassportRequest,
     @Query("id") id: number,
     @Query("status") status: string
-  ): Promise<Exam | Record<string, number>> {
+  ): Promise<string> {
     return this.examService.switchStatus(req.user!.id, id, status);
   }
 
-  @Get("checkIfArchivable")
+  @Get("getDaysRemaining")
   @Roles(UserRole.RECRUITER)
   checkIfArchivable(
     @Req() req: PassportRequest,
     @Query("id") id: number
   ): Promise<Record<string, number>> {
-    return this.examService.checkIfArchivable(req.user!.id, id);
+    return this.examService.getDaysRemaining(req.user!.id, id);
   }
 
   @Post("sendInvitations")
