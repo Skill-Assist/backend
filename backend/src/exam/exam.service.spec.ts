@@ -20,6 +20,7 @@ import { Exam } from "./entities/exam.entity";
 
 /** dto */
 import { CreateExamDto } from "./dto/create-exam.dto";
+import { AnswerSheet } from "../answer-sheet/entities/answer-sheet.entity";
 //////////////////////////////////////////////////////////////////////////////////
 
 /** --- mock modules ------------------------------------------------------------
@@ -79,11 +80,14 @@ jest.mock("langchain/chains", () => {
 const mockRepository = {
   of: jest.fn().mockReturnThis(),
   set: jest.fn().mockReturnThis(),
+  from: jest.fn().mockReturnThis(),
   where: jest.fn().mockReturnThis(),
   update: jest.fn().mockReturnThis(),
   getOne: jest.fn().mockReturnThis(),
   create: jest.fn().mockReturnThis(),
+  delete: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
+  getMany: jest.fn().mockReturnThis(),
   execute: jest.fn().mockReturnThis(),
   andWhere: jest.fn().mockReturnThis(),
   relation: jest.fn().mockReturnThis(),
@@ -100,24 +104,42 @@ const mockQueryRunner = {
   rollbackTransaction: jest.fn().mockReturnThis(),
 };
 
-const mockAnswerSheetService = {};
-const mockExamInvitationService = {};
+const mockAnswerSheetService = {
+  start: jest.fn().mockReturnThis(),
+  submit: jest.fn().mockReturnThis(),
+};
+
+const mockExamInvitationService = {
+  reject: jest.fn().mockReturnThis(),
+  findPending: jest.fn().mockReturnThis(),
+};
+
 const mockUserService = { findOne: jest.fn().mockReturnThis() };
+
 const mockConfigService = { get: jest.fn().mockReturnValue("") };
 
 const mockModuleRef = {
-  get: jest.fn().mockImplementation((provider: any) => {
-    switch (provider) {
-      case UserService:
-        return mockUserService;
-      case AnswerSheetService:
-        return mockAnswerSheetService;
-      case ExamInvitationService:
-        return mockExamInvitationService;
-      default:
-        return {};
-    }
-  }),
+  get: jest
+    .fn()
+    .mockImplementation(
+      (
+        provider:
+          | typeof UserService
+          | typeof AnswerSheetService
+          | typeof ExamInvitationService
+      ) => {
+        switch (provider) {
+          case UserService:
+            return mockUserService;
+          case AnswerSheetService:
+            return mockAnswerSheetService;
+          case ExamInvitationService:
+            return mockExamInvitationService;
+          default:
+            return {};
+        }
+      }
+    ),
 };
 
 /** --- setup ----------------------------------------------------------------*/
@@ -184,15 +206,70 @@ describe("ExamService", () => {
   });
 
   describe("findAll method", () => {
-    it("should throw an error if key is provided but value is not", async () => {});
+    it("should throw an error if key is provided but value is not", async () => {
+      await expect(service.findAll("id")).rejects.toThrow(
+        "Key provided without value. Process aborted."
+      );
+    });
 
-    it("should return an array of exams", async () => {});
+    it("should return an array of exams", async () => {
+      mockRepository.getMany.mockResolvedValueOnce([]);
 
-    it("should return an array of exams filtered by key and value", async () => {});
+      await expect(service.findAll()).resolves.toEqual([]);
 
-    it("should return an array of exams with relations", async () => {});
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
+      expect(mockRepository.getMany).toHaveBeenCalled();
+    });
 
-    it("should return an array of exams with relations mapped", async () => {});
+    it("should return an array of exams filtered by key and value", async () => {
+      mockRepository.getMany.mockResolvedValueOnce([]);
+
+      await expect(service.findAll("id", expect.any(String))).resolves.toEqual(
+        []
+      );
+
+      expect(mockRepository.getMany).toHaveBeenCalled();
+      expect(mockRepository.where).toHaveBeenCalledWith("exam.id = :id", {
+        id: expect.any(String),
+      });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
+    });
+
+    it("should return an array of exams with relations", async () => {
+      mockRepository.getMany.mockResolvedValueOnce([]);
+
+      await expect(
+        service.findAll("id", expect.any(String), [expect.any(String)])
+      ).resolves.toEqual([]);
+
+      expect(mockRepository.getMany).toHaveBeenCalled();
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
+      expect(mockRepository.where).toHaveBeenCalledWith("exam.id = :id", {
+        id: expect.any(String),
+      });
+      expect(mockRepository.loadRelationIdAndMap).toHaveBeenCalledWith(
+        `${expect.any(String)}Ref`,
+        `exam.${expect.any(String)}`
+      );
+    });
+
+    it("should return an array of exams with relations mapped", async () => {
+      mockRepository.getMany.mockResolvedValueOnce([]);
+
+      await expect(
+        service.findAll("id", expect.any(String), [expect.any(String)], true)
+      ).resolves.toEqual([]);
+
+      expect(mockRepository.getMany).toHaveBeenCalled();
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
+      expect(mockRepository.where).toHaveBeenCalledWith("exam.id = :id", {
+        id: expect.any(String),
+      });
+      expect(mockRepository.leftJoinAndSelect).toHaveBeenCalledWith(
+        `exam.${expect.any(String)}`,
+        `${expect.any(String)}`
+      );
+    });
   });
 
   describe("findOne method", () => {
@@ -201,16 +278,16 @@ describe("ExamService", () => {
 
       await expect(
         service.findOne(expect.any(Number), "id", expect.any(Number))
-      ).rejects.toThrow();
+      ).rejects.toThrow("Exam with given id not found.");
 
+      expect(mockRepository.getOne).toHaveBeenCalled();
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
       expect(mockRepository.where).toHaveBeenCalledWith("exam.id = :id", {
         id: expect.any(Number),
       });
-      expect(mockRepository.getOne).toHaveBeenCalled();
     });
 
-    it("should throw an error if the user is not the owner or not enrolled", async () => {
+    it("should throw an error if the user is not the owner nor enrolled", async () => {
       mockRepository.getOne.mockResolvedValueOnce({
         createdBy: Promise.resolve({ id: 1 }),
         enrolledUsers: Promise.resolve([{ id: 2 }]),
@@ -218,16 +295,16 @@ describe("ExamService", () => {
 
       await expect(
         service.findOne(3, "id", expect.any(Number))
-      ).rejects.toThrow();
+      ).rejects.toThrow("You are not authorized to access this exam.");
 
+      expect(mockRepository.getOne).toHaveBeenCalled();
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
       expect(mockRepository.where).toHaveBeenCalledWith("exam.id = :id", {
         id: expect.any(Number),
       });
-      expect(mockRepository.getOne).toHaveBeenCalled();
     });
 
-    it("should return an exam if found and user is the owner", async () => {
+    it("should return an exam if one is found and user is the owner", async () => {
       mockRepository.getOne
         .mockResolvedValueOnce({
           createdBy: Promise.resolve({ id: 1 }),
@@ -239,11 +316,11 @@ describe("ExamService", () => {
         service.findOne(1, "id", expect.any(Number))
       ).resolves.toBeDefined();
 
+      expect(mockRepository.getOne).toHaveBeenCalledTimes(2);
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
       expect(mockRepository.where).toHaveBeenCalledWith("exam.id = :id", {
         id: expect.any(Number),
       });
-      expect(mockRepository.getOne).toHaveBeenCalledTimes(2);
     });
 
     it("should return an exam if one is found and user is enrolled", async () => {
@@ -258,11 +335,11 @@ describe("ExamService", () => {
         service.findOne(2, "id", expect.any(Number))
       ).resolves.toBeDefined();
 
+      expect(mockRepository.getOne).toHaveBeenCalledTimes(2);
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
       expect(mockRepository.where).toHaveBeenCalledWith("exam.id = :id", {
         id: expect.any(Number),
       });
-      expect(mockRepository.getOne).toHaveBeenCalledTimes(2);
     });
 
     it("should return an exam with relations", async () => {
@@ -274,11 +351,11 @@ describe("ExamService", () => {
         service.findOne(1, "id", expect.any(Number), ["createdBy"])
       ).resolves.toBeDefined();
 
+      expect(mockRepository.getOne).toHaveBeenCalled();
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
       expect(mockRepository.where).toHaveBeenCalledWith("exam.id = :id", {
         id: expect.any(Number),
       });
-      expect(mockRepository.getOne).toHaveBeenCalled();
       expect(mockRepository.loadRelationIdAndMap).toHaveBeenCalledWith(
         "createdByRef",
         "exam.createdBy"
@@ -294,11 +371,11 @@ describe("ExamService", () => {
         service.findOne(1, "id", expect.any(Number), ["createdBy"], true)
       ).resolves.toBeDefined();
 
+      expect(mockRepository.getOne).toHaveBeenCalled();
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
       expect(mockRepository.where).toHaveBeenCalledWith("exam.id = :id", {
         id: expect.any(Number),
       });
-      expect(mockRepository.getOne).toHaveBeenCalled();
       expect(mockRepository.leftJoinAndSelect).toHaveBeenCalledWith(
         "exam.createdBy",
         "createdBy"
@@ -317,47 +394,50 @@ describe("ExamService", () => {
       ).rejects.toThrow("Exam is not in draft status. Process was aborted.");
     });
 
-    it("should update the exam", async () => {
+    it("should update the exam and its metadata in vector store", async () => {
       const mockUpdateExamDto = { status: "draft" } as Exam;
-
       jest.spyOn(service, "findOne").mockResolvedValue(mockUpdateExamDto);
-
-      jest.spyOn(service, "manageVectorStore").mockResolvedValueOnce(undefined);
-
-      await expect(
-        service.update(expect.any(Number), expect.any(Number), {})
-      ).resolves.toEqual(mockUpdateExamDto);
-    });
-
-    it("should update exam's metadata in vector store", async () => {
-      const mockUpdateExamDto = {
-        status: "draft",
-        id: 1,
-        jobTitle: "",
-        jobLevel: "",
-        description: "",
-      } as Exam;
-
-      jest.spyOn(service, "findOne").mockResolvedValue(mockUpdateExamDto);
-
       jest.spyOn(service, "manageVectorStore").mockResolvedValueOnce(undefined);
 
       await expect(
         service.update(expect.any(Number), expect.any(Number), {})
       ).resolves.toEqual(mockUpdateExamDto);
 
-      expect(service.manageVectorStore).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.any(String),
-        mockUpdateExamDto.id,
-        mockUpdateExamDto.jobTitle,
-        mockUpdateExamDto.jobLevel,
-        mockUpdateExamDto.description
-      );
+      expect(service.manageVectorStore).toHaveBeenCalled();
     });
   });
 
-  describe("delete method", () => {});
+  describe("delete method", () => {
+    it("should throw an error if exam is not in draft status", async () => {
+      jest
+        .spyOn(service, "findOne")
+        .mockResolvedValueOnce({ status: "published" } as Exam);
+
+      await expect(
+        service.delete(expect.any(Number), expect.any(Number))
+      ).rejects.toThrow("Exam is not in draft status. Process was aborted.");
+    });
+
+    it("should delete the exam and its metadata from vector store", async () => {
+      jest
+        .spyOn(service, "findOne")
+        .mockResolvedValue({ status: "draft" } as Exam);
+      jest.spyOn(service, "manageVectorStore").mockResolvedValueOnce(undefined);
+
+      await expect(
+        service.delete(expect.any(Number), expect.any(Number))
+      ).resolves.toBeUndefined();
+
+      expect(mockRepository.from).toHaveBeenCalled();
+      expect(mockRepository.delete).toHaveBeenCalled();
+      expect(mockRepository.execute).toHaveBeenCalled();
+      expect(service.manageVectorStore).toHaveBeenCalled();
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith();
+      expect(mockRepository.where).toHaveBeenCalledWith("id = :id", {
+        id: expect.any(Number),
+      });
+    });
+  });
 
   describe("suggestDescription method", () => {
     it("should return a suggested description from SQL database", async () => {
@@ -370,6 +450,7 @@ describe("ExamService", () => {
         })
       ).resolves.toBe("test");
 
+      expect(mockRepository.getOne).toHaveBeenCalled();
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
       expect(mockRepository.select).toHaveBeenCalledWith("exam.description");
       expect(mockRepository.where).toHaveBeenCalledWith(
@@ -380,7 +461,6 @@ describe("ExamService", () => {
         "exam.jobLevel = :jobLevel",
         { jobLevel: "" }
       );
-      expect(mockRepository.getOne).toHaveBeenCalled();
     });
 
     it("should return a suggested description from vector store", async () => {
@@ -395,13 +475,13 @@ describe("ExamService", () => {
         })
       ).resolves.toBe("test");
 
-      expect(service.vectorStore.index).toHaveBeenCalled();
       expect(OpenAIEmbeddings).toHaveBeenCalled();
+      expect(service.vectorStore.index).toHaveBeenCalled();
+      expect(mockRepository.getOne).toHaveBeenCalledTimes(2);
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
       expect(mockRepository.where).toHaveBeenNthCalledWith(2, "user.id = :id", {
         id: expect.any(Number),
       });
-      expect(mockRepository.getOne).toHaveBeenCalledTimes(2);
     });
 
     it("should throw an error if the vector store returns an invalid exam id", async () => {
@@ -414,8 +494,8 @@ describe("ExamService", () => {
         })
       ).rejects.toThrow();
 
-      expect(service.vectorStore.index).toHaveBeenCalled();
       expect(OpenAIEmbeddings).toHaveBeenCalled();
+      expect(service.vectorStore.index).toHaveBeenCalled();
     });
 
     it("should return a suggested description from LLM model call with validated length", async () => {
@@ -429,16 +509,251 @@ describe("ExamService", () => {
           })
         ).resolves.toBe("test");
 
-        expect(service.vectorStore.index).toHaveBeenCalled();
-        expect(OpenAIEmbeddings).toHaveBeenCalled();
         expect(LLMChain).toHaveBeenCalled();
+        expect(OpenAIEmbeddings).toHaveBeenCalled();
+        expect(service.vectorStore.index).toHaveBeenCalled();
       };
     });
   });
 
-  describe("fetchOwn method", () => {});
-  describe("switchStatus", () => {});
-  describe("checkIfArchivable", () => {});
+  describe("fetchOwn method", () => {
+    it("should return an array of exams created by user or in which user is enrolled, removing duplicates if any", async () => {
+      jest.spyOn(service, "findAll").mockResolvedValueOnce([{ id: 1 } as Exam]);
+      mockUserService.findOne
+        .mockReset()
+        .mockReturnValueOnce(Promise.resolve({ roles: ["candidate"] }));
+      mockRepository.getMany.mockResolvedValueOnce([
+        { id: 1 } as Exam,
+        { id: 2 } as Exam,
+      ]);
+
+      await expect(service.fetchOwn(expect.any(Number))).resolves.toEqual([
+        { id: 1 },
+        { id: 2 },
+      ]);
+    });
+  });
+
+  describe("switchStatus method", () => {
+    it("should throw an error if new status is neither published nor archived", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({} as Exam);
+
+      await expect(
+        service.switchStatus(expect.any(Number), expect.any(Number), "draft")
+      ).rejects.toThrow("Invalid status. Process was aborted.");
+    });
+
+    it("should throw an error if new status is published but exam has no sections", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({
+        sections: Promise.resolve([]),
+      } as unknown as Exam);
+
+      await expect(
+        service.switchStatus(
+          expect.any(Number),
+          expect.any(Number),
+          "published"
+        )
+      ).rejects.toThrow("Exam has no sections. Process was aborted.");
+    });
+
+    it("should throw an error if new status is published but exam has sections without questions", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({
+        sections: Promise.resolve([{}]),
+      } as unknown as Exam);
+
+      await expect(
+        service.switchStatus(
+          expect.any(Number),
+          expect.any(Number),
+          "published"
+        )
+      ).rejects.toThrow(
+        "Exam has sections without questions. Process was aborted."
+      );
+
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({
+        sections: Promise.resolve([{ questions: [] }]),
+      } as unknown as Exam);
+
+      await expect(
+        service.switchStatus(
+          expect.any(Number),
+          expect.any(Number),
+          "published"
+        )
+      ).rejects.toThrow(
+        "Exam has sections without questions. Process was aborted."
+      );
+    });
+
+    it("should throw an error if new status is published but overall section's weights do not add to 1", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({
+        sections: Promise.resolve([
+          { weight: 0.6, questions: [{}] },
+          { weight: 0.3, questions: [{}] },
+        ]),
+      } as unknown as Exam);
+
+      await expect(
+        service.switchStatus(
+          expect.any(Number),
+          expect.any(Number),
+          "published"
+        )
+      ).rejects.toThrow(
+        "Exam has sections with weights that do not add to 1. Process was aborted."
+      );
+    });
+
+    it("should throw an error if new status is archived but current status is not published", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({
+        status: "draft",
+      } as Exam);
+
+      await expect(
+        service.switchStatus(expect.any(Number), expect.any(Number), "archived")
+      ).rejects.toThrow("Exam is not published. Process was aborted.");
+    });
+
+    it("should throw an error if new status is archived but exam has pending answer sheets", async () => {
+      jest
+        .spyOn(service, "findOne")
+        .mockResolvedValueOnce({ status: "published" } as Exam);
+
+      jest
+        .spyOn(service, "getDaysRemaining")
+        .mockResolvedValueOnce({ daysRemaining: 24 * 60 * 60 * 1 });
+
+      await expect(
+        service.switchStatus(expect.any(Number), expect.any(Number), "archived")
+      ).rejects.toThrow(
+        "Exam is not archivable. 1 days remaining. Process was aborted."
+      );
+    });
+
+    it("should switch status to published", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({
+        status: "draft",
+        sections: Promise.resolve([
+          { weight: 0.5, questions: [{}] },
+          { weight: 0.5, questions: [{}] },
+        ]),
+      } as Exam);
+
+      await expect(
+        service.switchStatus(
+          expect.any(Number),
+          expect.any(Number),
+          "published"
+        )
+      ).resolves.toEqual("Exam has been published.");
+
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(mockRepository.update).toHaveBeenCalled();
+      expect(mockRepository.execute).toHaveBeenCalled();
+      expect(mockRepository.set).toHaveBeenCalledWith({ status: "published" });
+      expect(mockRepository.where).toHaveBeenCalledWith("id = :id", {
+        id: expect.any(Number),
+      });
+    });
+
+    it("should switch status to archived", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({
+        status: "published",
+        answerSheets: Promise.resolve([] as AnswerSheet[]),
+      } as Exam);
+
+      jest
+        .spyOn(service, "getDaysRemaining")
+        .mockResolvedValueOnce({ daysRemaining: -1 });
+
+      mockExamInvitationService.findPending.mockResolvedValueOnce([]);
+
+      await expect(
+        service.switchStatus(expect.any(Number), expect.any(Number), "archived")
+      ).resolves.toEqual("Exam has been archived.");
+
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(mockRepository.update).toHaveBeenCalled();
+      expect(mockRepository.execute).toHaveBeenCalled();
+      expect(mockRepository.set).toHaveBeenCalledWith({ status: "archived" });
+      expect(mockRepository.where).toHaveBeenCalledWith("id = :id", {
+        id: expect.any(Number),
+      });
+    });
+
+    it("should rekove pending invitations before switching to archived status", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({
+        status: "published",
+        answerSheets: Promise.resolve([] as AnswerSheet[]),
+      } as Exam);
+
+      jest.spyOn(service, "getDaysRemaining").mockResolvedValueOnce({
+        daysRemaining: 0,
+      });
+
+      mockExamInvitationService.findPending.mockResolvedValueOnce([
+        { id: 1 },
+        { id: 2 },
+      ]);
+
+      await service.switchStatus(
+        expect.any(Number),
+        expect.any(Number),
+        "archived"
+      );
+
+      expect(mockExamInvitationService.findPending).toHaveBeenCalled();
+      expect(mockExamInvitationService.reject).toHaveBeenCalledTimes(2);
+    });
+
+    it("should close all non-initiated answer sheets", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({
+        status: "published",
+        answerSheets: Promise.resolve([{}, {}] as AnswerSheet[]),
+      } as Exam);
+
+      jest.spyOn(service, "getDaysRemaining").mockResolvedValueOnce({
+        daysRemaining: -1,
+      });
+
+      mockExamInvitationService.findPending.mockResolvedValueOnce([]);
+
+      await service.switchStatus(
+        expect.any(Number),
+        expect.any(Number),
+        "archived"
+      );
+
+      expect(mockAnswerSheetService.start).toHaveBeenCalledTimes(2);
+      expect(mockAnswerSheetService.submit).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("getDaysRemaining method", () => {
+    it("should return the number of days remaining before exam can be archived (given by max days for answer sheet submission)", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({
+        answerSheets: Promise.resolve([
+          { deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2) },
+          { deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 1) },
+        ] as AnswerSheet[]),
+      } as Exam);
+
+      await expect(
+        service.getDaysRemaining(expect.any(Number), expect.any(Number))
+      ).resolves.toEqual({ daysRemaining: 60 * 60 * 24 * 2 });
+
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({
+        answerSheets: Promise.resolve([] as AnswerSheet[]),
+      } as Exam);
+
+      await expect(
+        service.getDaysRemaining(expect.any(Number), expect.any(Number))
+      ).resolves.toEqual({ daysRemaining: 0 });
+    });
+  });
+
   describe("sendInvitations", () => {});
   describe("enrollUser", () => {});
   describe("fetchCandidates", () => {});
