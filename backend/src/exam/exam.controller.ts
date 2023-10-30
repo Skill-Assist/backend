@@ -17,6 +17,7 @@ import { ExamService } from "./exam.service";
 
 /** entities */
 import { Exam } from "./entities/exam.entity";
+import { User } from "../user/entities/user.entity";
 import { UserRole } from "../user/entities/user.entity";
 
 /** dtos */
@@ -47,23 +48,6 @@ export class ExamController {
     return this.examService.create(req.user!.id, createExamDto);
   }
 
-  @Get("findOne")
-  findOne(
-    @Req() req: PassportRequest,
-    @Query("key") key: string,
-    @Query("value") value: unknown,
-    @Query("relations") relations: string,
-    @Query("map") map: boolean
-  ): Promise<Exam | null> {
-    return this.examService.findOne(
-      req.user!.id,
-      key,
-      value,
-      relations ? relations.split(",") : undefined,
-      map
-    );
-  }
-
   @Patch()
   @Roles(UserRole.RECRUITER)
   update(
@@ -78,6 +62,23 @@ export class ExamController {
   @Roles(UserRole.RECRUITER)
   delete(@Req() req: PassportRequest, @Query("id") id: number): Promise<void> {
     return this.examService.delete(req.user!.id, id);
+  }
+
+  @Get("findOne")
+  findOne(
+    @Req() req: PassportRequest,
+    @Query("key") key: string,
+    @Query("value") value: unknown,
+    @Query("relations") relations?: string,
+    @Query("map") map?: boolean
+  ): Promise<Exam | null> {
+    return this.examService.findOne(
+      req.user!.id,
+      key,
+      value,
+      relations ? relations.split(",") : undefined,
+      map
+    );
   }
 
   /** --- custom endpoints -----------------------------------------------------*/
@@ -106,7 +107,7 @@ export class ExamController {
 
   @Get("getDaysRemaining")
   @Roles(UserRole.RECRUITER)
-  checkIfArchivable(
+  getDaysRemaining(
     @Req() req: PassportRequest,
     @Query("id") id: number
   ): Promise<Record<string, number>> {
@@ -128,7 +129,7 @@ export class ExamController {
   fetchCandidates(
     @Req() req: PassportRequest,
     @Query("id") id: number
-  ): Promise<any> {
+  ): Promise<Partial<User>[]> {
     return this.examService.fetchCandidates(req.user!.id, id);
   }
 }

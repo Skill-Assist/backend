@@ -510,7 +510,10 @@ export class ExamService implements OnModuleInit {
     return (await this.findOne(user.id, "id", exam.id)) as Exam;
   }
 
-  async fetchCandidates(userId: number, examId: number): Promise<any> {
+  async fetchCandidates(
+    userId: number,
+    examId: number
+  ): Promise<Partial<User>[]> {
     // try to get exam by id, check if exam exists and is owned by user
     const exam = await this.findOne(userId, "id", examId);
 
