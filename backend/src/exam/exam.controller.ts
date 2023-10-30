@@ -7,6 +7,7 @@ import {
   Query,
   Patch,
   Delete,
+  HttpCode,
   Controller,
   UseInterceptors,
   ClassSerializerInterceptor,
@@ -83,6 +84,7 @@ export class ExamController {
 
   /** --- custom endpoints -----------------------------------------------------*/
   @Post("suggestDescription")
+  @HttpCode(200)
   @Roles(UserRole.RECRUITER)
   suggestDescription(
     @Body() suggestDescriptionDto: SuggestDescriptionDto

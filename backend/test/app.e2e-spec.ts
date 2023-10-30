@@ -3,20 +3,22 @@
  *
  * docker run --name mysql -p 3306:3306
  * -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=db
- * -d mysql:latest
+ * -d --rm mysql:latest
  *
- * docker run --name mongodb -p 27017:27017 -d mongo:latest
+ * docker run --name mongodb -p 27017:27017 -d --rm mongo:latest
  */
 
 /** nestjs */
-import { INestApplication } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
 import { Test, TestingModule } from "@nestjs/testing";
+import { INestApplication, ClassSerializerInterceptor } from "@nestjs/common";
 
 /** external dependencies */
 import * as request from "supertest";
 
 /** modules */
 import { AppModule } from "../src/app.module";
+import { AuthorizationGuard } from "../src/auth/guards/authorization.guard";
 ////////////////////////////////////////////////////////////////////////////////
 
 /** --- setup ----------------------------------------------------------------*/
@@ -28,6 +30,8 @@ beforeAll(async () => {
   }).compile();
 
   app = moduleRef.createNestApplication();
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  app.useGlobalGuards(new AuthorizationGuard(app.get(Reflector)));
 
   await app.init();
 });
@@ -39,7 +43,9 @@ afterAll(async () => {
 
 /** --- test suite -----------------------------------------------------------*/
 describe("Application (e2e)", () => {
-  let accessTokenArr: string[] = [];
+  let recruiterAccessTokenArr: string[] = [];
+  let candidateAccessTokenArr: string[] = [];
+  let examIdArr: number[] = [];
 
   it("should be defined", () => {
     expect(app).toBeDefined();
@@ -47,7 +53,7 @@ describe("Application (e2e)", () => {
 
   describe("User registration and onboarding", () => {
     it("should create five new recruiters with minimal information and return their access tokens and user roles", async () => {
-      const initialTokenArrayLength = accessTokenArr.length;
+      const initialTokenArrayLength = recruiterAccessTokenArr.length;
 
       for (let i = 0; i < 5; i++) {
         await request(app.getHttpServer())
@@ -65,14 +71,14 @@ describe("Application (e2e)", () => {
               userRole: ["recruiter"],
             });
           })
-          .then((res) => accessTokenArr.push(res.body.access_token));
+          .then((res) => recruiterAccessTokenArr.push(res.body.access_token));
       }
 
-      expect(accessTokenArr.length).toBe(initialTokenArrayLength + 5);
+      expect(recruiterAccessTokenArr.length).toBe(initialTokenArrayLength + 5);
     });
 
     it("should create five new candidates with minimal information and return their access tokens and user roles", async () => {
-      const initialTokenArrayLength = accessTokenArr.length;
+      const initialTokenArrayLength = candidateAccessTokenArr.length;
 
       for (let i = 0; i < 5; i++) {
         await request(app.getHttpServer())
@@ -90,14 +96,14 @@ describe("Application (e2e)", () => {
               userRole: ["candidate"],
             });
           })
-          .then((res) => accessTokenArr.push(res.body.access_token));
+          .then((res) => candidateAccessTokenArr.push(res.body.access_token));
       }
 
-      expect(accessTokenArr.length).toBe(initialTokenArrayLength + 5);
+      expect(candidateAccessTokenArr.length).toBe(initialTokenArrayLength + 5);
     });
 
     it("should create a new recruiter and set nickname to 'Recrutador' if name is provided but nickname is not", async () => {
-      const initialTokenArrayLength = accessTokenArr.length;
+      const initialTokenArrayLength = recruiterAccessTokenArr.length;
 
       await request(app.getHttpServer())
         .post("/auth/signup")
@@ -109,22 +115,24 @@ describe("Application (e2e)", () => {
           roles: ["recruiter"],
         })
         .expect(201)
-        .then((res) => accessTokenArr.push(res.body.access_token));
+        .then((res) => recruiterAccessTokenArr.push(res.body.access_token));
 
-      expect(accessTokenArr.length).toBe(initialTokenArrayLength + 1);
+      expect(recruiterAccessTokenArr.length).toBe(initialTokenArrayLength + 1);
 
       await request(app.getHttpServer())
         .get("/user/profile")
         .set(
           "Authorization",
-          `Bearer ${accessTokenArr[accessTokenArr.length - 1]}`
+          `Bearer ${
+            recruiterAccessTokenArr[recruiterAccessTokenArr.length - 1]
+          }`
         )
         .expect(200)
         .expect((res) => expect(res.body.nickname).toBe("Recrutador"));
     });
 
     it("should create a new candidate and set nickname to first name if name is provided but nickname is not", async () => {
-      const initialTokenArrayLength = accessTokenArr.length;
+      const initialTokenArrayLength = candidateAccessTokenArr.length;
 
       await request(app.getHttpServer())
         .post("/auth/signup")
@@ -136,15 +144,17 @@ describe("Application (e2e)", () => {
           roles: ["candidate"],
         })
         .expect(201)
-        .then((res) => accessTokenArr.push(res.body.access_token));
+        .then((res) => candidateAccessTokenArr.push(res.body.access_token));
 
-      expect(accessTokenArr.length).toBe(initialTokenArrayLength + 1);
+      expect(candidateAccessTokenArr.length).toBe(initialTokenArrayLength + 1);
 
       await request(app.getHttpServer())
         .get("/user/profile")
         .set(
           "Authorization",
-          `Bearer ${accessTokenArr[accessTokenArr.length - 1]}`
+          `Bearer ${
+            candidateAccessTokenArr[candidateAccessTokenArr.length - 1]
+          }`
         )
         .expect(200)
         .expect((res) => expect(res.body.nickname).toBe("Test"));
@@ -164,7 +174,7 @@ describe("Application (e2e)", () => {
             userRole: ["recruiter"],
           });
         })
-        .then((res) => (accessTokenArr[0] = res.body.access_token));
+        .then((res) => (recruiterAccessTokenArr[0] = res.body.access_token));
     });
   });
 
@@ -172,7 +182,7 @@ describe("Application (e2e)", () => {
     it("should return the current user's profile based on access token", async () => {
       await request(app.getHttpServer())
         .get("/user/profile")
-        .set("Authorization", `Bearer ${accessTokenArr[0]}`)
+        .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
         .expect(200)
         .expect((res) => {
           expect(res.body).toBeDefined();
@@ -201,7 +211,7 @@ describe("Application (e2e)", () => {
 
       await request(app.getHttpServer())
         .patch("/user/updateProfile")
-        .set("Authorization", `Bearer ${accessTokenArr[0]}`)
+        .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
         .send(payload)
         .expect(200)
         .expect((res) => {
@@ -213,7 +223,7 @@ describe("Application (e2e)", () => {
     it("should accept a new profile picture and return the updated profile", async () => {
       await request(app.getHttpServer())
         .patch("/user/updateProfile")
-        .set("Authorization", `Bearer ${accessTokenArr[0]}`)
+        .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
         .attach("file", "test/assets/profile-picture.jpg")
         .expect(200)
         .expect((res) => {
@@ -229,63 +239,198 @@ describe("Application (e2e)", () => {
 
   describe("Exam creation and configuration", () => {
     describe("Functional requirements", () => {
-      it("should suggest an exam description based on a Job Title and a Job Level", async () => {});
+      it(
+        "should suggest five exam descriptions based on LLM model (timeout: 50 seconds per suggestion)",
+        async () => {
+          for (let i = 0; i < 5; i++) {
+            await request(app.getHttpServer())
+              .post("/exam/suggestDescription")
+              .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+              .send({
+                jobTitle: "Engenheiro de software",
+                jobLevel: "estágio",
+              })
+              .expect(200)
+              .expect((res) => expect(res.text).toBeDefined())
+              .then(async (res) => {
+                if (i === 4)
+                  await request(app.getHttpServer())
+                    .post("/exam")
+                    .set(
+                      "Authorization",
+                      `Bearer ${recruiterAccessTokenArr[0]}`
+                    )
+                    .send({
+                      jobTitle: "Engenheiro de software",
+                      jobLevel: "estágio",
+                      description: res.text,
+                      durationInHours: 1.25,
+                      submissionInHours: 4.125,
+                      showScore: true,
+                      isPublic: true,
+                    })
+                    .expect(201)
+                    .then((res) => examIdArr.push(res.body.id));
+              });
+          }
+        },
+        5 * 1000 * 50
+      );
 
-      it("should not suggest an exam description if called by a candidate", async () => {});
+      it("should suggest an exam description based on SQL query", async () => {});
 
-      it("should throw an exception if the job title is too short or too long", async () => {
-        // await expect(
-        //   controller.suggestDescription({
-        //     jobTitle: "",
-        //     jobLevel: "estágio",
-        //   })
-        // ).rejects.toThrow();
-        // await expect(
-        //   controller.suggestDescription({
-        //     jobTitle: "a".repeat(51),
-        //     jobLevel: "estágio",
-        //   })
-        // ).rejects.toThrow();
+      it("should suggest an exam description based on vector similarity", async () => {});
+
+      it("should not suggest an exam description if called by a candidate", async () => {
+        await request(app.getHttpServer())
+          .post("/exam/suggestDescription")
+          .set("Authorization", `Bearer ${candidateAccessTokenArr[0]}`)
+          .send({
+            jobTitle: "Test Job Title",
+            jobLevel: "estágio",
+          })
+          .expect(401);
       });
 
-      it("should trim the job title before using it to generate the description", async () => {
-        // await expect(
-        //   controller.suggestDescription({
-        //     jobTitle: "  Test title  ",
-        //     jobLevel: "estágio",
-        //   })
-        // ).resolves.toEqual("Suggested description");
+      it(
+        "should create three new exams for each recruiter and return them (timeout: 1.5 seconds per exam)",
+        async () => {
+          for (let i = 0; i < recruiterAccessTokenArr.length; i++) {
+            for (let j = 0; j < 3; j++) {
+              const jobTitleTemplate = `Test Exam ${j} - Recruiter ${i}`;
+
+              await request(app.getHttpServer())
+                .post("/exam")
+                .set("Authorization", `Bearer ${recruiterAccessTokenArr[i]}`)
+                .send({
+                  jobTitle: jobTitleTemplate,
+                  jobLevel: "estágio",
+                  description: "Test description",
+                  durationInHours: 1.25,
+                  submissionInHours: 4.125,
+                  showScore: true,
+                  isPublic: true,
+                })
+                .expect(201)
+                .expect((res) => {
+                  expect(res.body).toBeDefined();
+                  expect(res.body).toMatchObject({
+                    jobTitle: jobTitleTemplate.toLowerCase(),
+                    durationInHours: 1.25,
+                    submissionInHours: 4.125,
+                    status: "draft",
+                  });
+                })
+                .then((res) => examIdArr.push(res.body.id));
+            }
+          }
+        },
+        6 * 3 * 1000 * 1.5
+      );
+
+      it("should not allow a candidate to create a new exam", async () => {
+        await request(app.getHttpServer())
+          .post("/exam")
+          .set("Authorization", `Bearer ${candidateAccessTokenArr[0]}`)
+          .send({
+            jobTitle: "Test Exam - Candidate",
+            jobLevel: "estágio",
+            description: "Test description",
+            durationInHours: 1.25,
+            submissionInHours: 4.125,
+            showScore: true,
+            isPublic: true,
+          })
+          .expect(401);
       });
 
-      it("should throw an exception if the job level is not one of the allowed values", async () => {
-        // ["estágio", "trainee", "júnior", "pleno", "sênior", "outro"]
-        // await expect(
-        //   controller.suggestDescription({
-        //     jobTitle: "Test title",
-        //     jobLevel: "invalid",
-        //   })
-        // ).rejects.toThrow();
+      it("should update an existing exam and return it", async () => {
+        const payload = {
+          description: "Test description - updated",
+        };
+
+        await request(app.getHttpServer())
+          .patch(`/exam?id=${examIdArr[0]}`)
+          .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+          .send(payload)
+          .expect(200)
+          .expect((res) => {
+            expect(res.body).toBeDefined();
+            expect(res.body).toMatchObject(payload);
+          });
       });
 
-      it("should create a new exam and return it", async () => {});
+      it("should not allow a candidate to update an existing exam", async () => {
+        const payload = {
+          description: "Test description - updated",
+        };
 
-      it("should update an existing exam and return it", async () => {});
+        await request(app.getHttpServer())
+          .patch(`/exam?id=${examIdArr[0]}`)
+          .set("Authorization", `Bearer ${candidateAccessTokenArr[0]}`)
+          .send(payload)
+          .expect(401);
+      });
 
-      it("should delete an existing exam and return it", async () => {});
+      it("should delete an existing exam", async () => {
+        await request(app.getHttpServer())
+          .delete(`/exam?id=${examIdArr[0]}`)
+          .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+          .expect(200);
 
-      it("should find an existing exam and return it", async () => {});
+        examIdArr.shift();
+      });
 
-      it("should return a list of all exams created by the current user", async () => {});
+      it("should not allow a candidate to delete an existing exam", async () => {
+        await request(app.getHttpServer())
+          .delete(`/exam?id=${examIdArr[0]}`)
+          .set("Authorization", `Bearer ${candidateAccessTokenArr[0]}`)
+          .expect(401);
+      });
+
+      it("should throw an exception if the job title is too short or too long", async () => {});
+
+      it("should throw an exception if the job level is not one of the allowed values", async () => {});
+
+      it("should fetch a list of all exams created by the current user", async () => {});
+
+      it("should fetch a list of all exams the current user is enrolled in", async () => {});
+
+      it("should switch an exam's status between 'draft' and 'published'", async () => {});
+
+      it("should switch an exam's status between 'published' and 'archived'", async () => {});
+
+      it("should not allow a candidate to switch an exam's status", async () => {});
+
+      it("should get the days left until an exam's deadline", async () => {});
+
+      it("should send invitations to candidates to take an exam", async () => {});
+
+      it("should not allow a candidate to send invitations to candidates", async () => {});
+
+      it("should fetch a list of all candidates invited to take an exam", async () => {});
+
+      it("should find an exam created by the user and return it", async () => {});
+
+      it("should find an exam created by the user and return it with relations", async () => {});
+
+      it("should find an exam created by the user and return it with relations mapped", async () => {});
     });
 
     describe("Non-functional requirements", () => {
-      it("POST /exam/suggestDescription should respond within predefined latency limits", async () => {});
+      // it("POST /exam should send embeddings vector to a queue for further processing", async () => {});
     });
   });
 
   describe("Section management and organization", () => {});
   describe("Question bank and content upload", () => {});
-  describe("Exam scheduling and enrollment", () => {});
+  describe("Exam scheduling and enrollment", () => {
+    it("should find an exam the user is enrolled in and return it", async () => {});
+
+    it("should find an exam the user is enrolled in and return it with relations", async () => {});
+
+    it("should find an exam the user is enrolled in and return it with relations mapped", async () => {});
+  });
   describe("Taking an exam and answering questions", () => {});
   describe("Grading and results reporting", () => {});
   describe("Feedback and review process", () => {});
