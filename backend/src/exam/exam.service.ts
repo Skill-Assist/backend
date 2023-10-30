@@ -28,21 +28,13 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 /** entities */
 import { Exam } from "./entities/exam.entity";
 import { User } from "../user/entities/user.entity";
+import { Section } from "../section/entities/section.entity";
 
 /** dtos */
 import { InviteDto } from "./dto/invite.dto";
 import { CreateExamDto } from "./dto/create-exam.dto";
 import { UpdateExamDto } from "./dto/update-exam.dto";
 import { SuggestDescriptionDto } from "./dto/suggest-description.dto";
-
-/** utils */
-import {
-  _create,
-  _findOne,
-  _findAll,
-  _update,
-  _delete,
-} from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
@@ -456,7 +448,7 @@ export class ExamService implements OnModuleInit {
     });
 
     return {
-      daysRemaining: Math.max(...daysRemaining) / 1000,
+      daysRemaining: Math.round(Math.max(...daysRemaining) / 1000),
     };
   }
 
@@ -485,22 +477,19 @@ export class ExamService implements OnModuleInit {
           .getOne()
       )
         throw new UnauthorizedException(
-          "Email address is already enrolled in exam. Process was aborted."
+          "Email address is already enrolled in exam. No invitation was sent. Process was aborted."
         );
     }
 
     // for each email address
     for (const email of inviteDto.email) {
       // check if email address is already registered in the system (user)
-      const user = <User>await this.userService.findOne("email", email);
+      const user = (await this.userService.findOne("email", email)) as User;
 
       // create exam invitation related to exam and user, if any
       await this.examInvitationService.create(
         userId,
-        {
-          email,
-          expirationInHours: inviteDto.expirationInHours,
-        },
+        { email, expirationInHours: inviteDto.expirationInHours },
         exam!,
         user
       );
@@ -518,8 +507,7 @@ export class ExamService implements OnModuleInit {
       .of(exam)
       .add(user);
 
-    // return updated exam
-    return <Exam>await this.findOne(user.id, "id", exam.id);
+    return (await this.findOne(user.id, "id", exam.id)) as Exam;
   }
 
   async fetchCandidates(userId: number, examId: number): Promise<any> {
@@ -578,41 +566,37 @@ export class ExamService implements OnModuleInit {
     userId: number,
     examId: number,
     mode: "general" | "strict" = "general"
-  ) {
-    const { jobTitle, jobLevel } = (await this.findOne(userId, "id", examId))!;
+  ): Promise<Partial<Section>[]> {
+    const exam = (await this.findOne(userId, "id", examId)) as Exam;
 
-    let similarExams: any[] = [];
+    const similarExams: Exam[] = [];
+    const similarSections: Partial<Section>[] = [];
+
     if (mode === "general") {
-      similarExams = await this.repository
+      const examLookup = await this.repository
         .createQueryBuilder("exam")
-        .where("exam.jobTitle = :jobTitle", { jobTitle })
-        .andWhere("exam.jobLevel = :jobLevel", { jobLevel })
+        .where("exam.jobTitle = :jobTitle", { jobTitle: exam.jobTitle })
+        .andWhere("exam.jobLevel = :jobLevel", { jobLevel: exam.jobLevel })
         .andWhere("exam.id != :examId", { examId })
         .getMany();
 
+      similarExams.push(...examLookup);
+
       if (!similarExams.length) {
-        return similarExams;
+        return similarSections;
       }
     }
 
-    if (mode === "strict") {
-      similarExams = await this.repository
-        .createQueryBuilder("exam")
-        .where("exam.id = :examId", { examId })
-        .getMany();
-    }
+    if (mode === "strict") similarExams.push(exam);
 
-    const similarSections: any[] = [];
     for (let i = 0; i < similarExams.length; i++) {
-      const exam = similarExams[i];
-
       const sections = await this.repository
         .createQueryBuilder("exam")
         .relation(Exam, "sections")
-        .of(exam)
+        .of(similarExams[i])
         .loadMany();
 
-      const data = sections.map((section) => {
+      const data: Partial<Section>[] = sections.map((section) => {
         return {
           id: section.id,
           name: section.name,
@@ -634,40 +618,29 @@ export class ExamService implements OnModuleInit {
     jobLevel?: string,
     description?: string
   ): Promise<void> {
-    const pineconeIndex = this.vectorStore.index(pineconeIdx);
+    try {
+      const pineconeIndex = this.vectorStore.index(pineconeIdx);
 
-    if (mode === "upsert") {
-      const embeddings = new OpenAIEmbeddings();
-      const embeddedDescription = await embeddings.embedDocuments([
-        `${jobTitle}|${jobLevel}|${description}`,
-      ]);
+      if (mode === "upsert") {
+        const embeddings = new OpenAIEmbeddings();
+        const embeddedDescription = await embeddings.embedDocuments([
+          `${jobTitle}|${jobLevel}|${description}`,
+        ]);
 
-      if (embeddedDescription[0].length > this.PINECONE_INDEX_DIMENSION)
-        throw new Error(
-          `Document dimension (${embeddedDescription[0].length}) is larger than index dimension (${this.PINECONE_INDEX_DIMENSION}).`
-        );
-
-      const zerosArray: number[] = [];
-      for (
-        let i = 0;
-        i < this.PINECONE_INDEX_DIMENSION - embeddedDescription[0].length;
-        i++
-      ) {
-        zerosArray.push(0);
-      }
-      embeddedDescription[0].push(...zerosArray);
-
-      await pineconeIndex.upsert([
-        {
-          id: String(examId),
-          values: embeddedDescription[0],
-          metadata: {
-            module: this.PINECONE_INDEX_MODULE,
+        await pineconeIndex.upsert([
+          {
+            id: String(examId),
+            values: embeddedDescription[0],
+            metadata: {
+              module: this.PINECONE_INDEX_MODULE,
+            },
           },
-        },
-      ]);
-    }
+        ]);
+      }
 
-    if (mode === "delete") pineconeIndex.deleteOne(String(examId));
+      if (mode === "delete") pineconeIndex.deleteOne(String(examId));
+    } catch (err) {
+      throw new BadRequestException(err.message);
+    }
   }
 }

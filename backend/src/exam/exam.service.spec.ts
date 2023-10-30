@@ -17,10 +17,11 @@ import { ExamInvitationService } from "../exam-invitation/exam-invitation.servic
 
 /** entities */
 import { Exam } from "./entities/exam.entity";
+import { User } from "../user/entities/user.entity";
+import { AnswerSheet } from "../answer-sheet/entities/answer-sheet.entity";
 
 /** dto */
 import { CreateExamDto } from "./dto/create-exam.dto";
-import { AnswerSheet } from "../answer-sheet/entities/answer-sheet.entity";
 //////////////////////////////////////////////////////////////////////////////////
 
 /** --- mock modules ------------------------------------------------------------
@@ -42,6 +43,9 @@ jest.mock("langchain/llms/openai", () => {
 jest.mock("@pinecone-database/pinecone", () => {
   class VectorStore {
     index = jest.fn().mockReturnThis();
+    upsert = jest.fn().mockReturnThis();
+    delete = jest.fn().mockReturnThis();
+    deleteOne = jest.fn().mockReturnThis();
     query = jest
       .fn()
       .mockReturnValueOnce(
@@ -55,6 +59,10 @@ jest.mock("@pinecone-database/pinecone", () => {
 
 jest.mock("langchain/embeddings/openai", () => {
   class Embeddings {
+    embedDocuments() {
+      return jest.fn().mockReturnValue(Promise.resolve([0.1, 0.2, 0.3]));
+    }
+
     embedQuery() {
       return jest.fn().mockReturnValue(Promise.resolve([0.1, 0.2, 0.3]));
     }
@@ -80,6 +88,7 @@ jest.mock("langchain/chains", () => {
 const mockRepository = {
   of: jest.fn().mockReturnThis(),
   set: jest.fn().mockReturnThis(),
+  add: jest.fn().mockReturnThis(),
   from: jest.fn().mockReturnThis(),
   where: jest.fn().mockReturnThis(),
   update: jest.fn().mockReturnThis(),
@@ -89,6 +98,7 @@ const mockRepository = {
   select: jest.fn().mockReturnThis(),
   getMany: jest.fn().mockReturnThis(),
   execute: jest.fn().mockReturnThis(),
+  loadMany: jest.fn().mockReturnThis(),
   andWhere: jest.fn().mockReturnThis(),
   relation: jest.fn().mockReturnThis(),
   leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -110,7 +120,9 @@ const mockAnswerSheetService = {
 };
 
 const mockExamInvitationService = {
+  create: jest.fn().mockReturnThis(),
   reject: jest.fn().mockReturnThis(),
+  findAll: jest.fn().mockReturnThis(),
   findPending: jest.fn().mockReturnThis(),
 };
 
@@ -649,9 +661,9 @@ describe("ExamService", () => {
         )
       ).resolves.toEqual("Exam has been published.");
 
-      expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
       expect(mockRepository.update).toHaveBeenCalled();
       expect(mockRepository.execute).toHaveBeenCalled();
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
       expect(mockRepository.set).toHaveBeenCalledWith({ status: "published" });
       expect(mockRepository.where).toHaveBeenCalledWith("id = :id", {
         id: expect.any(Number),
@@ -754,9 +766,253 @@ describe("ExamService", () => {
     });
   });
 
-  describe("sendInvitations", () => {});
-  describe("enrollUser", () => {});
-  describe("fetchCandidates", () => {});
-  describe("findSimilarSections", () => {});
-  describe("manageVectorStore", () => {});
+  describe("sendInvitations", () => {
+    it("should throw an error if exam is not in published", async () => {
+      jest
+        .spyOn(service, "findOne")
+        .mockResolvedValueOnce({ status: "draft" } as Exam);
+
+      await expect(
+        service.sendInvitations(expect.any(Number), expect.any(Number), {
+          email: [expect.any(String)],
+          expirationInHours: expect.any(Number),
+        })
+      ).rejects.toThrow("Exam is not published. Process was aborted.");
+    });
+
+    it("should throw an error in any of the invitees is already enrolled", async () => {
+      jest
+        .spyOn(service, "findOne")
+        .mockResolvedValueOnce({ status: "published" } as Exam);
+
+      mockRepository.getOne.mockResolvedValueOnce(expect.any(String));
+
+      await expect(
+        service.sendInvitations(expect.any(Number), expect.any(Number), {
+          email: [expect.any(String)],
+          expirationInHours: expect.any(Number),
+        })
+      ).rejects.toThrow(
+        "Email address is already enrolled in exam. No invitation was sent. Process was aborted."
+      );
+    });
+
+    it("should send invitations to invitees", async () => {
+      jest
+        .spyOn(service, "findOne")
+        .mockResolvedValueOnce({ status: "published" } as Exam)
+        .mockResolvedValueOnce(null);
+
+      mockRepository.getOne.mockResolvedValueOnce(undefined);
+
+      await expect(
+        service.sendInvitations(expect.any(Number), expect.any(Number), {
+          email: [expect.any(String)],
+          expirationInHours: expect.any(Number),
+        })
+      ).resolves.toEqual("Invitations sent to 1 email addresses.");
+    });
+  });
+
+  describe("enrollUser", () => {
+    it("should enroll user in exam", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({} as Exam);
+
+      await expect(
+        service.enrollUser({} as Exam, {} as User)
+      ).resolves.not.toBeUndefined();
+
+      expect(mockRepository.of).toHaveBeenCalled();
+      expect(mockRepository.add).toHaveBeenCalled();
+      expect(mockRepository.relation).toHaveBeenCalled();
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
+    });
+  });
+
+  describe("fetchCandidates", () => {
+    it("should return an array of candidates", async () => {
+      jest.spyOn(service, "findOne").mockResolvedValueOnce({} as Exam);
+
+      function createMockExamInvitation(
+        accepted: boolean | null,
+        createdAtOffset: number
+      ) {
+        const commonUserProps = {
+          name: expect.any(String),
+          nickname: expect.any(String),
+          logo: expect.any(String),
+        };
+
+        return {
+          id: expect.any(Number),
+          email: expect.any(String),
+          user: Promise.resolve(commonUserProps),
+          accepted,
+          createdAt: new Date(
+            Date.now() - 1000 * 60 * 60 * 24 * createdAtOffset
+          ),
+          expirationInHours: 36,
+          answerSheet: Promise.resolve({
+            id: expect.any(Number),
+            aiScore: expect.any(Number),
+          }),
+        };
+      }
+
+      mockExamInvitationService.findAll.mockResolvedValueOnce([
+        createMockExamInvitation(true, 3),
+        createMockExamInvitation(false, 2),
+        createMockExamInvitation(null, 1),
+        createMockExamInvitation(true, 3),
+        createMockExamInvitation(false, 2),
+        createMockExamInvitation(null, 1),
+      ]);
+
+      mockRepository.getMany.mockResolvedValueOnce([]);
+
+      await expect(
+        service.fetchCandidates(expect.any(Number), expect.any(Number))
+      ).resolves.not.toBeUndefined();
+
+      expect(service.findOne).toHaveBeenCalled();
+      expect(mockExamInvitationService.findAll).toHaveBeenCalled();
+    });
+  });
+
+  describe("findSimilarSections", () => {
+    it("should return an empty array when no similar exams are found in 'general' mode", async () => {
+      jest
+        .spyOn(service, "findOne")
+        .mockReset()
+        .mockResolvedValueOnce({
+          jobTitle: expect.any(String),
+          jobLevel: expect.any(String),
+        } as Exam);
+
+      mockRepository.getMany.mockResolvedValueOnce([]);
+
+      await expect(
+        service.findSimilarSections(
+          expect.any(Number),
+          expect.any(Number),
+          "general"
+        )
+      ).resolves.toEqual([]);
+
+      expect(service.findOne).toHaveBeenCalled();
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
+      expect(mockRepository.getMany).toHaveBeenCalled();
+      expect(mockRepository.where).toHaveBeenCalledWith(
+        "exam.jobTitle = :jobTitle",
+        { jobTitle: expect.any(String) }
+      );
+      expect(mockRepository.andWhere).toHaveBeenNthCalledWith(
+        1,
+        "exam.jobLevel = :jobLevel",
+        { jobLevel: expect.any(String) }
+      );
+      expect(mockRepository.andWhere).toHaveBeenNthCalledWith(
+        2,
+        "exam.id != :examId",
+        { examId: expect.any(Number) }
+      );
+    });
+
+    it("should return an array of similar sections when similar exams are found in 'general' mode", async () => {
+      jest
+        .spyOn(service, "findOne")
+        .mockReset()
+        .mockResolvedValueOnce({
+          jobTitle: expect.any(String),
+          jobLevel: expect.any(String),
+        } as Exam);
+
+      mockRepository.getMany
+        .mockReset()
+        .mockResolvedValueOnce([{ id: expect.any(Number) }]);
+
+      mockRepository.loadMany.mockResolvedValue([
+        {
+          id: expect.any(Number),
+          name: expect.any(String),
+          description: expect.any(String),
+        },
+      ]);
+
+      await expect(
+        service.findSimilarSections(
+          expect.any(Number),
+          expect.any(Number),
+          "general"
+        )
+      ).resolves.toEqual([
+        {
+          description: expect.any(String),
+          id: expect.any(Number),
+          name: expect.any(String),
+        },
+      ]);
+
+      expect(service.findOne).toHaveBeenCalled();
+      expect(mockRepository.loadMany).toHaveBeenCalled();
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
+      expect(mockRepository.relation).toHaveBeenCalledWith(Exam, "sections");
+      expect(mockRepository.of).toHaveBeenCalledWith({
+        id: expect.any(Number),
+      });
+    });
+
+    it("should return an array with all sections from a given exam when in 'strict' mode", async () => {
+      jest
+        .spyOn(service, "findOne")
+        .mockReset()
+        .mockResolvedValueOnce({
+          jobTitle: expect.any(String),
+          jobLevel: expect.any(String),
+        } as Exam);
+
+      mockRepository.loadMany.mockResolvedValue([
+        {
+          id: expect.any(Number),
+          name: expect.any(String),
+          description: expect.any(String),
+        },
+      ]);
+
+      await expect(
+        service.findSimilarSections(
+          expect.any(Number),
+          expect.any(Number),
+          "strict"
+        )
+      ).resolves.toBeDefined();
+    });
+  });
+
+  describe("manageVectorStore", () => {
+    it("should upsert exam metadata in vector store", async () => {
+      await expect(
+        service.manageVectorStore(
+          "upsert",
+          expect.any(String),
+          expect.any(Number)
+        )
+      ).resolves.toBeUndefined();
+
+      expect(service.vectorStore.index).toHaveBeenCalled();
+      expect(OpenAIEmbeddings).toHaveBeenCalled();
+    });
+
+    it("should delete exam metadata from vector store", async () => {
+      await expect(
+        service.manageVectorStore(
+          "delete",
+          expect.any(String),
+          expect.any(Number)
+        )
+      ).resolves.toBeUndefined();
+
+      expect(service.vectorStore.index).toHaveBeenCalled();
+    });
+  });
 });
