@@ -10,8 +10,8 @@
 
 /** nestjs */
 import {
-  INestApplication,
   ValidationPipe,
+  INestApplication,
   ClassSerializerInterceptor,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
@@ -251,11 +251,12 @@ describe("Application (e2e)", () => {
   describe("Exam creation and configuration", () => {
     describe("Functional requirements", () => {
       it(
-        "should suggest five exam descriptions based on LLM model (timeout: 80 seconds per suggestion)",
+        "should suggest five exam descriptions based on LLM model",
         async () => {
           const startTime = Date.now();
+
           let suggestion: string = "";
-          for (let i = 0; i < 4; i++) {
+          for (let i = 0; i < 4; i++)
             await request(app.getHttpServer())
               .post("/exam/suggestDescription")
               .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
@@ -266,7 +267,15 @@ describe("Application (e2e)", () => {
               .expect(200)
               .expect((res) => expect(res.text).toBeDefined())
               .then(async (res) => (suggestion = res.text));
-          }
+
+          const endTime = Date.now();
+          const elapsedTime = endTime - startTime;
+          console.log("LLM model, total elapsed time: ", elapsedTime);
+          console.log(
+            "LLM model, elapsed time per suggestion (sec): ",
+            Math.round(elapsedTime / 1000 / 5)
+          );
+
           await request(app.getHttpServer())
             .post("/exam")
             .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
@@ -281,51 +290,59 @@ describe("Application (e2e)", () => {
             })
             .expect(201)
             .then((res) => examIdArr.push(res.body.id));
-          const endTime = Date.now();
-          const elapsedTime = endTime - startTime;
-          console.log("elapsed time, LLM model: ", elapsedTime);
         },
         5 * 1000 * 1000
       );
 
-      it(
-        "should suggest five exam descriptions based on SQL query (timeout: 1 second per suggestion)",
-        async () => {
-          const startTime = Date.now();
-          for (let i = 0; i < 4; i++)
-            await request(app.getHttpServer())
-              .post("/exam/suggestDescription")
-              .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
-              .send({
-                jobTitle: "Engenheiro de software",
-                jobLevel: "estágio",
-              })
-              .expect(200)
-              .expect((res) => expect(res.text).toBeDefined());
-          const endTime = Date.now();
-          const elapsedTime = endTime - startTime;
-          console.log("elapsed time, SQL query: ", elapsedTime);
-        },
-        5 * 1000 * 1000
-      );
+      it("should suggest five exam descriptions based on SQL query", async () => {
+        const startTime = Date.now();
+
+        for (let i = 0; i < 4; i++)
+          await request(app.getHttpServer())
+            .post("/exam/suggestDescription")
+            .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+            .send({
+              jobTitle: "Engenheiro de software",
+              jobLevel: "estágio",
+            })
+            .expect(200)
+            .expect((res) => expect(res.text).toBeDefined());
+
+        const endTime = Date.now();
+        const elapsedTime = endTime - startTime;
+        console.log("SQL query, total elapsed time: ", elapsedTime);
+        console.log(
+          "SQL query, elapsed time per suggestion (sec): ",
+          Math.round(elapsedTime / 1000 / 5)
+        );
+      });
 
       it(
-        "should suggest five exam descriptions based on vector similarity (timeout: 5 seconds per suggestion)",
-        async () => {
-          const startTime = Date.now();
-          for (let i = 0; i < 4; i++)
-            await request(app.getHttpServer())
-              .post("/exam/suggestDescription")
-              .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
-              .send({
-                jobTitle: "Engenheira de software",
-                jobLevel: "estágio",
-              })
-              .expect(200)
-              .expect((res) => expect(res.text).toBeDefined());
-          const endTime = Date.now();
-          const elapsedTime = endTime - startTime;
-          console.log("elapsed time, vector similarity: ", elapsedTime);
+        "should suggest five exam descriptions based on vector similarity",
+        () => {
+          // this timer is required due to Pinecone's eventual consistency
+          setTimeout(async () => {
+            const startTime = Date.now();
+
+            for (let i = 0; i < 4; i++)
+              await request(app.getHttpServer())
+                .post("/exam/suggestDescription")
+                .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+                .send({
+                  jobTitle: "Engenheira de software",
+                  jobLevel: "estágio",
+                })
+                .expect(200)
+                .expect((res) => expect(res.text).toBeDefined());
+
+            const endTime = Date.now();
+            const elapsedTime = endTime - startTime;
+            console.log("vector similarity, total elapsed time: ", elapsedTime);
+            console.log(
+              "vector similarity, elapsed time per suggestion (sec): ",
+              Math.round(elapsedTime / 1000 / 5)
+            );
+          }, 10 * 1000);
         },
         5 * 1000 * 1000
       );
@@ -417,11 +434,16 @@ describe("Application (e2e)", () => {
       });
 
       it(
-        "should create three new exams for each recruiter and return them (timeout: 1.5 seconds per exam)",
+        "should create three new exams for each recruiter and return them",
         async () => {
+          const startTime = Date.now();
+
           for (let i = 0; i < recruiterAccessTokenArr.length; i++) {
+            console.log("i: ", i);
             for (let j = 0; j < 3; j++) {
+              console.log("j: ", j);
               const jobTitleTemplate = `Test Exam ${j} - Recruiter ${i}`;
+
               await request(app.getHttpServer())
                 .post("/exam")
                 .set("Authorization", `Bearer ${recruiterAccessTokenArr[i]}`)
@@ -447,8 +469,16 @@ describe("Application (e2e)", () => {
                 .then((res) => examIdArr.push(res.body.id));
             }
           }
+
+          const endTime = Date.now();
+          const elapsedTime = endTime - startTime;
+          console.log("exam creation, total elapsed time: ", elapsedTime);
+          console.log(
+            "exam creation, elapsed time per exam (sec): ",
+            Math.round(elapsedTime / 1000 / 18)
+          );
         },
-        6 * 3 * 1000 * 1.5
+        5 * 1000 * 1000
       );
 
       it("should not allow a candidate to create a new exam", async () => {

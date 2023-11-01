@@ -491,7 +491,7 @@ describe("ExamService", () => {
       expect(service.vectorStore.index).toHaveBeenCalled();
       expect(mockRepository.getOne).toHaveBeenCalledTimes(2);
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith("exam");
-      expect(mockRepository.where).toHaveBeenNthCalledWith(2, "user.id = :id", {
+      expect(mockRepository.where).toHaveBeenNthCalledWith(2, "exam.id = :id", {
         id: expect.any(Number),
       });
     });

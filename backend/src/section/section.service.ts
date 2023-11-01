@@ -39,7 +39,7 @@ import { _create, _findOne, _update } from "../utils/typeorm.utils";
 @Injectable()
 export class SectionService implements OnModuleInit {
   private PINECONE_SECTION_INDEX_NAME: string = "vector-store";
-  private PINECONE_SECTION_INDEX_DIMENSION: number = 2054;
+  private PINECONE_SECTION_INDEX_DIMENSION: number = 1536;
 
   private examService: ExamService;
 
@@ -276,21 +276,6 @@ export class SectionService implements OnModuleInit {
     const embeddedQuery = await embeddings.embedQuery(
       `${exam!.jobTitle}|${exam!.jobLevel}|${exam!.description}`
     );
-
-    if (embeddedQuery.length > this.examService.PINECONE_INDEX_DIMENSION)
-      throw new Error(
-        `Query dimension (${embeddedQuery.length}) is larger than index dimension (${this.examService.PINECONE_INDEX_DIMENSION}).`
-      );
-
-    const zerosArray: number[] = [];
-    for (
-      let i = 0;
-      i < this.examService.PINECONE_INDEX_DIMENSION - embeddedQuery.length;
-      i++
-    ) {
-      zerosArray.push(0);
-    }
-    embeddedQuery.push(...zerosArray);
 
     const queryResponse = await pineconeIndex.query({
       topK: 4,
