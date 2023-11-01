@@ -92,8 +92,7 @@ export class ExamService implements OnModuleInit {
         this.PINECONE_INDEX_NAME,
         exam.id,
         exam.jobTitle,
-        exam.jobLevel,
-        exam.description
+        exam.jobLevel
       );
 
       // set relation between exam and user
@@ -204,17 +203,16 @@ export class ExamService implements OnModuleInit {
       .execute();
 
     // update exam's metadata in vector store
-    const updatedExam = await this.findOne(userId, "id", examId);
+    const updatedExam = (await this.findOne(userId, "id", examId)) as Exam;
 
-    const { id, jobTitle, jobLevel, description } = updatedExam!;
+    const { id, jobTitle, jobLevel } = updatedExam;
 
     await this.manageVectorStore(
       "upsert",
       this.PINECONE_INDEX_NAME,
       id,
       jobTitle,
-      jobLevel,
-      description
+      jobLevel
     );
 
     return updatedExam!;
@@ -277,13 +275,15 @@ export class ExamService implements OnModuleInit {
       includeMetadata: true,
     });
 
+    console.log("queryResponse: ", queryResponse);
+
     if (queryResponse.matches?.length) {
       const match = queryResponse.matches[0];
 
       if (match.score && match.score >= 0.85) {
         const exam = await this.repository
           .createQueryBuilder("exam")
-          .where("user.id = :id", { id: +match.id })
+          .where("exam.id = :id", { id: +match.id })
           .getOne();
 
         if (!exam) throw new NotFoundException("Exam with given id not found.");
@@ -618,8 +618,7 @@ export class ExamService implements OnModuleInit {
     pineconeIdx: string,
     examId: number,
     jobTitle?: string,
-    jobLevel?: string,
-    description?: string
+    jobLevel?: string
   ): Promise<void> {
     try {
       const pineconeIndex = this.vectorStore.index(pineconeIdx);
@@ -627,7 +626,7 @@ export class ExamService implements OnModuleInit {
       if (mode === "upsert") {
         const embeddings = new OpenAIEmbeddings();
         const embeddedDescription = await embeddings.embedDocuments([
-          `${jobTitle}|${jobLevel}|${description}`,
+          `${jobTitle}|${jobLevel}`,
         ]);
 
         await pineconeIndex.upsert([

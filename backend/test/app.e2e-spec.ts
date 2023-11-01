@@ -9,9 +9,13 @@
  */
 
 /** nestjs */
+import {
+  INestApplication,
+  ValidationPipe,
+  ClassSerializerInterceptor,
+} from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { Test, TestingModule } from "@nestjs/testing";
-import { INestApplication, ClassSerializerInterceptor } from "@nestjs/common";
 
 /** external dependencies */
 import * as request from "supertest";
@@ -30,6 +34,13 @@ beforeAll(async () => {
   }).compile();
 
   app = moduleRef.createNestApplication();
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    })
+  );
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.useGlobalGuards(new AuthorizationGuard(app.get(Reflector)));
 
@@ -240,9 +251,11 @@ describe("Application (e2e)", () => {
   describe("Exam creation and configuration", () => {
     describe("Functional requirements", () => {
       it(
-        "should suggest five exam descriptions based on LLM model (timeout: 50 seconds per suggestion)",
+        "should suggest five exam descriptions based on LLM model (timeout: 80 seconds per suggestion)",
         async () => {
-          for (let i = 0; i < 5; i++) {
+          const startTime = Date.now();
+          let suggestion: string = "";
+          for (let i = 0; i < 4; i++) {
             await request(app.getHttpServer())
               .post("/exam/suggestDescription")
               .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
@@ -252,34 +265,70 @@ describe("Application (e2e)", () => {
               })
               .expect(200)
               .expect((res) => expect(res.text).toBeDefined())
-              .then(async (res) => {
-                if (i === 4)
-                  await request(app.getHttpServer())
-                    .post("/exam")
-                    .set(
-                      "Authorization",
-                      `Bearer ${recruiterAccessTokenArr[0]}`
-                    )
-                    .send({
-                      jobTitle: "Engenheiro de software",
-                      jobLevel: "estágio",
-                      description: res.text,
-                      durationInHours: 1.25,
-                      submissionInHours: 4.125,
-                      showScore: true,
-                      isPublic: true,
-                    })
-                    .expect(201)
-                    .then((res) => examIdArr.push(res.body.id));
-              });
+              .then(async (res) => (suggestion = res.text));
           }
+          await request(app.getHttpServer())
+            .post("/exam")
+            .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+            .send({
+              jobTitle: "Engenheiro de software",
+              jobLevel: "estágio",
+              description: suggestion,
+              durationInHours: 1.25,
+              submissionInHours: 4.125,
+              showScore: true,
+              isPublic: true,
+            })
+            .expect(201)
+            .then((res) => examIdArr.push(res.body.id));
+          const endTime = Date.now();
+          const elapsedTime = endTime - startTime;
+          console.log("elapsed time, LLM model: ", elapsedTime);
         },
-        5 * 1000 * 50
+        5 * 1000 * 1000
       );
 
-      it("should suggest an exam description based on SQL query", async () => {});
+      it(
+        "should suggest five exam descriptions based on SQL query (timeout: 1 second per suggestion)",
+        async () => {
+          const startTime = Date.now();
+          for (let i = 0; i < 4; i++)
+            await request(app.getHttpServer())
+              .post("/exam/suggestDescription")
+              .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+              .send({
+                jobTitle: "Engenheiro de software",
+                jobLevel: "estágio",
+              })
+              .expect(200)
+              .expect((res) => expect(res.text).toBeDefined());
+          const endTime = Date.now();
+          const elapsedTime = endTime - startTime;
+          console.log("elapsed time, SQL query: ", elapsedTime);
+        },
+        5 * 1000 * 1000
+      );
 
-      it("should suggest an exam description based on vector similarity", async () => {});
+      it(
+        "should suggest five exam descriptions based on vector similarity (timeout: 5 seconds per suggestion)",
+        async () => {
+          const startTime = Date.now();
+          for (let i = 0; i < 4; i++)
+            await request(app.getHttpServer())
+              .post("/exam/suggestDescription")
+              .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+              .send({
+                jobTitle: "Engenheira de software",
+                jobLevel: "estágio",
+              })
+              .expect(200)
+              .expect((res) => expect(res.text).toBeDefined());
+          const endTime = Date.now();
+          const elapsedTime = endTime - startTime;
+          console.log("elapsed time, vector similarity: ", elapsedTime);
+        },
+        5 * 1000 * 1000
+      );
 
       it("should not suggest an exam description if called by a candidate", async () => {
         await request(app.getHttpServer())
@@ -292,13 +341,87 @@ describe("Application (e2e)", () => {
           .expect(401);
       });
 
+      it("should throw an exception if the job title is too long", async () => {
+        await request(app.getHttpServer())
+          .post("/exam")
+          .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+          .send({
+            jobTitle: "a".repeat(51),
+            jobLevel: "estágio",
+            description: "Test description",
+            durationInHours: 1.25,
+            submissionInHours: 4.125,
+            showScore: true,
+            isPublic: true,
+          })
+          .expect((res) => {
+            expect(res.body).toBeDefined();
+            expect(res.body).toMatchObject({
+              statusCode: 400,
+              message: [
+                "jobTitle must be shorter than or equal to 50 characters",
+              ],
+              error: "Bad Request",
+            });
+          });
+      });
+
+      it("should throw an exception if the job level is not one of the allowed values", async () => {
+        await request(app.getHttpServer())
+          .post("/exam")
+          .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+          .send({
+            jobTitle: "Test Job Title",
+            jobLevel: "junior",
+            description: "Test description",
+            durationInHours: 1.25,
+            submissionInHours: 4.125,
+            showScore: true,
+            isPublic: true,
+          })
+          .expect((res) => {
+            expect(res.body).toBeDefined();
+            expect(res.body).toMatchObject({
+              statusCode: 400,
+              message: [
+                "jobLevel must be one of the following values: estágio, trainee, júnior, pleno, sênior",
+              ],
+              error: "Bad Request",
+            });
+          });
+      });
+
+      it("should throw an exception if the description is too long", async () => {
+        await request(app.getHttpServer())
+          .post("/exam")
+          .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+          .send({
+            jobTitle: "Test Job Title",
+            jobLevel: "estágio",
+            description: "a".repeat(401),
+            durationInHours: 1.25,
+            submissionInHours: 4.125,
+            showScore: true,
+            isPublic: true,
+          })
+          .expect((res) => {
+            expect(res.body).toBeDefined();
+            expect(res.body).toMatchObject({
+              statusCode: 400,
+              message: [
+                "description must be shorter than or equal to 400 characters",
+              ],
+              error: "Bad Request",
+            });
+          });
+      });
+
       it(
         "should create three new exams for each recruiter and return them (timeout: 1.5 seconds per exam)",
         async () => {
           for (let i = 0; i < recruiterAccessTokenArr.length; i++) {
             for (let j = 0; j < 3; j++) {
               const jobTitleTemplate = `Test Exam ${j} - Recruiter ${i}`;
-
               await request(app.getHttpServer())
                 .post("/exam")
                 .set("Authorization", `Bearer ${recruiterAccessTokenArr[i]}`)
@@ -348,7 +471,6 @@ describe("Application (e2e)", () => {
         const payload = {
           description: "Test description - updated",
         };
-
         await request(app.getHttpServer())
           .patch(`/exam?id=${examIdArr[0]}`)
           .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
@@ -377,7 +499,6 @@ describe("Application (e2e)", () => {
           .delete(`/exam?id=${examIdArr[0]}`)
           .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
           .expect(200);
-
         examIdArr.shift();
       });
 
@@ -388,51 +509,53 @@ describe("Application (e2e)", () => {
           .expect(401);
       });
 
-      it("should throw an exception if the job title is too short or too long", async () => {});
+      // it("should fetch a list of all exams created by the current user", async () => {});
 
-      it("should throw an exception if the job level is not one of the allowed values", async () => {});
+      // it("should fetch a list of all exams the current user is enrolled in", async () => {});
 
-      it("should fetch a list of all exams created by the current user", async () => {});
+      // it("should switch an exam's status between 'draft' and 'published'", async () => {});
 
-      it("should fetch a list of all exams the current user is enrolled in", async () => {});
+      // it("should switch an exam's status between 'published' and 'archived'", async () => {});
 
-      it("should switch an exam's status between 'draft' and 'published'", async () => {});
+      // it("should not allow a candidate to switch an exam's status", async () => {});
 
-      it("should switch an exam's status between 'published' and 'archived'", async () => {});
+      // it("should get the days left until an exam's deadline", async () => {});
 
-      it("should not allow a candidate to switch an exam's status", async () => {});
+      // it("should send invitations to candidates to take an exam", async () => {});
 
-      it("should get the days left until an exam's deadline", async () => {});
+      // it("should not allow a candidate to send invitations to candidates", async () => {});
 
-      it("should send invitations to candidates to take an exam", async () => {});
+      // it("should fetch a list of all candidates invited to take an exam", async () => {});
 
-      it("should not allow a candidate to send invitations to candidates", async () => {});
+      // it("should find an exam created by the user and return it", async () => {});
 
-      it("should fetch a list of all candidates invited to take an exam", async () => {});
+      // it("should find an exam created by the user and return it with relations", async () => {});
 
-      it("should find an exam created by the user and return it", async () => {});
-
-      it("should find an exam created by the user and return it with relations", async () => {});
-
-      it("should find an exam created by the user and return it with relations mapped", async () => {});
+      // it("should find an exam created by the user and return it with relations mapped", async () => {});
     });
 
-    describe("Non-functional requirements", () => {
-      // it("POST /exam should send embeddings vector to a queue for further processing", async () => {});
-    });
+    // describe("Non-functional requirements", () => {
+    //   it("POST /exam should send embeddings vector to a queue for further processing", async () => {});
+    // });
   });
 
-  describe("Section management and organization", () => {});
-  describe("Question bank and content upload", () => {});
-  describe("Exam scheduling and enrollment", () => {
-    it("should find an exam the user is enrolled in and return it", async () => {});
+  // describe("Section management and organization", () => {});
 
-    it("should find an exam the user is enrolled in and return it with relations", async () => {});
+  // describe("Question bank and content upload", () => {});
 
-    it("should find an exam the user is enrolled in and return it with relations mapped", async () => {});
-  });
-  describe("Taking an exam and answering questions", () => {});
-  describe("Grading and results reporting", () => {});
-  describe("Feedback and review process", () => {});
-  describe("User log-off and data privacy", () => {});
+  // describe("Exam scheduling and enrollment", () => {
+  //   it("should find an exam the user is enrolled in and return it", async () => {});
+
+  //   it("should find an exam the user is enrolled in and return it with relations", async () => {});
+
+  //   it("should find an exam the user is enrolled in and return it with relations mapped", async () => {});
+  // });
+
+  // describe("Taking an exam and answering questions", () => {});
+
+  // describe("Grading and results reporting", () => {});
+
+  // describe("Feedback and review process", () => {});
+
+  // describe("User log-off and data privacy", () => {});
 });
