@@ -275,8 +275,6 @@ export class ExamService implements OnModuleInit {
       includeMetadata: true,
     });
 
-    console.log("queryResponse: ", queryResponse);
-
     if (queryResponse.matches?.length) {
       const match = queryResponse.matches[0];
 

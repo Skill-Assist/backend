@@ -1,5 +1,7 @@
 /**
- * container setup:
+ * test environment setup:
+ *
+ * remove all vectors from Pinecone
  *
  * docker run --name mysql -p 3306:3306
  * -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=db
@@ -22,8 +24,9 @@ import * as request from "supertest";
 
 /** modules */
 import { AppModule } from "../src/app.module";
+
+/** guards */
 import { AuthorizationGuard } from "../src/auth/guards/authorization.guard";
-////////////////////////////////////////////////////////////////////////////////
 
 /** --- setup ----------------------------------------------------------------*/
 let app: INestApplication;
@@ -270,7 +273,9 @@ describe("Application (e2e)", () => {
 
           const endTime = Date.now();
           const elapsedTime = endTime - startTime;
+
           console.log("LLM model, total elapsed time: ", elapsedTime);
+
           console.log(
             "LLM model, elapsed time per suggestion (sec): ",
             Math.round(elapsedTime / 1000 / 5)
@@ -310,6 +315,7 @@ describe("Application (e2e)", () => {
 
         const endTime = Date.now();
         const elapsedTime = endTime - startTime;
+
         console.log("SQL query, total elapsed time: ", elapsedTime);
         console.log(
           "SQL query, elapsed time per suggestion (sec): ",
@@ -337,7 +343,9 @@ describe("Application (e2e)", () => {
 
             const endTime = Date.now();
             const elapsedTime = endTime - startTime;
+
             console.log("vector similarity, total elapsed time: ", elapsedTime);
+
             console.log(
               "vector similarity, elapsed time per suggestion (sec): ",
               Math.round(elapsedTime / 1000 / 5)
@@ -439,9 +447,7 @@ describe("Application (e2e)", () => {
           const startTime = Date.now();
 
           for (let i = 0; i < recruiterAccessTokenArr.length; i++) {
-            console.log("i: ", i);
             for (let j = 0; j < 3; j++) {
-              console.log("j: ", j);
               const jobTitleTemplate = `Test Exam ${j} - Recruiter ${i}`;
 
               await request(app.getHttpServer())
@@ -539,29 +545,16 @@ describe("Application (e2e)", () => {
           .expect(401);
       });
 
-      // it("should fetch a list of all exams created by the current user", async () => {});
-
-      // it("should fetch a list of all exams the current user is enrolled in", async () => {});
-
-      // it("should switch an exam's status between 'draft' and 'published'", async () => {});
-
-      // it("should switch an exam's status between 'published' and 'archived'", async () => {});
-
-      // it("should not allow a candidate to switch an exam's status", async () => {});
-
-      // it("should get the days left until an exam's deadline", async () => {});
-
-      // it("should send invitations to candidates to take an exam", async () => {});
-
-      // it("should not allow a candidate to send invitations to candidates", async () => {});
-
-      // it("should fetch a list of all candidates invited to take an exam", async () => {});
-
-      // it("should find an exam created by the user and return it", async () => {});
-
-      // it("should find an exam created by the user and return it with relations", async () => {});
-
-      // it("should find an exam created by the user and return it with relations mapped", async () => {});
+      it("should fetch a list of all exams created by the current user", async () => {
+        await request(app.getHttpServer())
+          .get("/exam/fetchOwn")
+          .set("Authorization", `Bearer ${recruiterAccessTokenArr[0]}`)
+          .expect(200)
+          .expect((res) => {
+            expect(res.body).toBeDefined();
+            expect(res.body).toHaveLength(3);
+          });
+      });
     });
 
     // describe("Non-functional requirements", () => {
@@ -574,11 +567,33 @@ describe("Application (e2e)", () => {
   // describe("Question bank and content upload", () => {});
 
   // describe("Exam scheduling and enrollment", () => {
+  // it("should fetch a list of all exams the current user is enrolled in", async () => {});
+
   //   it("should find an exam the user is enrolled in and return it", async () => {});
 
   //   it("should find an exam the user is enrolled in and return it with relations", async () => {});
 
   //   it("should find an exam the user is enrolled in and return it with relations mapped", async () => {});
+
+  // it("should switch an exam's status between 'draft' and 'published'", async () => {});
+
+  // it("should switch an exam's status between 'published' and 'archived'", async () => {});
+
+  // it("should not allow a candidate to switch an exam's status", async () => {});
+
+  // it("should get the days left until an exam can be switched to 'archived'", async () => {});
+
+  // it("should send invitations to candidates to take an exam", async () => {});
+
+  // it("should not allow a candidate to send invitations to candidates", async () => {});
+
+  // it("should fetch a list of all candidates invited to take an exam", async () => {});
+
+  // it("should find an exam created by the user and return it", async () => {});
+
+  // it("should find an exam created by the user and return it with relations", async () => {});
+
+  // it("should find an exam created by the user and return it with relations mapped", async () => {});
   // });
 
   // describe("Taking an exam and answering questions", () => {});
