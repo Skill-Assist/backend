@@ -143,9 +143,11 @@ export class QuestionService implements OnModuleInit {
       );
 
     // add relationship between section and question
-    const questions = (
-      await this.sectionService.findOne(userId, "id", sectionId)
-    ).questions;
+    const questions = (await this.sectionService.findOne(
+      userId,
+      "id",
+      sectionId
+    ))!.questions;
 
     this.sectionService.addtoQuestion(sectionId, {
       questions: questions

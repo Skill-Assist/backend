@@ -33,6 +33,9 @@ export class Section extends SQLBaseEntity {
   @Column({ type: "json", nullable: true })
   questions: { id: string; weight: number }[];
 
+  @Column({ type: "simple-array" })
+  type: string[];
+
   /** relations */
   @ManyToOne(() => Exam, (exam) => exam.sections)
   exam: Promise<Exam>;

@@ -70,7 +70,7 @@ export class AppInterceptor implements NestInterceptor {
             if (data["__sectionToAnswerSheets__"]) {
               // prettier-ignore
               const section = await this.sectionService.findOne(user.id, "id", data.id);
-              const exam = await section.exam;
+              const exam = await section!.exam;
 
               if (!exam.showScore) {
                 for (const key in data["__sectionToAnswerSheets__"]) {

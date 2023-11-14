@@ -6,6 +6,7 @@ import {
   Body,
   Query,
   Patch,
+  Delete,
   Controller,
   UseInterceptors,
   ClassSerializerInterceptor,
@@ -34,7 +35,7 @@ import { PassportRequest } from "../utils/api-types.utils";
 export class SectionController {
   constructor(private readonly sectionService: SectionService) {}
 
-  /** basic CRUD endpoints */
+  /** --- basic CRUD endpoints -------------------------------------------------*/
   @Post()
   @Roles(UserRole.RECRUITER)
   create(
@@ -52,7 +53,7 @@ export class SectionController {
     @Query("value") value: unknown,
     @Query("relations") relations?: string,
     @Query("map") map?: boolean
-  ): Promise<Section> {
+  ): Promise<Section | null> {
     return this.sectionService.findOne(
       req.user!.id,
       key,
@@ -72,12 +73,24 @@ export class SectionController {
     return this.sectionService.update(req.user!.id, id, updateSectionDto);
   }
 
-  @Get("suggestDescription")
+  @Delete()
   @Roles(UserRole.RECRUITER)
-  suggestDescription(
+  delete(@Req() req: PassportRequest, @Query("id") id: number): Promise<void> {
+    return this.sectionService.delete(req.user!.id, id);
+  }
+
+  /** --- custom endpoints -----------------------------------------------------*/
+  @Get("suggest")
+  @Roles(UserRole.RECRUITER)
+  suggest(
     @Req() req: PassportRequest,
-    @Query("examId") examId: number
+    @Query("examId") examId: number,
+    @Query("type") type: string
   ) {
-    return this.sectionService.suggestDescription(req.user!.id, examId);
+    return this.sectionService.suggestProject(
+      req.user!.id,
+      examId,
+      type.split(",")
+    );
   }
 }

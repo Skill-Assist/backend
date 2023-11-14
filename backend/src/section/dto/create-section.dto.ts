@@ -7,6 +7,7 @@ import {
   IsString,
   IsBoolean,
   IsOptional,
+  IsIn,
 } from "class-validator";
 import { isValid } from "date-fns";
 //////////////////////////////////////////////////////////////////////////////////////
@@ -41,4 +42,10 @@ export class CreateSectionDto {
   @IsOptional()
   @IsBoolean()
   hasProctoring?: boolean;
+
+  @IsIn(["test", "project"], {
+    each: true,
+    message: "Type must be either test or project or both",
+  })
+  type: string[];
 }

@@ -105,6 +105,8 @@ export class ExamService implements OnModuleInit {
 
       return exam;
     } catch (err) {
+      console.log(err.message);
+
       // rollback changes made in case of error
       await this.queryRunner.rollbackTransaction();
       throw new BadRequestException(err.message);
@@ -215,7 +217,7 @@ export class ExamService implements OnModuleInit {
       jobLevel
     );
 
-    return updatedExam!;
+    return updatedExam;
   }
 
   async delete(userId: number, examId: number): Promise<void> {
@@ -624,7 +626,7 @@ export class ExamService implements OnModuleInit {
       if (mode === "upsert") {
         const embeddings = new OpenAIEmbeddings();
         const embeddedDescription = await embeddings.embedDocuments([
-          `${jobTitle}|${jobLevel}`,
+          `${examId}|${jobTitle}|${jobLevel}`,
         ]);
 
         await pineconeIndex.upsert([

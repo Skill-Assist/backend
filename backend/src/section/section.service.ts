@@ -1,9 +1,10 @@
 /** nestjs */
 import {
   Injectable,
-  NotFoundException,
   OnModuleInit,
+  NotFoundException,
   UnauthorizedException,
+  BadRequestException,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
@@ -14,15 +15,9 @@ import { ExamService } from "../exam/exam.service";
 import { QueryRunnerService } from "../query-runner/query-runner.service";
 
 /** external dependencies */
-import { ObjectId } from "mongodb";
 import { Repository } from "typeorm";
 import { Pinecone } from "@pinecone-database/pinecone";
-
-import { PromptTemplate } from "langchain/prompts";
-import { ChatOpenAI } from "langchain/chat_models/openai";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
-import { RunnableSequence } from "langchain/schema/runnable";
-// import { StructuredOutputParser } from "langchain/output_parsers";
 
 /** entities */
 import { Section } from "./entities/section.entity";
@@ -31,22 +26,14 @@ import { Section } from "./entities/section.entity";
 import { AddQuestionDto } from "./dto/add-question.dto";
 import { CreateSectionDto } from "./dto/create-section.dto";
 import { UpdateSectionDto } from "./dto/update-section.dto";
-
-/** utils */
-import { _create, _findOne, _update } from "../utils/typeorm.utils";
 ////////////////////////////////////////////////////////////////////////////////
 
 @Injectable()
 export class SectionService implements OnModuleInit {
-  private PINECONE_SECTION_INDEX_NAME: string = "vector-store";
-  private PINECONE_SECTION_INDEX_DIMENSION: number = 1536;
+  private PINECONE_INDEX_NAME: string = "vector-store";
+  public PINECONE_INDEX_MODULE: string = "section-description";
 
   private examService: ExamService;
-
-  private llm: ChatOpenAI = new ChatOpenAI({
-    modelName: "gpt-4",
-    temperature: 0,
-  });
 
   private vectorStore: Pinecone = new Pinecone({
     apiKey: this.configService.get<string>("PINECONE_API_KEY")!,
@@ -55,7 +42,7 @@ export class SectionService implements OnModuleInit {
 
   constructor(
     @InjectRepository(Section)
-    private readonly sectionRepository: Repository<Section>,
+    private readonly repository: Repository<Section>,
     private readonly moduleRef: ModuleRef,
     private readonly configService: ConfigService,
     private readonly queryRunner: QueryRunnerService
@@ -67,7 +54,7 @@ export class SectionService implements OnModuleInit {
     });
   }
 
-  /** basic CRUD methods */
+  /** --- basic CRUD methods ---------------------------------------------------*/
   async create(
     userId: number,
     examId: number,
@@ -95,25 +82,44 @@ export class SectionService implements OnModuleInit {
       );
 
     // create section
-    const section = (await _create(this.queryRunner, this.sectionRepository, {
-      ...createSectionDto,
-      questionId: [],
-    })) as Section;
+    await this.queryRunner.connect();
+    await this.queryRunner.startTransaction();
 
-    // add exam's metadata to vector store
-    await this.manageVectorStore(
-      "upsert",
-      this.PINECONE_SECTION_INDEX_NAME,
-      section.id,
-      section.name,
-      section.description
-    );
+    try {
+      const section = this.repository.create({
+        ...createSectionDto,
+        questionId: [],
+      } as unknown as Section);
 
-    // set relation between section and exam
-    await _update(section.id, { exam }, this.sectionRepository, "section");
+      await this.queryRunner.commitTransaction(section);
 
-    // return updated section
-    return await this.findOne(userId, "id", section.id);
+      // add section's metadata to vector store
+      await this.manageVectorStore(
+        "upsert",
+        this.PINECONE_INDEX_NAME,
+        section.id,
+        section.name,
+        section.description
+      );
+
+      // set relation between section and exam
+      await this.repository
+        .createQueryBuilder()
+        .relation(Section, "exam")
+        .of(section)
+        .set(exam);
+
+      return section;
+    } catch (err) {
+      console.log(err.message);
+
+      // rollback changes made in case of error
+      await this.queryRunner.rollbackTransaction();
+      throw new BadRequestException(err.message);
+    } finally {
+      // release queryRunner after transaction
+      await this.queryRunner.release();
+    }
   }
 
   async findOne(
@@ -122,13 +128,12 @@ export class SectionService implements OnModuleInit {
     value: unknown,
     relations?: string[],
     map?: boolean
-  ): Promise<Section> {
-    const section = (await _findOne(
-      this.sectionRepository,
-      "section",
-      key,
-      value
-    )) as Section;
+  ): Promise<Section | null> {
+    const queryBuilder = this.repository
+      .createQueryBuilder("section")
+      .where(`section.${key} = :${key}`, { [key]: value });
+
+    const section = await queryBuilder.getOne();
 
     // check if section exists
     if (!section) throw new NotFoundException("Section not found.");
@@ -143,14 +148,17 @@ export class SectionService implements OnModuleInit {
         "You are not authorized to access this section."
       );
 
-    return (await _findOne(
-      this.sectionRepository,
-      "section",
-      key,
-      value,
-      relations,
-      map
-    )) as Section;
+    if (relations)
+      for (const relation of relations) {
+        map
+          ? queryBuilder.leftJoinAndSelect(`section.${relation}`, `${relation}`)
+          : queryBuilder.loadRelationIdAndMap(
+              `${relation}Ref`,
+              `section.${relation}`
+            );
+      }
+
+    return await queryBuilder.getOne();
   }
 
   async update(
@@ -158,8 +166,9 @@ export class SectionService implements OnModuleInit {
     sectionId: number,
     updateSectionDto: UpdateSectionDto
   ): Promise<Section> {
-    // check if exam exists and is owned by user
+    // check if section exists and is owned by user
     const section = await this.findOne(userId, "id", sectionId);
+    if (!section) throw new NotFoundException("Section not found.");
 
     // check if exam is in draft state
     if ((await section.exam).status !== "draft")
@@ -168,47 +177,146 @@ export class SectionService implements OnModuleInit {
       );
 
     // check if exam's sections's weights are less than or equal to 1
-    const updatedWeight =
-      (await (await section.exam).sections).reduce((acc, curr, idx) => {
-        return acc + +curr.weight;
-      }, updateSectionDto.weight!) - section.weight;
+    if (updateSectionDto.weight) {
+      const sections = await (await section.exam).sections;
+      const updatedWeight =
+        sections.reduce((acc, curr, idx) => {
+          return acc + +curr.weight;
+        }, updateSectionDto.weight) - section.weight;
 
-    if (updateSectionDto.weight && updatedWeight > 1)
-      throw new UnauthorizedException(
-        "The sum of all sections' weights cannot be greater than 1."
-      );
+      if (updatedWeight > 1)
+        throw new UnauthorizedException(
+          "The sum of all sections' weights cannot be greater than 1."
+        );
+    }
 
     // update exam
-    await _update(
-      sectionId,
-      updateSectionDto as Record<string, unknown>,
-      this.sectionRepository,
-      "section"
-    );
+    await this.repository
+      .createQueryBuilder()
+      .update()
+      .set(updateSectionDto)
+      .where("id = :id", { id: sectionId })
+      .execute();
 
     // update section's metadata in vector store
-    const updatedSection = await this.findOne(userId, "id", sectionId);
+    const updatedSection = (await this.findOne(
+      userId,
+      "id",
+      sectionId
+    )) as Section;
+
+    const { id, name, description } = updatedSection;
+
     this.manageVectorStore(
       "upsert",
-      this.PINECONE_SECTION_INDEX_NAME,
-      updatedSection.id,
-      updatedSection.name,
-      updatedSection.description
+      this.PINECONE_INDEX_NAME,
+      id,
+      name,
+      description
     );
 
     return updatedSection;
   }
 
-  /** custom methods */
-  async addtoQuestion(id: number, payload: AddQuestionDto): Promise<void> {
-    await _update(
-      id,
-      payload as unknown as Record<string, Record<string, ObjectId | number>[]>,
-      this.sectionRepository,
-      "section"
-    );
+  async delete(userId: number, sectionId: number): Promise<void> {
+    // check if exam exists and is owned by user
+    const section = await this.findOne(userId, "id", sectionId);
+
+    // check if exam is in draft state
+    if ((await section!.exam).status !== "draft")
+      throw new UnauthorizedException(
+        "You cannot delete a section for an exam that is not in draft state."
+      );
+
+    // delete section
+    await this.repository
+      .createQueryBuilder()
+      .delete()
+      .from(Section)
+      .where("id = :id", { id: sectionId })
+      .execute();
+
+    // delete section's metadata from vector store
+    this.manageVectorStore("delete", this.PINECONE_INDEX_NAME, sectionId);
   }
 
+  /** --- custom methods -------------------------------------------------------*/
+  async addtoQuestion(id: number, payload: AddQuestionDto): Promise<void> {
+    await this.repository
+      .createQueryBuilder()
+      .update()
+      .set(payload as UpdateSectionDto)
+      .where("id = :id", { id })
+      .execute();
+  }
+
+  async suggestProject(userId: number, examId: number, type: string[]) {
+    const exam = await this.examService.findOne(userId, "id", examId);
+    if (!exam) throw new NotFoundException("Exam not found.");
+
+    const similarSections: Partial<Section>[] = [];
+
+    // 1. MySQL database
+    for (let i = 0; i < type.length; i++) {
+      const similar = await this.findSimilarSectionsOnDatabase(
+        examId,
+        "jobTitle",
+        exam.jobTitle,
+        type[i]
+      );
+
+      if (similar.length > 0) similarSections.push(...similar);
+    }
+
+    if (similarSections.length > 0) return similarSections;
+
+    // 2. Pinecone vector store
+    const pineconeIndex = this.vectorStore.index(this.PINECONE_INDEX_NAME);
+
+    const embeddings = new OpenAIEmbeddings();
+    const embeddedQuery = await embeddings.embedQuery(
+      `${exam.jobTitle}|${exam.description}`
+    );
+
+    const queryResponse = await pineconeIndex.query({
+      topK: 5,
+      vector: embeddedQuery,
+      filter: {
+        module: { $eq: this.examService.PINECONE_INDEX_MODULE },
+      },
+      includeMetadata: true,
+    });
+
+    if (queryResponse.matches?.length) {
+      for (let i = 0; i < queryResponse.matches.length; i++) {
+        const match = queryResponse.matches[i];
+
+        if (match.id === String(examId)) continue;
+
+        if (match.score && match.score >= 0.75) {
+          const similarExam = (
+            await this.examService.findAll("id", Number(match.id), ["sections"])
+          )[0];
+
+          for (const section_ of await similarExam.sections)
+            for (let i = 0; i < type.length; i++) {
+              if (section_.type.includes(type[i]))
+                similarSections.push({
+                  name: section_.name,
+                  description: section_.description,
+                  type: section_.type,
+                });
+            }
+        }
+      }
+    }
+
+    if (similarSections.length > 0) return similarSections;
+
+    return null;
+  }
+
+  /** --- helper methods -------------------------------------------------------*/
   async manageVectorStore(
     mode: string = "upsert" || "delete",
     pineconeIdx: string,
@@ -224,22 +332,6 @@ export class SectionService implements OnModuleInit {
         `${name}|${description}`,
       ]);
 
-      if (embeddedDescription[0].length > this.PINECONE_SECTION_INDEX_DIMENSION)
-        throw new Error(
-          `Document dimension (${embeddedDescription[0].length}) is larger than index dimension (${this.PINECONE_SECTION_INDEX_DIMENSION}).`
-        );
-
-      const zerosArray: number[] = [];
-      for (
-        let i = 0;
-        i <
-        this.PINECONE_SECTION_INDEX_DIMENSION - embeddedDescription[0].length;
-        i++
-      ) {
-        zerosArray.push(0);
-      }
-      embeddedDescription[0].push(...zerosArray);
-
       await pineconeIndex.upsert([
         {
           id: String(examId),
@@ -254,122 +346,30 @@ export class SectionService implements OnModuleInit {
     if (mode === "delete") pineconeIndex.deleteOne(String(examId));
   }
 
-  async suggestDescription(userId: number, examId: number) {
-    const suggestedSectionsArr: any[] = [];
+  async findSimilarSectionsOnDatabase(
+    examId: number,
+    key: string,
+    value: string | number,
+    type: string
+  ): Promise<Partial<Section>[]> {
+    const similarExams = (
+      await this.examService.findAll(key, value, ["sections"])
+    ).filter((exam) => exam.id !== examId);
 
-    // 1. MySQL database: return section suggestions based on job title and job level
-    const sectionsFromEquivalentExams =
-      await this.examService.findSimilarSections(userId, examId);
+    const similarSections: Partial<Section>[] = [];
 
-    suggestedSectionsArr.push(...sectionsFromEquivalentExams);
+    for (const exam_ of similarExams) {
+      const sections = await exam_.sections;
 
-    if (suggestedSectionsArr.length > 2) return suggestedSectionsArr;
-
-    // 2. Pinecone: if not enough similar sections, suggest based on vector similarity
-    const exam = await this.examService.findOne(userId, "id", examId);
-
-    const pineconeIndex = this.vectorStore.index(
-      this.examService.PINECONE_INDEX_NAME
-    );
-
-    const embeddings = new OpenAIEmbeddings();
-    const embeddedQuery = await embeddings.embedQuery(
-      `${exam!.jobTitle}|${exam!.jobLevel}|${exam!.description}`
-    );
-
-    const queryResponse = await pineconeIndex.query({
-      topK: 4,
-      vector: embeddedQuery,
-      filter: {
-        module: { $eq: this.examService.PINECONE_INDEX_MODULE },
-      },
-    });
-
-    if (queryResponse.matches) {
-      const matches = queryResponse.matches.map((match) => {
-        return { id: match.id, score: match.score };
-      });
-
-      for (let i = 0; i < matches.length; i++) {
-        if (
-          +matches[i].id !== examId &&
-          matches[i].score &&
-          +matches[i].score! >= 0.95
-        ) {
-          const suggestedSections = await this.examService.findSimilarSections(
-            userId,
-            +matches[i].id,
-            "strict"
-          );
-
-          suggestedSectionsArr.push(...suggestedSections);
-        }
-
-        if (suggestedSectionsArr.length > 2) return suggestedSectionsArr;
-      }
+      for (const section_ of sections)
+        if (section_.type.includes(type))
+          similarSections.push({
+            name: section_.name,
+            description: section_.description,
+            type: section_.type,
+          });
     }
 
-    // 3. LLM call: if not enough similar sections, suggest based on LLM
-    const basePrompt =
-      "Sugira uma seção para um teste de recrutamento para uma vaga de {jobTitle} no nível de {jobLevel}. A seção deve ser um objeto JSON com as propriedades name e description. A seção sugerida deve conter uma descrição detalhada do conteúdo a ser testado pelo candidato e fazer sentido para a vaga, por exemplo, um engenheiro de software deve ter uma seção de programação, um contador deve ter uma seção de contabilidade, e assim por diante.";
-
-    // const outputParser = StructuredOutputParser.fromNamesAndDescriptions({
-    //   name: "nome da seção do teste de recrutamento",
-    //   description: "descrição da seção do teste de recrutamento",
-    // });
-
-    const functionSchema = [
-      {
-        name: "sectionSuggestions",
-        description: "sugere uma seção para um teste de recrutamento",
-        parameters: {
-          type: "object",
-          properties: {
-            name: {
-              type: "string",
-              description: "nome da seção do teste de recrutamento",
-            },
-            description: {
-              type: "string",
-              description: "descrição da seção do teste de recrutamento",
-            },
-          },
-          required: ["name", "description"],
-        },
-      },
-    ];
-
-    while (true) {
-      const currentSections = suggestedSectionsArr
-        .map((section) => {
-          return section.name;
-        })
-        .join(", ");
-
-      const prompt = PromptTemplate.fromTemplate(
-        currentSections
-          ? `${basePrompt} A seção sugerida não pode ser nenhuma das seguintes: ${currentSections}.`
-          : basePrompt
-      );
-
-      const chain = RunnableSequence.from([
-        prompt,
-        this.llm.bind({
-          functions: functionSchema,
-          function_call: { name: "sectionSuggestions" },
-        }),
-      ]);
-
-      const result = await chain.invoke({
-        jobTitle: exam!.jobTitle,
-        jobLevel: exam!.jobLevel,
-      });
-
-      suggestedSectionsArr.push(
-        JSON.parse(result.additional_kwargs.function_call!.arguments)
-      );
-
-      if (suggestedSectionsArr.length > 2) return suggestedSectionsArr;
-    }
+    return similarSections;
   }
 }
